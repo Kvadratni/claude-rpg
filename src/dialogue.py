@@ -46,7 +46,7 @@ class DialogueWindow:
         screen_width = pygame.display.get_surface().get_width()
         screen_height = pygame.display.get_surface().get_height()
         window_x = (screen_width - self.width) // 2
-        window_y = screen_height - self.height - 50  # Near bottom of screen
+        window_y = (screen_height - self.height) // 2
         
         # Convert to relative position
         rel_x = pos[0] - window_x
@@ -89,9 +89,9 @@ class DialogueWindow:
         screen_width = screen.get_width()
         screen_height = screen.get_height()
         
-        # Calculate window position (bottom center)
+        # Calculate window position (center of screen)
         window_x = (screen_width - self.width) // 2
-        window_y = screen_height - self.height - 50
+        window_y = (screen_height - self.height) // 2
         
         # Create dialogue surface
         dialogue_surface = pygame.Surface((self.width, self.height))

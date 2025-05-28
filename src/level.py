@@ -157,7 +157,7 @@ class Level:
         return tiles
     
     def create_building(self, tiles, start_x, start_y, width, height):
-        """Create a building structure"""
+        """Create a building structure with double doors"""
         # Building walls
         for y in range(start_y, start_y + height):
             for x in range(start_x, start_x + width):
@@ -167,11 +167,22 @@ class Level:
                 else:
                     tiles[y][x] = self.TILE_STONE  # Interior floor
         
-        # Add a door
-        door_x = start_x + width // 2
+        # Add double doors (2 tiles wide)
+        door_center_x = start_x + width // 2
         door_y = start_y + height - 1
-        if 0 <= door_x < self.width and 0 <= door_y < self.height:
-            tiles[door_y][door_x] = self.TILE_DOOR
+        
+        # Create 2-tile wide door centered on the building
+        door_x1 = door_center_x - 1
+        door_x2 = door_center_x
+        
+        # Make sure both door positions are valid and within the building wall
+        if (0 <= door_x1 < self.width and 0 <= door_y < self.height and 
+            door_x1 > start_x and door_x1 < start_x + width - 1):
+            tiles[door_y][door_x1] = self.TILE_DOOR
+        
+        if (0 <= door_x2 < self.width and 0 <= door_y < self.height and 
+            door_x2 > start_x and door_x2 < start_x + width - 1):
+            tiles[door_y][door_x2] = self.TILE_DOOR
     
     def create_lake(self, tiles, center_x, center_y, radius):
         """Create a circular lake"""
@@ -594,7 +605,7 @@ class Level:
         return False
     
     def find_path(self, start_x, start_y, end_x, end_y, entity_size=0.4):
-        """Find a path from start to end using A* algorithm"""
+        """Find a path from start to end using A* algorithm with forced tile-center movement"""
         # Convert to grid coordinates
         start_grid_x = int(start_x)
         start_grid_y = int(start_y)
@@ -608,12 +619,16 @@ class Level:
             return []
         
         # If end position is not walkable, find nearest walkable position
-        if not self.is_position_walkable(end_grid_x, end_grid_y, entity_size):
+        if not self.walkable[end_grid_y][end_grid_x]:
             end_grid_x, end_grid_y = self.find_nearest_walkable(end_grid_x, end_grid_y, entity_size)
             if end_grid_x is None:
                 return []  # No walkable position found
         
-        # A* algorithm
+        # For very short distances, just go direct to tile center
+        if abs(start_grid_x - end_grid_x) <= 1 and abs(start_grid_y - end_grid_y) <= 1:
+            return [(end_grid_x + 0.5, end_grid_y + 0.5)]
+        
+        # A* algorithm - simplified to only consider basic walkability
         open_set = []
         heapq.heappush(open_set, (0, start_grid_x, start_grid_y))
         
@@ -622,7 +637,7 @@ class Level:
         f_score = {(start_grid_x, start_grid_y): self.heuristic(start_grid_x, start_grid_y, end_grid_x, end_grid_y)}
         
         visited = set()
-        max_iterations = 1000  # Prevent infinite loops
+        max_iterations = 500  # Reduced iterations for faster pathfinding
         iterations = 0
         
         while open_set and iterations < max_iterations:
@@ -636,15 +651,20 @@ class Level:
             
             # Check if we reached the goal
             if current_x == end_grid_x and current_y == end_grid_y:
-                # Reconstruct path
+                # Reconstruct path using only tile centers
                 path = []
                 while (current_x, current_y) in came_from:
-                    path.append((current_x + 0.5, current_y + 0.5))  # Center of tile
+                    # Force all waypoints to tile centers
+                    path.append((current_x + 0.5, current_y + 0.5))
                     current_x, current_y = came_from[(current_x, current_y)]
                 path.reverse()
+                
+                # Final destination is also tile center
+                path.append((end_grid_x + 0.5, end_grid_y + 0.5))
+                
                 return path
             
-            # Check neighbors (8-directional movement)
+            # Check all 8 neighbors
             neighbors = [
                 (current_x + 1, current_y),     # Right
                 (current_x - 1, current_y),     # Left
@@ -664,13 +684,17 @@ class Level:
                 if not (0 <= next_x < self.width and 0 <= next_y < self.height):
                     continue
                 
-                # Check if position is walkable
-                if not self.is_position_walkable(next_x, next_y, entity_size):
+                # Simple walkability check - only check tile type, ignore objects for pathfinding
+                if not self.walkable[next_y][next_x]:
                     continue
                 
-                # Calculate movement cost (diagonal moves cost more)
+                # Calculate movement cost
                 is_diagonal = abs(next_x - current_x) == 1 and abs(next_y - current_y) == 1
-                move_cost = 1.414 if is_diagonal else 1.0  # sqrt(2) for diagonal
+                move_cost = 1.414 if is_diagonal else 1.0
+                
+                # Heavily favor doors to force pathfinding through them
+                if self.tiles[next_y][next_x] == self.TILE_DOOR:
+                    move_cost *= 0.1  # 90% cost reduction for doors
                 
                 tentative_g_score = g_score.get((current_x, current_y), float('inf')) + move_cost
                 
@@ -712,6 +736,102 @@ class Level:
                 # Use slightly larger collision for pathfinding to avoid tight squeezes
                 collision_distance = entity_size + 0.4
                 if distance < collision_distance:
+                    return False
+        
+        return True
+    
+    def is_position_walkable_lenient(self, x, y, entity_size=0.4):
+        """Check if a grid position is walkable for pathfinding with more lenient rules"""
+        # Check basic tile walkability
+        if not (0 <= x < self.width and 0 <= y < self.height):
+            return False
+        
+        if not self.walkable[y][x]:
+            return False
+        
+        # Special handling for doors - be more lenient around door tiles
+        current_tile = self.tiles[y][x]
+        is_door_area = current_tile == self.TILE_DOOR
+        
+        # Also check adjacent tiles for doors
+        if not is_door_area:
+            for dx in [-1, 0, 1]:
+                for dy in [-1, 0, 1]:
+                    check_x, check_y = x + dx, y + dy
+                    if (0 <= check_x < self.width and 0 <= check_y < self.height):
+                        if self.tiles[check_y][check_x] == self.TILE_DOOR:
+                            is_door_area = True
+                            break
+                if is_door_area:
+                    break
+        
+        # Check for objects that block movement with smaller collision for pathfinding
+        center_x = x + 0.5
+        center_y = y + 0.5
+        
+        for obj in self.objects:
+            if obj.blocks_movement:
+                dist_x = center_x - obj.x
+                dist_y = center_y - obj.y
+                distance = math.sqrt(dist_x * dist_x + dist_y * dist_y)
+                
+                # Use much smaller collision for door areas, normal for others
+                if is_door_area:
+                    collision_distance = entity_size + 0.1  # Very lenient for doors
+                else:
+                    collision_distance = entity_size + 0.2  # Reduced from 0.4
+                
+                if distance < collision_distance:
+                    return False
+        
+        return True
+    
+    def is_direct_path_clear(self, start_x, start_y, end_x, end_y, entity_size=0.4):
+        """Check if there's a clear direct path between two points"""
+        # Calculate the distance and direction
+        dx = end_x - start_x
+        dy = end_y - start_y
+        distance = math.sqrt(dx * dx + dy * dy)
+        
+        if distance == 0:
+            return True
+        
+        # Normalize direction
+        step_x = dx / distance
+        step_y = dy / distance
+        
+        # Check points along the path
+        steps = int(distance * 4)  # Check every 0.25 units
+        for i in range(1, steps + 1):
+            check_x = start_x + (step_x * i * 0.25)
+            check_y = start_y + (step_y * i * 0.25)
+            
+            # Check if we're near a door - if so, be more lenient with collision
+            tile_x = int(check_x)
+            tile_y = int(check_y)
+            is_near_door = False
+            
+            if 0 <= tile_x < self.width and 0 <= tile_y < self.height:
+                # Check current tile and adjacent tiles for doors
+                for dx_check in [-1, 0, 1]:
+                    for dy_check in [-1, 0, 1]:
+                        check_tile_x = tile_x + dx_check
+                        check_tile_y = tile_y + dy_check
+                        if (0 <= check_tile_x < self.width and 0 <= check_tile_y < self.height):
+                            if self.tiles[check_tile_y][check_tile_x] == self.TILE_DOOR:
+                                is_near_door = True
+                                break
+                    if is_near_door:
+                        break
+            
+            # Use more lenient collision checking near doors
+            if is_near_door:
+                # Use smaller entity size for door areas
+                if self.check_collision(check_x, check_y, entity_size * 0.7):
+                    return False
+            else:
+                # Normal collision checking
+                if self.check_collision(check_x, check_y, entity_size):
                     return False
         
         return True
