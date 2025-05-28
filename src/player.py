@@ -43,6 +43,10 @@ class Player:
         self.target_y = None
         self.move_speed = 0.1  # Increased from 0.05 - speed for mouse movement
         
+        # Pathfinding
+        self.path = []  # Current path to follow
+        self.path_index = 0  # Current index in path
+        
         # Animation
         self.animation_frame = 0
         self.animation_timer = 0
@@ -97,24 +101,28 @@ class Player:
         """Handle player input"""
         self.moving = False
         
-        # Check if we have a mouse target to move to
-        if self.target_x is not None and self.target_y is not None:
-            # Calculate distance to target
-            dx = self.target_x - self.x
-            dy = self.target_y - self.y
+        # Follow current path if we have one
+        if self.path and self.path_index < len(self.path):
+            target_x, target_y = self.path[self.path_index]
+            
+            # Calculate distance to current path target
+            dx = target_x - self.x
+            dy = target_y - self.y
             distance = math.sqrt(dx * dx + dy * dy)
             
-            # If we're close enough to the target, stop moving
-            if distance < 0.1:
-                self.target_x = None
-                self.target_y = None
+            # If we're close enough to the current path point, move to next
+            if distance < 0.2:
+                self.path_index += 1
+                if self.path_index >= len(self.path):
+                    # Reached end of path
+                    self.path = []
+                    self.path_index = 0
+                    self.target_x = None
+                    self.target_y = None
             else:
-                # Move towards target
+                # Move towards current path target
                 move_x = (dx / distance) * self.move_speed
                 move_y = (dy / distance) * self.move_speed
-                
-                # Store old position
-                old_x, old_y = self.x, self.y
                 
                 # Try to move
                 new_x = self.x + move_x
@@ -122,11 +130,14 @@ class Player:
                 
                 # Check collision before moving
                 if level and level.check_collision(new_x, new_y, self.size):
-                    # Cancel mouse movement if blocked
-                    self.target_x = None
-                    self.target_y = None
-                    if self.game_log:
-                        self.game_log.add_message("Path blocked!", "system")
+                    # Path is blocked, recalculate
+                    if self.target_x is not None and self.target_y is not None:
+                        self.recalculate_path(level)
+                    else:
+                        self.path = []
+                        self.path_index = 0
+                        if self.game_log:
+                            self.game_log.add_message("Path blocked!", "system")
                 else:
                     self.x = new_x
                     self.y = new_y
@@ -173,6 +184,22 @@ class Player:
                 self.animation_timer = 0
                 self.animation_frame = (self.animation_frame + 1) % 4
     
+    def recalculate_path(self, level):
+        """Recalculate path to target"""
+        if self.target_x is not None and self.target_y is not None and level:
+            new_path = level.find_path(self.x, self.y, self.target_x, self.target_y, self.size)
+            if new_path:
+                self.path = new_path
+                self.path_index = 0
+            else:
+                # No path found
+                self.path = []
+                self.path_index = 0
+                self.target_x = None
+                self.target_y = None
+                if self.game_log:
+                    self.game_log.add_message("No path found!", "system")
+    
     def handle_mouse_click(self, world_x, world_y, level):
         """Handle mouse click for movement and interaction"""
         # Get audio manager
@@ -212,11 +239,16 @@ class Player:
                             if self.game_log:
                                 self.game_log.add_message("Inventory is full!", "system")
                     else:
-                        # Move towards the item
-                        self.target_x = item.x
-                        self.target_y = item.y
-                        if self.game_log:
-                            self.game_log.add_message(f"Moving to pick up {item.name}", "system")
+                        # Use pathfinding to move towards the item
+                        path = level.find_path(self.x, self.y, item.x, item.y, self.size)
+                        if path:
+                            self.path = path
+                            self.path_index = 0
+                            self.target_x = item.x
+                            self.target_y = item.y
+                        else:
+                            if self.game_log:
+                                self.game_log.add_message(f"Can't reach {item.name}!", "system")
                     clicked_entity = item
                     break
         
@@ -238,26 +270,28 @@ class Player:
                             if self.game_log:
                                 self.game_log.add_message("Attack on cooldown!", "combat")
                     else:
-                        # Move towards enemy for attack
-                        self.target_x = enemy.x
-                        self.target_y = enemy.y
-                        if self.game_log:
-                            self.game_log.add_message(f"Moving to attack {enemy.name}", "combat")
+                        # Use pathfinding to move towards enemy for attack
+                        path = level.find_path(self.x, self.y, enemy.x, enemy.y, self.size)
+                        if path:
+                            self.path = path
+                            self.path_index = 0
+                            self.target_x = enemy.x
+                            self.target_y = enemy.y
+                        else:
+                            if self.game_log:
+                                self.game_log.add_message(f"Can't reach {enemy.name}!", "combat")
                     clicked_entity = enemy
                     break
         
         # If no entity was clicked, move to the location
         if not clicked_entity:
-            # Check if the target location is walkable
-            tile_x = int(world_x)
-            tile_y = int(world_y)
-            
-            if (0 <= tile_x < level.width and 0 <= tile_y < level.height and
-                level.walkable[tile_y][tile_x]):
+            # Use pathfinding to move to the clicked location
+            path = level.find_path(self.x, self.y, world_x, world_y, self.size)
+            if path:
+                self.path = path
+                self.path_index = 0
                 self.target_x = world_x
                 self.target_y = world_y
-                if self.game_log:
-                    self.game_log.add_message(f"Moving to ({world_x:.1f}, {world_y:.1f})", "system")
             else:
                 if self.game_log:
                     self.game_log.add_message("Can't move there!", "system")
@@ -491,7 +525,7 @@ class Player:
         # Draw sprite
         screen.blit(current_sprite, sprite_rect)
         
-        # Render movement target indicator
+        # Render movement target indicator and path
         if self.target_x is not None and self.target_y is not None:
             target_screen_x, target_screen_y = iso_renderer.world_to_screen(self.target_x, self.target_y, camera_x, camera_y)
             # Draw a pulsing circle at the target location
@@ -499,6 +533,21 @@ class Player:
             pulse = int(abs(math.sin(time.time() * 5)) * 10) + 5
             pygame.draw.circle(screen, (255, 255, 0), (int(target_screen_x), int(target_screen_y)), pulse, 2)
             pygame.draw.circle(screen, (255, 255, 255), (int(target_screen_x), int(target_screen_y)), 3)
+            
+            # Draw path if we have one
+            if self.path and len(self.path) > 1:
+                path_points = []
+                for path_x, path_y in self.path:
+                    path_screen_x, path_screen_y = iso_renderer.world_to_screen(path_x, path_y, camera_x, camera_y)
+                    path_points.append((int(path_screen_x), int(path_screen_y)))
+                
+                # Draw path lines
+                if len(path_points) > 1:
+                    pygame.draw.lines(screen, (100, 255, 100), False, path_points, 2)
+                
+                # Draw path points
+                for point in path_points:
+                    pygame.draw.circle(screen, (0, 255, 0), point, 3)
         
         # Render attack indicator if attacking
         if self.attacking:

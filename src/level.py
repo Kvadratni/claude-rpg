@@ -5,6 +5,7 @@ Level system for the RPG
 import pygame
 import random
 import math
+import heapq
 from .isometric import IsometricRenderer, sort_by_depth
 from .entity import Entity, NPC, Enemy, Item
 
@@ -250,11 +251,11 @@ class Level:
         else:
             self.tile_sprites[self.TILE_DIRT] = self.iso_renderer.create_diamond_tile((150, 100, 50))
         
-        # Door - try to use loaded image, fall back to generated sprite
+        # Door - don't rotate, use as-is like walls, and render with dirt base
         door_image = self.asset_loader.get_image("door_tile")
         if door_image:
-            rotated_door = pygame.transform.rotate(door_image, 45)
-            self.tile_sprites[self.TILE_DOOR] = pygame.transform.scale(rotated_door, (self.tile_width, self.tile_height))
+            # Don't rotate the door tile - use it as-is like walls
+            self.tile_sprites[self.TILE_DOOR] = pygame.transform.scale(door_image, (self.tile_width, self.tile_height + 16))
         else:
             self.tile_sprites[self.TILE_DOOR] = self.iso_renderer.create_cube_tile((150, 100, 50), (120, 80, 40), (100, 60, 30))
     
@@ -494,6 +495,149 @@ class Level:
         
         return False
     
+    def find_path(self, start_x, start_y, end_x, end_y, entity_size=0.4):
+        """Find a path from start to end using A* algorithm"""
+        # Convert to grid coordinates
+        start_grid_x = int(start_x)
+        start_grid_y = int(start_y)
+        end_grid_x = int(end_x)
+        end_grid_y = int(end_y)
+        
+        # Check if start and end are valid
+        if not (0 <= start_grid_x < self.width and 0 <= start_grid_y < self.height):
+            return []
+        if not (0 <= end_grid_x < self.width and 0 <= end_grid_y < self.height):
+            return []
+        
+        # If end position is not walkable, find nearest walkable position
+        if not self.is_position_walkable(end_grid_x, end_grid_y, entity_size):
+            end_grid_x, end_grid_y = self.find_nearest_walkable(end_grid_x, end_grid_y, entity_size)
+            if end_grid_x is None:
+                return []  # No walkable position found
+        
+        # A* algorithm
+        open_set = []
+        heapq.heappush(open_set, (0, start_grid_x, start_grid_y))
+        
+        came_from = {}
+        g_score = {(start_grid_x, start_grid_y): 0}
+        f_score = {(start_grid_x, start_grid_y): self.heuristic(start_grid_x, start_grid_y, end_grid_x, end_grid_y)}
+        
+        visited = set()
+        max_iterations = 1000  # Prevent infinite loops
+        iterations = 0
+        
+        while open_set and iterations < max_iterations:
+            iterations += 1
+            current_f, current_x, current_y = heapq.heappop(open_set)
+            
+            if (current_x, current_y) in visited:
+                continue
+            
+            visited.add((current_x, current_y))
+            
+            # Check if we reached the goal
+            if current_x == end_grid_x and current_y == end_grid_y:
+                # Reconstruct path
+                path = []
+                while (current_x, current_y) in came_from:
+                    path.append((current_x + 0.5, current_y + 0.5))  # Center of tile
+                    current_x, current_y = came_from[(current_x, current_y)]
+                path.reverse()
+                return path
+            
+            # Check neighbors (8-directional movement)
+            neighbors = [
+                (current_x + 1, current_y),     # Right
+                (current_x - 1, current_y),     # Left
+                (current_x, current_y + 1),     # Down
+                (current_x, current_y - 1),     # Up
+                (current_x + 1, current_y + 1), # Down-Right
+                (current_x - 1, current_y + 1), # Down-Left
+                (current_x + 1, current_y - 1), # Up-Right
+                (current_x - 1, current_y - 1), # Up-Left
+            ]
+            
+            for next_x, next_y in neighbors:
+                if (next_x, next_y) in visited:
+                    continue
+                
+                # Check bounds
+                if not (0 <= next_x < self.width and 0 <= next_y < self.height):
+                    continue
+                
+                # Check if position is walkable
+                if not self.is_position_walkable(next_x, next_y, entity_size):
+                    continue
+                
+                # Calculate movement cost (diagonal moves cost more)
+                is_diagonal = abs(next_x - current_x) == 1 and abs(next_y - current_y) == 1
+                move_cost = 1.414 if is_diagonal else 1.0  # sqrt(2) for diagonal
+                
+                tentative_g_score = g_score.get((current_x, current_y), float('inf')) + move_cost
+                
+                if tentative_g_score < g_score.get((next_x, next_y), float('inf')):
+                    came_from[(next_x, next_y)] = (current_x, current_y)
+                    g_score[(next_x, next_y)] = tentative_g_score
+                    f_score[(next_x, next_y)] = tentative_g_score + self.heuristic(next_x, next_y, end_grid_x, end_grid_y)
+                    
+                    heapq.heappush(open_set, (f_score[(next_x, next_y)], next_x, next_y))
+        
+        return []  # No path found
+    
+    def heuristic(self, x1, y1, x2, y2):
+        """Heuristic function for A* (Manhattan distance with diagonal movement)"""
+        dx = abs(x1 - x2)
+        dy = abs(y1 - y2)
+        # Use diagonal distance heuristic
+        return max(dx, dy) + (1.414 - 1) * min(dx, dy)
+    
+    def is_position_walkable(self, x, y, entity_size=0.4):
+        """Check if a grid position is walkable for pathfinding"""
+        # Check basic tile walkability
+        if not (0 <= x < self.width and 0 <= y < self.height):
+            return False
+        
+        if not self.walkable[y][x]:
+            return False
+        
+        # Check for objects that block movement
+        center_x = x + 0.5
+        center_y = y + 0.5
+        
+        for obj in self.objects:
+            if obj.blocks_movement:
+                dist_x = center_x - obj.x
+                dist_y = center_y - obj.y
+                distance = math.sqrt(dist_x * dist_x + dist_y * dist_y)
+                
+                # Use slightly larger collision for pathfinding to avoid tight squeezes
+                collision_distance = entity_size + 0.4
+                if distance < collision_distance:
+                    return False
+        
+        return True
+    
+    def find_nearest_walkable(self, x, y, entity_size=0.4, max_radius=5):
+        """Find the nearest walkable position to the given coordinates"""
+        # Check the position itself first
+        if self.is_position_walkable(x, y, entity_size):
+            return x, y
+        
+        # Search in expanding circles
+        for radius in range(1, max_radius + 1):
+            for dx in range(-radius, radius + 1):
+                for dy in range(-radius, radius + 1):
+                    # Only check positions on the edge of the current radius
+                    if abs(dx) == radius or abs(dy) == radius:
+                        check_x = x + dx
+                        check_y = y + dy
+                        
+                        if self.is_position_walkable(check_x, check_y, entity_size):
+                            return check_x, check_y
+        
+        return None, None  # No walkable position found
+    
     def update_camera(self, screen_width, screen_height):
         """Update camera to follow player"""
         # Convert player position to isometric coordinates
@@ -703,17 +847,25 @@ class Level:
                 tile_type = self.tiles[y][x]
                 height = self.heightmap[y][x]
                 
-                # Get tile sprite
-                sprite = self.tile_sprites[tile_type]
-                
                 # Calculate screen position
                 screen_x, screen_y = self.iso_renderer.world_to_screen(x, y, self.camera_x, self.camera_y)
                 
                 # Adjust for height
                 screen_y -= height * 16
                 
-                # Draw tile
-                game_surface.blit(sprite, (screen_x - self.tile_width // 2, screen_y - self.tile_height // 2))
+                # Special handling for doors - render dirt underneath first
+                if tile_type == self.TILE_DOOR:
+                    # Render dirt base first
+                    dirt_sprite = self.tile_sprites[self.TILE_DIRT]
+                    game_surface.blit(dirt_sprite, (screen_x - self.tile_width // 2, screen_y - self.tile_height // 2))
+                    
+                    # Then render door on top
+                    door_sprite = self.tile_sprites[self.TILE_DOOR]
+                    game_surface.blit(door_sprite, (screen_x - self.tile_width // 2, screen_y - self.tile_height // 2))
+                else:
+                    # Normal tile rendering
+                    sprite = self.tile_sprites[tile_type]
+                    game_surface.blit(sprite, (screen_x - self.tile_width // 2, screen_y - self.tile_height // 2))
         
         # Collect all entities for depth sorting
         all_entities = []
