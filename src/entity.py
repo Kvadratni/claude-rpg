@@ -133,6 +133,11 @@ class NPC(Entity):
                 if elder_image:
                     self.sprite = pygame.transform.scale(elder_image, (size, size))
                     return
+            elif "Guard" in self.name:
+                guard_image = self.asset_loader.get_image("village_guard_sprite")
+                if guard_image:
+                    self.sprite = pygame.transform.scale(guard_image, (size, size))
+                    return
         
         # Fallback to generated sprite
         self.sprite = pygame.Surface((size, size), pygame.SRCALPHA)
@@ -142,6 +147,8 @@ class NPC(Entity):
             color = (255, 215, 0)  # Gold
         elif "Elder" in self.name:
             color = (128, 0, 128)  # Purple
+        elif "Guard" in self.name:
+            color = (70, 130, 180)  # Steel blue
         else:
             color = (0, 191, 255)  # Deep sky blue
         
@@ -156,6 +163,10 @@ class NPC(Entity):
             pygame.draw.rect(self.sprite, (139, 69, 19), (size//2 - 12, 3, 24, 12))  # Larger hat
         elif "Elder" in self.name:
             pygame.draw.circle(self.sprite, (255, 255, 255), (size//2, 12), 9)  # Larger beard
+        elif "Guard" in self.name:
+            # Draw a simple helmet/armor
+            pygame.draw.rect(self.sprite, (105, 105, 105), (size//2 - 10, 5, 20, 8))  # Helmet
+            pygame.draw.rect(self.sprite, (169, 169, 169), (size//2 - 8, 8, 16, 4))   # Helmet detail
     
     def interact(self, player):
         """Interact with the NPC"""

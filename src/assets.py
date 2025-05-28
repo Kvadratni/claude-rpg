@@ -40,6 +40,7 @@ class AssetLoader:
             "orc_boss_sprite": "orc_boss_sprite.png",
             "npc_shopkeeper": "npc_shopkeeper.png",
             "elder_npc": "elder_npc.png",  # Added elder NPC
+            "village_guard_sprite": "village_guard_sprite.png",  # Added village guard
             "tree": "tree.png",
             "rock": "rock.png",
             "menu_background": "menu_background.png",  # Added menu background
@@ -91,6 +92,7 @@ class AssetLoader:
             "orc_boss_sprite": (139, 0, 0),
             "npc_shopkeeper": (255, 215, 0),
             "elder_npc": (128, 0, 128),  # Purple for elder
+            "village_guard_sprite": (70, 130, 180),  # Steel blue for guard
             "tree": (34, 139, 34),
             "rock": (128, 128, 128),
             # Item colors

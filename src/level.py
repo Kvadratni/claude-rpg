@@ -1182,14 +1182,7 @@ class Level:
         # Blit the entire UI panel to screen
         screen.blit(ui_panel, (0, screen_height - ui_height))
         
-        # Instructions (moved down to avoid XP bar)
-        instructions = [
-            "Left Click: Move/Interact/Attack  |  Right Click: Inspect  |  SPACE: Attack  |  ESC: Menu"
-        ]
-        
-        for i, text in enumerate(instructions):
-            surface = small_font.render(text, True, (200, 200, 200))
-            screen.blit(surface, (10, 40 + i * 20))  # Moved down from 10 to 40
+        # Instructions removed - UI is now self-explanatory
     
     def render_circular_bars(self, surface, x, y):
         """Render circular health and stamina bars"""

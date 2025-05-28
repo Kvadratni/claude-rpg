@@ -59,6 +59,22 @@ class Inventory:
         title = font.render("Inventory", True, (255, 255, 255))
         inv_surface.blit(title, (10, 10))
         
+        # Close button (X)
+        close_button_size = 25
+        close_button_x = inv_width - close_button_size - 10
+        close_button_y = 10
+        close_button_rect = pygame.Rect(close_button_x, close_button_y, close_button_size, close_button_size)
+        
+        pygame.draw.rect(inv_surface, (200, 50, 50), close_button_rect)
+        pygame.draw.rect(inv_surface, (255, 255, 255), close_button_rect, 2)
+        
+        close_text = small_font.render("X", True, (255, 255, 255))
+        close_text_rect = close_text.get_rect(center=close_button_rect.center)
+        inv_surface.blit(close_text, close_text_rect)
+        
+        # Store close button rect for click detection (adjusted for screen position)
+        self.close_button_rect = pygame.Rect(inv_x + close_button_x, inv_y + close_button_y, close_button_size, close_button_size)
+        
         # Equipment slots on the left
         eq_start_x = 20
         eq_start_y = 50
@@ -182,6 +198,13 @@ class Inventory:
             return None
         
         if event.type == pygame.MOUSEBUTTONDOWN:
+            # Check close button first
+            if hasattr(self, 'close_button_rect') and self.close_button_rect.collidepoint(event.pos):
+                if audio_manager:
+                    audio_manager.play_ui_sound("inventory_close")
+                self.show = False
+                return None
+            
             if hasattr(self, 'inventory_rect') and self.inventory_rect.collidepoint(event.pos):
                 # Check if clicking on inventory grid
                 if hasattr(self, 'grid_start_pos'):
