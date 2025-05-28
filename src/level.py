@@ -55,67 +55,111 @@ class Level:
         self.create_tile_sprites()
     
     def generate_level(self):
-        """Generate a simple level"""
+        """Generate a well-designed level layout"""
         tiles = []
         
-        # Create a more interesting level layout for the bigger map
+        # Initialize with grass
         for y in range(self.height):
             row = []
             for x in range(self.width):
-                # Create borders
-                if x == 0 or x == self.width - 1 or y == 0 or y == self.height - 1:
-                    row.append(self.TILE_WALL)
-                # Add some water features (scaled up for bigger map)
-                elif 30 <= x <= 45 and 60 <= y <= 75:
-                    # Large lake
-                    if 33 <= x <= 42 and 63 <= y <= 72:
-                        row.append(self.TILE_WATER)
-                    else:
-                        row.append(self.TILE_DIRT)
-                # Add some stone paths (scaled up)
-                elif (x == 60 or x == 61) and 15 <= y <= 105:
-                    row.append(self.TILE_STONE)
-                elif 15 <= x <= 105 and (y == 45 or y == 46):
-                    row.append(self.TILE_STONE)
-                # Add some buildings (scaled up)
-                elif 75 <= x <= 90 and 15 <= y <= 30:
-                    if x == 82 and y == 30:
-                        row.append(self.TILE_DOOR)  # Door
-                    else:
-                        row.append(self.TILE_WALL)
-                elif 15 <= x <= 30 and 75 <= y <= 90:
-                    if x == 22 and y == 90:
-                        row.append(self.TILE_DOOR)  # Door
-                    else:
-                        row.append(self.TILE_WALL)
-                # Add more varied terrain for the larger map
-                elif 90 <= x <= 110 and 90 <= y <= 110:
-                    # Another building area
-                    if x == 100 and y == 110:
-                        row.append(self.TILE_DOOR)
-                    else:
-                        row.append(self.TILE_WALL)
-                # Random features (less dense for bigger map)
-                elif random.random() < 0.03:  # Reduced from 0.05
-                    row.append(self.TILE_STONE)
-                elif random.random() < 0.05:  # Reduced from 0.08
-                    row.append(self.TILE_DIRT)
-                else:
-                    row.append(self.TILE_GRASS)
+                row.append(self.TILE_GRASS)
             tiles.append(row)
         
-        # Ensure player starting area is clear (scaled up)
-        start_x = self.width // 2
-        start_y = self.height // 2
+        # Create border walls
+        for y in range(self.height):
+            for x in range(self.width):
+                if x == 0 or x == self.width - 1 or y == 0 or y == self.height - 1:
+                    tiles[y][x] = self.TILE_WALL
         
-        for dy in range(-5, 6):  # Larger clear area
-            for dx in range(-5, 6):
+        # Create a central town area with stone paths
+        town_center_x, town_center_y = 60, 60
+        
+        # Main cross roads through the center
+        for x in range(20, 100):
+            tiles[town_center_y][x] = self.TILE_STONE
+            tiles[town_center_y + 1][x] = self.TILE_STONE
+        
+        for y in range(20, 100):
+            tiles[y][town_center_x] = self.TILE_STONE
+            tiles[y][town_center_x + 1] = self.TILE_STONE
+        
+        # Create town buildings
+        self.create_building(tiles, 25, 25, 15, 10)  # Top-left building
+        self.create_building(tiles, 80, 25, 15, 10)  # Top-right building
+        self.create_building(tiles, 25, 85, 15, 10)  # Bottom-left building
+        self.create_building(tiles, 80, 85, 15, 10)  # Bottom-right building
+        
+        # Central marketplace
+        for y in range(55, 66):
+            for x in range(55, 66):
+                tiles[y][x] = self.TILE_STONE
+        
+        # Create a lake in the northeast
+        self.create_lake(tiles, 85, 35, 12)
+        
+        # Create a forest area in the southwest
+        self.create_forest_clearing(tiles, 25, 75, 20)
+        
+        # Add dirt paths connecting areas
+        self.create_dirt_path(tiles, 40, 30, 60, 30)  # Horizontal path
+        self.create_dirt_path(tiles, 30, 40, 30, 80)  # Vertical path
+        self.create_dirt_path(tiles, 70, 40, 70, 80)  # Another vertical path
+        
+        # Ensure player starting area is clear
+        start_x, start_y = 60, 60
+        for dy in range(-3, 4):
+            for dx in range(-3, 4):
                 if 0 <= start_x + dx < self.width and 0 <= start_y + dy < self.height:
-                    tiles[start_y + dy][start_x + dx] = self.TILE_GRASS
+                    if tiles[start_y + dy][start_x + dx] == self.TILE_WALL:
+                        tiles[start_y + dy][start_x + dx] = self.TILE_STONE
         
-        # Mirror the tiles horizontally to fix the mirroring issue
-        # Actually, let's not mirror the data - let's fix it in the rendering instead
         return tiles
+    
+    def create_building(self, tiles, start_x, start_y, width, height):
+        """Create a building structure"""
+        # Building walls
+        for y in range(start_y, start_y + height):
+            for x in range(start_x, start_x + width):
+                if (x == start_x or x == start_x + width - 1 or 
+                    y == start_y or y == start_y + height - 1):
+                    tiles[y][x] = self.TILE_WALL
+                else:
+                    tiles[y][x] = self.TILE_STONE  # Interior floor
+        
+        # Add a door
+        door_x = start_x + width // 2
+        door_y = start_y + height - 1
+        if 0 <= door_x < self.width and 0 <= door_y < self.height:
+            tiles[door_y][door_x] = self.TILE_DOOR
+    
+    def create_lake(self, tiles, center_x, center_y, radius):
+        """Create a circular lake"""
+        for y in range(max(1, center_y - radius), min(self.height - 1, center_y + radius)):
+            for x in range(max(1, center_x - radius), min(self.width - 1, center_x + radius)):
+                distance = ((x - center_x) ** 2 + (y - center_y) ** 2) ** 0.5
+                if distance < radius - 2:
+                    tiles[y][x] = self.TILE_WATER
+                elif distance < radius:
+                    tiles[y][x] = self.TILE_DIRT  # Shore
+    
+    def create_forest_clearing(self, tiles, center_x, center_y, size):
+        """Create a forest clearing area"""
+        for y in range(max(1, center_y - size//2), min(self.height - 1, center_y + size//2)):
+            for x in range(max(1, center_x - size//2), min(self.width - 1, center_x + size//2)):
+                if random.random() < 0.3:  # 30% chance for dirt patches
+                    tiles[y][x] = self.TILE_DIRT
+    
+    def create_dirt_path(self, tiles, start_x, start_y, end_x, end_y):
+        """Create a dirt path between two points"""
+        # Simple straight line path
+        if start_x == end_x:  # Vertical path
+            for y in range(min(start_y, end_y), max(start_y, end_y) + 1):
+                if 1 <= y < self.height - 1:
+                    tiles[y][start_x] = self.TILE_DIRT
+        elif start_y == end_y:  # Horizontal path
+            for x in range(min(start_x, end_x), max(start_x, end_x) + 1):
+                if 1 <= x < self.width - 1:
+                    tiles[start_y][x] = self.TILE_DIRT
     
     def generate_heightmap(self):
         """Generate a heightmap for the level"""
@@ -195,8 +239,12 @@ class Level:
         else:
             self.tile_sprites[self.TILE_WALL] = self.iso_renderer.create_cube_tile((200, 200, 200), (150, 150, 150), (100, 100, 100))
         
-        # Dirt (fallback)
-        self.tile_sprites[self.TILE_DIRT] = self.iso_renderer.create_diamond_tile((150, 100, 50))
+        dirt_image = self.asset_loader.get_image("dirt_tile")
+        if dirt_image:
+            rotated_dirt = pygame.transform.rotate(dirt_image, 45)
+            self.tile_sprites[self.TILE_DIRT] = pygame.transform.scale(rotated_dirt, (self.tile_width, self.tile_height))
+        else:
+            self.tile_sprites[self.TILE_DIRT] = self.iso_renderer.create_diamond_tile((150, 100, 50))
         
         # Door (fallback)
         self.tile_sprites[self.TILE_DOOR] = self.iso_renderer.create_cube_tile((150, 100, 50), (120, 80, 40), (100, 60, 30))

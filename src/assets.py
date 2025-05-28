@@ -33,13 +33,26 @@ class AssetLoader:
             "stone_tile": "stone_tile.png", 
             "water_tile": "water_tile.png",
             "wall_tile": "wall_tile.png",
+            "dirt_tile": "dirt_tile.png",  # Added dirt tile
             "player_sprite": "player_sprite.png",
             "goblin_sprite": "goblin_sprite.png",
             "orc_boss_sprite": "orc_boss_sprite.png",
             "npc_shopkeeper": "npc_shopkeeper.png",
-            "items_spritesheet": "items_spritesheet.png",
             "tree": "tree.png",
-            "rock": "rock.png"
+            "rock": "rock.png",
+            # Individual item sprites
+            "iron_sword": "iron_sword.png",
+            "steel_axe": "steel_axe.png",
+            "bronze_mace": "bronze_mace.png",
+            "silver_dagger": "silver_dagger.png",
+            "war_hammer": "war_hammer.png",
+            "leather_armor": "leather_armor.png",
+            "chain_mail": "chain_mail.png",
+            "plate_armor": "plate_armor.png",
+            "studded_leather": "studded_leather.png",
+            "scale_mail": "scale_mail.png",
+            "health_potion": "health_potion.png",
+            "mana_potion": "mana_potion.png"
         }
         
         for name, filename in image_files.items():
@@ -67,13 +80,26 @@ class AssetLoader:
             "stone_tile": (150, 150, 150),
             "water_tile": (50, 100, 200),
             "wall_tile": (100, 100, 100),
+            "dirt_tile": (139, 69, 19),  # Brown for dirt
             "player_sprite": (100, 150, 255),
             "goblin_sprite": (0, 100, 0),
             "orc_boss_sprite": (139, 0, 0),
             "npc_shopkeeper": (255, 215, 0),
-            "items_spritesheet": (255, 255, 255),
             "tree": (34, 139, 34),
-            "rock": (128, 128, 128)
+            "rock": (128, 128, 128),
+            # Item colors
+            "iron_sword": (192, 192, 192),
+            "steel_axe": (169, 169, 169),
+            "bronze_mace": (205, 127, 50),
+            "silver_dagger": (211, 211, 211),
+            "war_hammer": (105, 105, 105),
+            "leather_armor": (139, 69, 19),
+            "chain_mail": (128, 128, 128),
+            "plate_armor": (192, 192, 192),
+            "studded_leather": (160, 82, 45),
+            "scale_mail": (105, 105, 105),
+            "health_potion": (255, 0, 0),
+            "mana_potion": (0, 0, 255)
         }
         
         color = colors.get(name, (255, 255, 255))

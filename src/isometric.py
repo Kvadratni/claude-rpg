@@ -112,5 +112,18 @@ class IsometricRenderer:
         return surface
 
 def sort_by_depth(objects):
-    """Sort objects by their depth for proper isometric rendering"""
-    return sorted(objects, key=lambda obj: obj.x + obj.y)
+    """Sort objects by their depth for proper isometric rendering with occlusion"""
+    def get_sort_key(obj):
+        # Base depth calculation
+        base_depth = obj.x + obj.y
+        
+        # Adjust depth based on entity type for proper layering
+        if hasattr(obj, 'entity_type'):
+            if obj.entity_type == "object" and ("Tree" in obj.name or "Wall" in obj.name):
+                # Trees and walls should render after other entities at the same position
+                # to provide proper occlusion
+                return base_depth + 0.5
+        
+        return base_depth
+    
+    return sorted(objects, key=get_sort_key)

@@ -63,13 +63,19 @@ class Entity:
         pass
     
     def render(self, screen, iso_renderer, camera_x, camera_y):
-        """Render the entity"""
+        """Render the entity with proper depth and occlusion"""
         if self.sprite:
             screen_x, screen_y = iso_renderer.world_to_screen(self.x, self.y, camera_x, camera_y)
             
-            # Center the sprite
-            sprite_rect = self.sprite.get_rect()
-            sprite_rect.center = (screen_x, screen_y - 16)  # Offset for isometric view
+            # Adjust rendering position based on entity type for proper layering
+            if self.entity_type == "object" and ("Tree" in self.name or "Wall" in self.name):
+                # Trees and walls render taller and should occlude other entities
+                sprite_rect = self.sprite.get_rect()
+                sprite_rect.center = (screen_x, screen_y - 32)  # Render higher for occlusion
+            else:
+                # Regular entities
+                sprite_rect = self.sprite.get_rect()
+                sprite_rect.center = (screen_x, screen_y - 16)
             
             screen.blit(self.sprite, sprite_rect)
     
@@ -368,47 +374,32 @@ class Item(Entity):
         self.create_item_sprite()
     
     def create_item_sprite(self):
-        """Create item sprite"""
+        """Create item sprite using individual sprite files"""
         size = 36  # Increased from 24 to 36
         
-        # Try to use loaded spritesheet first
-        if self.asset_loader:
-            items_spritesheet = self.asset_loader.get_image("items_spritesheet")
-            if items_spritesheet:
-                # The spritesheet is 8x8 grid with 64x64 pixel sprites
-                sprite_size = 64
-                
-                # Define sprite positions for different item types based on the actual spritesheet
-                sprite_positions = {
-                    "consumable": (3, 3),  # Health potions (row 4, column 4 - red potion)
-                    "weapon": (4, 1),      # Sword (row 2, column 5)
-                    "armor": (1, 1),       # Shield (row 2, column 2)
-                    "misc": (0, 0)         # Chest (row 1, column 1)
-                }
-                
-                # For specific item names, use more specific sprites
-                if "Health Potion" in self.name:
-                    sprite_positions["consumable"] = (3, 3)  # Red potion
-                elif "Mana Potion" in self.name:
-                    sprite_positions["consumable"] = (4, 3)  # Blue potion
-                elif "Sword" in self.name:
-                    sprite_positions["weapon"] = (4, 1)      # Golden sword
-                elif "Axe" in self.name:
-                    sprite_positions["weapon"] = (2, 1)      # Axe
-                elif "Shield" in self.name or "Armor" in self.name:
-                    sprite_positions["armor"] = (1, 1)       # Shield
-                
-                if self.item_type in sprite_positions:
-                    col, row = sprite_positions[self.item_type]
-                    sprite_rect = pygame.Rect(col * sprite_size, row * sprite_size, sprite_size, sprite_size)
-                    
-                    # Extract the sprite from the sheet
-                    sprite_surface = pygame.Surface((sprite_size, sprite_size), pygame.SRCALPHA)
-                    sprite_surface.blit(items_spritesheet, (0, 0), sprite_rect)
-                    
-                    # Scale to desired size
-                    self.sprite = pygame.transform.scale(sprite_surface, (size, size))
-                    return
+        # Map item names to sprite names
+        sprite_mapping = {
+            "Iron Sword": "iron_sword",
+            "Steel Axe": "steel_axe", 
+            "Bronze Mace": "bronze_mace",
+            "Silver Dagger": "silver_dagger",
+            "War Hammer": "war_hammer",
+            "Leather Armor": "leather_armor",
+            "Chain Mail": "chain_mail",
+            "Plate Armor": "plate_armor", 
+            "Studded Leather": "studded_leather",
+            "Scale Mail": "scale_mail",
+            "Health Potion": "health_potion",
+            "Mana Potion": "mana_potion"
+        }
+        
+        # Try to use individual sprite files
+        if self.asset_loader and self.name in sprite_mapping:
+            sprite_name = sprite_mapping[self.name]
+            item_image = self.asset_loader.get_image(sprite_name)
+            if item_image:
+                self.sprite = pygame.transform.scale(item_image, (size, size))
+                return
         
         # Fallback to generated sprite
         self.sprite = pygame.Surface((size, size), pygame.SRCALPHA)
@@ -424,7 +415,10 @@ class Item(Entity):
             # Draw armor shape
             pygame.draw.ellipse(self.sprite, color, (6, 9, size - 12, size - 15))
         elif self.item_type == "consumable":
-            color = (255, 0, 255)  # Magenta
+            if "Health" in self.name:
+                color = (255, 0, 0)  # Red for health
+            else:
+                color = (0, 0, 255)  # Blue for mana
             # Draw potion shape
             pygame.draw.ellipse(self.sprite, color, (9, 12, size - 18, size - 18))
             pygame.draw.rect(self.sprite, (139, 69, 19), (size//2 - 3, 6, 6, 9))
