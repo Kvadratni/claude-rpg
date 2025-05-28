@@ -9,6 +9,47 @@ This is an isometric RPG game built with Python and Pygame. The game features a 
 cd /Users/mnovich/Development/claude-rpg && uv run claude-rpg
 ```
 
+## Architecture Overview
+
+### Core Game Loop
+1. **Entry Point**: `main.py` → `src/main.py:main()` → `src.main:main` (via pyproject.toml)
+2. **Game Controller**: `Game` class manages all game states and systems
+3. **Game States**: MENU → PLAYING → PAUSED → GAME_OVER (with transitions)
+4. **Main Systems**: Asset Loading → Audio → Level → Player → UI → Save/Load
+
+### Class Hierarchy & Dependencies
+```
+Game (game.py) - Main controller
+├── AssetLoader (assets.py) - Loads sprites, sounds, music
+│   └── AudioManager (audio.py) - Handles all audio/music
+├── MainMenu (menu.py) - Menu system with music integration
+├── Level (level.py) - World generation, entity management, UI rendering
+│   ├── IsometricRenderer (isometric.py) - 2D→Iso coordinate conversion
+│   ├── Entity (entity.py) - Base class for all game objects
+│   │   ├── NPC - Non-player characters with dialog
+│   │   ├── Enemy - Combat entities with AI
+│   │   └── Item - Collectible objects with effects
+│   └── Player (player.py) - Player character with inventory
+│       └── Inventory (inventory.py) - Item management UI
+├── SaveSystem (save_system.py) - Game persistence
+├── Settings (settings.py) - Configuration management
+└── GameLog (game_log.py) - Message logging system
+```
+
+### File Size & Complexity (Lines of Code)
+- **level.py** (850 lines) - Largest file, handles world generation, entity spawning, UI rendering
+- **player.py** (584 lines) - Player mechanics, inventory, combat, movement
+- **entity.py** (517 lines) - All game entities (NPCs, enemies, items) with sprite loading
+- **menu.py** (506 lines) - Enhanced menu system with visual effects and music
+- **audio.py** (354 lines) - Comprehensive audio system with music/SFX management
+- **game.py** (252 lines) - Main game controller and state management
+- **inventory.py** (244 lines) - Inventory UI with sprite rendering
+- **assets.py** (162 lines) - Asset loading with audio integration
+- **isometric.py** (128 lines) - Coordinate conversion utilities
+- **game_log.py** (129 lines) - Message logging system
+- **save_system.py** (93 lines) - JSON-based save/load system
+- **settings.py** (68 lines) - Configuration management
+
 ## Recent Major Updates (Latest Session)
 ### ✅ Bottom Menu UI Fixes
 - **Fixed overlapping slots**: Weapon and armor slots now have proper spacing (110px apart instead of 80px)
@@ -42,28 +83,76 @@ cd /Users/mnovich/Development/claude-rpg && uv run claude-rpg
 ## Project Structure
 ```
 /Users/mnovich/Development/claude-rpg/
-├── src/
-│   ├── game.py           # Main game controller and state management
-│   ├── player.py         # Player class with inventory management
-│   ├── inventory.py      # Inventory UI rendering and interaction
-│   ├── level.py          # Level generation, entity spawning, UI rendering
-│   ├── entity.py         # Entity classes (Item, Enemy, NPC, etc.)
-│   ├── assets.py         # Asset loading system
-│   ├── audio.py          # Audio system with music and SFX support
-│   ├── isometric.py      # Isometric rendering utilities
-│   ├── menu.py           # Main menu system with music integration
-│   ├── save_system.py    # Game save/load functionality
-│   ├── settings.py       # Game settings management
-│   └── game_log.py       # Game message logging
-├── assets/
-│   ├── images/           # All sprite files (PNG format)
-│   └── sounds/           # Audio files including music
-│       ├── menu_music.mp3
-│       ├── game_music.mp3
-│       └── [various SFX categories]/
-├── main.py               # Entry point
-└── pyproject.toml        # Project configuration
+├── src/                  # Main source code (Python package)
+│   ├── __init__.py       # Package initialization (4 lines)
+│   ├── main.py           # Entry point (31 lines)
+│   ├── game.py           # Main game controller (252 lines)
+│   ├── level.py          # World generation & UI rendering (850 lines) ⭐ LARGEST
+│   ├── player.py         # Player mechanics & inventory (584 lines)
+│   ├── entity.py         # Game entities (NPCs, enemies, items) (517 lines)
+│   ├── menu.py           # Menu system with music (506 lines)
+│   ├── audio.py          # Audio system with music/SFX (354 lines)
+│   ├── inventory.py      # Inventory UI rendering (244 lines)
+│   ├── assets.py         # Asset loading system (162 lines)
+│   ├── isometric.py      # Coordinate conversion utilities (128 lines)
+│   ├── game_log.py       # Message logging system (129 lines)
+│   ├── save_system.py    # JSON save/load system (93 lines)
+│   └── settings.py       # Configuration management (68 lines)
+├── assets/               # Game assets
+│   ├── images/           # Sprites (PNG format)
+│   │   ├── [tiles]       # grass_tile, stone_tile, water_tile, wall_tile, dirt_tile
+│   │   ├── [characters]  # player_sprite, goblin_sprite, orc_boss_sprite, npc_shopkeeper
+│   │   ├── [objects]     # tree, rock, menu_background
+│   │   ├── [weapons]     # iron_sword, steel_axe, bronze_mace, silver_dagger, war_hammer
+│   │   ├── [armor]       # leather_armor, chain_mail, plate_armor, studded_leather, scale_mail
+│   │   └── [consumables] # health_potion, mana_potion
+│   └── sounds/           # Audio files
+│       ├── menu_music.mp3    # Background music for menus
+│       ├── game_music.mp3    # Background music for gameplay
+│       └── [SFX categories]/ # combat/, ui/, environment/, magic/, creatures/, ambient/
+├── main.py               # Alternative entry point (37 lines)
+├── pyproject.toml        # Project configuration & dependencies
+├── test_game.py          # Test file (95 lines)
+└── .goosehints          # This file - development guidance
 ```
+
+## Key Navigation Points for Agents
+
+### 🎯 Common Development Tasks & File Locations:
+
+#### UI/Interface Issues:
+- **Bottom Menu**: `src/level.py` lines ~700-800 (`render_ui()` method)
+- **Inventory Display**: `src/inventory.py` lines ~40-150 (`render()` method)
+- **Menu System**: `src/menu.py` lines ~400-500 (`render_menu_items()` method)
+- **Game HUD**: `src/level.py` lines ~600-700 (player stats, game log)
+
+#### Game Mechanics:
+- **Player Movement**: `src/player.py` lines ~100-200 (`handle_input()`, `update()`)
+- **Combat System**: `src/player.py` lines ~250-350 (`attack_enemy()`, `take_damage()`)
+- **Item System**: `src/entity.py` lines ~400-500 (`Item` class)
+- **Inventory Logic**: `src/player.py` lines ~350-450 (`use_item()`, equipment methods)
+
+#### World & Entities:
+- **Level Generation**: `src/level.py` lines ~50-200 (`generate_level()`, building creation)
+- **Entity Spawning**: `src/level.py` lines ~200-350 (`spawn_entities()`, `spawn_items()`)
+- **Enemy AI**: `src/entity.py` lines ~250-350 (`Enemy.update()`)
+- **Collision Detection**: `src/level.py` lines ~450-550 (`check_collision()`)
+
+#### Audio & Assets:
+- **Music Control**: `src/audio.py` lines ~100-200 (music methods)
+- **Asset Loading**: `src/assets.py` lines ~50-150 (`load_images()`, `load_sounds()`)
+- **Sprite Creation**: `src/entity.py` lines ~50-100 (sprite creation methods)
+
+#### Save/Load & Settings:
+- **Game Persistence**: `src/save_system.py` (entire file, 93 lines)
+- **Configuration**: `src/settings.py` (entire file, 68 lines)
+- **Game States**: `src/game.py` lines ~150-250 (state management)
+
+### 🔧 System Integration Points:
+- **Audio Manager Access**: `getattr(self.asset_loader, 'audio_manager', None)`
+- **Asset Loader Integration**: Passed to all entities via constructor
+- **Game State Transitions**: `src/game.py` lines ~80-150 (event handling)
+- **Coordinate Conversion**: `src/isometric.py` (world ↔ screen coordinates)
 
 ## Key Files and Recent Changes
 
@@ -156,3 +245,13 @@ All individual sprite files are loaded successfully:
 - Bottom menu shows equipped items with actual sprites (not colored shapes)
 - Music system works with appropriate volume levels and state transitions
 - All major UI and audio issues have been resolved
+
+## Development Patterns & Best Practices
+- **Asset Loading**: Always pass `asset_loader` to entity constructors
+- **Audio Integration**: Access via `getattr(self.asset_loader, 'audio_manager', None)`
+- **Sprite Scaling**: Use `pygame.transform.scale()` for UI elements
+- **State Management**: Use Game class state constants (STATE_MENU, STATE_PLAYING, etc.)
+- **Coordinate Conversion**: Use IsometricRenderer for world ↔ screen conversion
+- **Error Handling**: Check for None values when accessing audio_manager or sprites
+- **UI Positioning**: Use relative positioning and proper spacing calculations
+- **Music Transitions**: Always use fade-in/out for smooth audio transitions
