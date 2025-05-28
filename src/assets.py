@@ -35,6 +35,7 @@ class AssetLoader:
             "wall_tile": "wall_tile.png",
             "dirt_tile": "dirt_tile.png",  # Added dirt tile
             "door_tile": "door_tile.png",  # Added door tile
+            "brick_tile": "brick_tile.png",  # Added brick tile for building interiors
             "player_sprite": "player_sprite.png",
             "goblin_sprite": "goblin_sprite.png",
             "orc_boss_sprite": "orc_boss_sprite.png",
@@ -106,6 +107,7 @@ class AssetLoader:
             "wall_tile": (100, 100, 100),
             "dirt_tile": (139, 69, 19),  # Brown for dirt
             "door_tile": (139, 69, 19),  # Brown for door
+            "brick_tile": (150, 80, 60),  # Reddish-brown for brick
             "player_sprite": (100, 150, 255),
             "goblin_sprite": (0, 100, 0),
             "orc_boss_sprite": (139, 0, 0),
