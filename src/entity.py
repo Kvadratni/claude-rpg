@@ -281,6 +281,18 @@ class Enemy(Entity):
         
         # AI state machine
         if distance < self.detection_range:
+            # Play detection sound only when first seeing the player
+            if self.state == "idle":
+                # Get audio manager
+                audio = getattr(self.asset_loader, 'audio_manager', None) if self.asset_loader else None
+                if audio:
+                    if "Goblin" in self.name:
+                        audio.play_creature_sound("goblin")
+                    elif self.is_boss and "Orc" in self.name:
+                        audio.play_creature_sound("orc_boss", "voice")
+                    elif "Orc" in self.name:
+                        audio.play_creature_sound("orc", "voice")
+            
             if distance <= self.attack_range:
                 self.state = "attacking"
                 if self.attack_cooldown <= 0:
@@ -288,8 +300,8 @@ class Enemy(Entity):
                     self.attack_cooldown = self.max_attack_cooldown
             else:
                 self.state = "chasing"
-                # Move towards player
-                if distance > 0:
+                # Move towards player but stop at a reasonable distance
+                if distance > self.attack_range + 0.3:  # Stop a bit further than attack range
                     move_x = (dx / distance) * self.speed
                     move_y = (dy / distance) * self.speed
                     
@@ -297,9 +309,13 @@ class Enemy(Entity):
                     new_x = self.x + move_x
                     new_y = self.y + move_y
                     
-                    if not level.check_collision(new_x, new_y, self.size):
-                        self.x = new_x
-                        self.y = new_y
+                    # Check collision with level and avoid overlapping with player
+                    if not level.check_collision(new_x, new_y, self.size, exclude_entity=self):
+                        # Also check if we're not getting too close to player
+                        new_distance = math.sqrt((new_x - player.x)**2 + (new_y - player.y)**2)
+                        if new_distance >= self.attack_range:
+                            self.x = new_x
+                            self.y = new_y
         else:
             self.state = "idle"
             # Random movement when idle
@@ -310,7 +326,7 @@ class Enemy(Entity):
                 new_x = self.x + move_x
                 new_y = self.y + move_y
                 
-                if not level.check_collision(new_x, new_y, self.size):
+                if not level.check_collision(new_x, new_y, self.size, exclude_entity=self):
                     self.x = new_x
                     self.y = new_y
     
@@ -319,12 +335,14 @@ class Enemy(Entity):
         # Get audio manager
         audio = getattr(self.asset_loader, 'audio_manager', None) if self.asset_loader else None
         
-        # Play attack sound
+        # Play attack sound - different sounds for different enemies
         if audio:
-            if "Goblin" in self.name:
-                audio.play_creature_sound("goblin")
-            elif self.is_boss:
-                audio.play_creature_sound("dragon")  # Use dragon growl for boss
+            if self.is_boss and "Orc" in self.name:
+                audio.play_creature_sound("orc_boss", "attack")
+            elif "Orc" in self.name:
+                audio.play_creature_sound("orc", "attack")
+            elif "Goblin" in self.name:
+                audio.play_combat_sound("weapon_hit")  # Generic attack sound for goblins
             else:
                 audio.play_combat_sound("weapon_hit")  # Generic attack sound
         
@@ -342,12 +360,15 @@ class Enemy(Entity):
         actual_damage = max(1, damage - random.randint(0, 3))  # Random defense
         self.health -= actual_damage
         
-        # Play hurt sound
+        # Play hurt sound - different sounds for different enemies
         if audio:
-            if "Goblin" in self.name:
-                audio.play_creature_sound("goblin")
-            elif self.is_boss:
-                audio.play_creature_sound("dragon")
+            if self.is_boss and "Orc" in self.name:
+                audio.play_creature_sound("orc_boss", "hurt")
+            elif "Orc" in self.name:
+                audio.play_creature_sound("orc", "hurt")
+            elif "Goblin" in self.name:
+                # Use blade slice for goblin hurt sound
+                audio.play_combat_sound("blade_slice")
             else:
                 # Use a combat sound for generic hurt
                 audio.play_combat_sound("blade_slice")

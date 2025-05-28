@@ -423,47 +423,73 @@ class Level:
         
         return True
     
-    def check_collision(self, x, y, size=0.4):
-        """Check collision with level geometry and entities"""
-        # Convert to tile coordinates
-        tile_x = int(x)
-        tile_y = int(y)
-        
-        # Check if the position is within level bounds
-        if x < 0.5 or x >= self.width - 0.5 or y < 0.5 or y >= self.height - 0.5:
+    def check_collision(self, x, y, size=0.4, exclude_entity=None):
+        """Check collision with level geometry and entities - improved precision"""
+        # Check if the position is within level bounds with proper margin
+        margin = size + 0.1
+        if x < margin or x >= self.width - margin or y < margin or y >= self.height - margin:
             return True
         
-        # Check the tile the entity is on
-        if 0 <= tile_x < self.width and 0 <= tile_y < self.height:
-            if not self.walkable[tile_y][tile_x]:
+        # Get the entity's bounding box corners
+        half_size = size * 0.7  # Slightly smaller collision box for better movement
+        corners = [
+            (x - half_size, y - half_size),  # Top-left
+            (x + half_size, y - half_size),  # Top-right
+            (x - half_size, y + half_size),  # Bottom-left
+            (x + half_size, y + half_size),  # Bottom-right
+        ]
+        
+        # Check each corner against tiles
+        for corner_x, corner_y in corners:
+            tile_x = int(corner_x)
+            tile_y = int(corner_y)
+            
+            # Ensure tile coordinates are within bounds
+            if 0 <= tile_x < self.width and 0 <= tile_y < self.height:
+                if not self.walkable[tile_y][tile_x]:
+                    return True
+        
+        # Also check center point
+        center_tile_x = int(x)
+        center_tile_y = int(y)
+        if 0 <= center_tile_x < self.width and 0 <= center_tile_y < self.height:
+            if not self.walkable[center_tile_y][center_tile_x]:
                 return True
         
-        # Check surrounding tiles for edge cases
-        for dy in range(-1, 2):
-            for dx in range(-1, 2):
-                check_x = tile_x + dx
-                check_y = tile_y + dy
-                
-                # Check if tile is within bounds
-                if 0 <= check_x < self.width and 0 <= check_y < self.height:
-                    # Check if tile is not walkable
-                    if not self.walkable[check_y][check_x]:
-                        # Calculate distance to tile center
-                        dist_x = abs(x - (check_x + 0.5))
-                        dist_y = abs(y - (check_y + 0.5))
-                        
-                        # Check if entity overlaps with tile (more precise collision)
-                        if dist_x < 0.4 + size and dist_y < 0.4 + size:
-                            return True
-        
-        # Check collision with objects
+        # Check collision with objects using circular collision
         for obj in self.objects:
-            if obj.blocks_movement:
-                dist_x = abs(x - obj.x)
-                dist_y = abs(y - obj.y)
+            if obj.blocks_movement and obj != exclude_entity:
+                dist_x = x - obj.x
+                dist_y = y - obj.y
+                distance = math.sqrt(dist_x * dist_x + dist_y * dist_y)
                 
-                # Use smaller collision box for objects
-                if dist_x < size + 0.3 and dist_y < size + 0.3:
+                # Use circular collision for objects
+                collision_distance = size + 0.35  # Slightly tighter collision
+                if distance < collision_distance:
+                    return True
+        
+        # Check collision with NPCs using circular collision
+        for npc in self.npcs:
+            if npc != exclude_entity:
+                dist_x = x - npc.x
+                dist_y = y - npc.y
+                distance = math.sqrt(dist_x * dist_x + dist_y * dist_y)
+                
+                # NPCs have collision
+                collision_distance = size + 0.4
+                if distance < collision_distance:
+                    return True
+        
+        # Check collision with enemies (prevent stacking)
+        for enemy in self.enemies:
+            if enemy != exclude_entity:
+                dist_x = x - enemy.x
+                dist_y = y - enemy.y
+                distance = math.sqrt(dist_x * dist_x + dist_y * dist_y)
+                
+                # Enemies should not overlap too much
+                collision_distance = size + 0.3
+                if distance < collision_distance:
                     return True
         
         return False

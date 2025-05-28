@@ -83,7 +83,10 @@ class AudioManager:
             'creatures': {
                 'dragon_growl': ['dragon_growl_1.wav', 'dragon_growl_2.wav'],
                 'goblin_voice': ['goblin_voice_1.wav', 'goblin_voice_2.wav', 'goblin_voice_3.wav',
-                                'goblin_voice_4.wav', 'goblin_voice_5.wav']
+                                'goblin_voice_4.wav', 'goblin_voice_5.wav'],
+                'orc_growl': ['dragon_growl_1.wav', 'dragon_growl_2.wav'],  # Use dragon sounds for orc boss
+                'orc_attack': ['dragon_growl_1.wav'],  # Deeper growl for attacks
+                'orc_hurt': ['dragon_growl_2.wav']     # Different growl for taking damage
             },
             'ambient': {
                 'cave_ambience': ['cave_ambience.wav'],
@@ -234,6 +237,13 @@ class AudioManager:
             return self.play_sound("creatures", "dragon_growl")
         elif creature_type == "goblin":
             return self.play_sound("creatures", "goblin_voice")
+        elif creature_type == "orc" or creature_type == "orc_boss":
+            if action == "attack":
+                return self.play_sound("creatures", "orc_attack")
+            elif action == "hurt":
+                return self.play_sound("creatures", "orc_hurt")
+            else:  # detection/voice
+                return self.play_sound("creatures", "orc_growl")
         return False
     
     def play_environment_sound(self, action):
