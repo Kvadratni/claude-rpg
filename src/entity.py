@@ -99,12 +99,20 @@ class Entity:
 class NPC(Entity):
     """Non-player character"""
     
-    def __init__(self, x, y, name, dialog=None, shop_items=None, asset_loader=None):
+    def __init__(self, x, y, name, dialog=None, shop_items=None, asset_loader=None, has_shop=False):
         super().__init__(x, y, name, "npc")
         self.dialog = dialog or ["Hello, traveler!"]
         self.shop_items = shop_items or []
         self.dialog_index = 0
         self.asset_loader = asset_loader
+        self.has_shop = has_shop
+        self.shop = None
+        
+        # Create shop if this NPC is a shopkeeper
+        if self.has_shop:
+            from .shop import Shop
+            shop_name = f"{self.name}'s Shop"
+            self.shop = Shop(shop_name, asset_loader)
         
         # Create NPC sprite
         self.create_npc_sprite()
@@ -161,14 +169,23 @@ class NPC(Entity):
             else:
                 audio.play_ui_sound("button_click")  # Generic NPC talk sound
         
-        if self.dialog:
-            print(f"{self.name}: {self.dialog[self.dialog_index]}")
-            self.dialog_index = (self.dialog_index + 1) % len(self.dialog)
-        
-        # Handle shop
-        if self.shop_items:
-            print(f"{self.name} has items for sale!")
-            # TODO: Implement shop interface
+        # Handle shop interaction
+        if self.has_shop and self.shop:
+            self.shop.open_shop()
+            if player.game_log:
+                player.game_log.add_message(f"{self.name}: Welcome to my shop!", "dialog")
+        else:
+            # Regular dialog
+            if self.dialog:
+                message = self.dialog[self.dialog_index]
+                if player.game_log:
+                    player.game_log.add_message(f"{self.name}: {message}", "dialog")
+                self.dialog_index = (self.dialog_index + 1) % len(self.dialog)
+            
+            # Handle shop (legacy)
+            if self.shop_items:
+                if player.game_log:
+                    player.game_log.add_message(f"{self.name} has items for sale!", "dialog")
     
     def get_save_data(self):
         """Get data for saving"""
@@ -176,14 +193,16 @@ class NPC(Entity):
         data.update({
             "dialog": self.dialog,
             "shop_items": self.shop_items,
-            "dialog_index": self.dialog_index
+            "dialog_index": self.dialog_index,
+            "has_shop": self.has_shop
         })
         return data
     
     @classmethod
     def from_save_data(cls, data, asset_loader=None):
         """Create NPC from save data"""
-        npc = cls(data["x"], data["y"], data["name"], data["dialog"], data["shop_items"], asset_loader)
+        npc = cls(data["x"], data["y"], data["name"], data["dialog"], data["shop_items"], 
+                 asset_loader, data.get("has_shop", False))
         npc.dialog_index = data["dialog_index"]
         return npc
 

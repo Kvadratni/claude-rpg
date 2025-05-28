@@ -288,14 +288,18 @@ class Level:
     
     def spawn_npcs(self):
         """Spawn NPCs in the level"""
-        # Spawn a shopkeeper
+        # Spawn a shopkeeper with a shop
         self.spawn_entity_at_valid_position(
-            lambda x, y: NPC(x, y, "Shopkeeper", dialog=["Welcome to my shop!", "What would you like to buy?"], asset_loader=self.asset_loader)
+            lambda x, y: NPC(x, y, "Shopkeeper", 
+                           dialog=["Welcome to my shop!", "I have the finest goods in town!", "Come back anytime!"], 
+                           asset_loader=self.asset_loader, has_shop=True)
         )
         
         # Spawn a quest giver
         self.spawn_entity_at_valid_position(
-            lambda x, y: NPC(x, y, "Village Elder", dialog=["Our village is in danger.", "Please defeat the Orc Chief!"], asset_loader=self.asset_loader)
+            lambda x, y: NPC(x, y, "Village Elder", 
+                           dialog=["Our village is in danger.", "Please defeat the Orc Chief!", "You are our only hope."], 
+                           asset_loader=self.asset_loader)
         )
     
     def spawn_items(self):
@@ -649,6 +653,13 @@ class Level:
     
     def handle_event(self, event):
         """Handle level events"""
+        # Check if any shop is open and handle shop events first
+        for npc in self.npcs:
+            if hasattr(npc, 'shop') and npc.shop and npc.shop.show:
+                if event.type == pygame.MOUSEBUTTONDOWN and event.button == 1:
+                    if npc.shop.handle_click(event.pos, self.player):
+                        return  # Shop consumed the event
+        
         # Handle mouse clicks for interaction and movement
         if event.type == pygame.MOUSEBUTTONDOWN:
             if event.button == 1:  # Left click
@@ -890,6 +901,11 @@ class Level:
         
         # Render UI on top
         self.render_ui(screen)
+        
+        # Render shops on top of everything
+        for npc in self.npcs:
+            if hasattr(npc, 'shop') and npc.shop:
+                npc.shop.render(screen)
     
     def render_ui(self, screen):
         """Render enhanced game UI"""

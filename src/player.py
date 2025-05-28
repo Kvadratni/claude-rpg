@@ -101,6 +101,12 @@ class Player:
         """Handle player input"""
         self.moving = False
         
+        # Check if any shop is open - if so, disable movement
+        if level:
+            for npc in level.npcs:
+                if hasattr(npc, 'shop') and npc.shop and npc.shop.show:
+                    return  # Don't allow movement while shop is open
+        
         # Follow current path if we have one
         if self.path and self.path_index < len(self.path):
             target_x, target_y = self.path[self.path_index]
@@ -202,6 +208,12 @@ class Player:
     
     def handle_mouse_click(self, world_x, world_y, level):
         """Handle mouse click for movement and interaction"""
+        # Check if any shop is open - if so, disable mouse movement
+        if level:
+            for npc in level.npcs:
+                if hasattr(npc, 'shop') and npc.shop and npc.shop.show:
+                    return  # Don't allow movement while shop is open
+        
         # Get audio manager
         audio = getattr(self.asset_loader, 'audio_manager', None) if self.asset_loader else None
         
@@ -212,8 +224,24 @@ class Player:
         for npc in level.npcs:
             # Use larger detection area for easier clicking
             if abs(world_x - npc.x) < 1.2 and abs(world_y - npc.y) < 1.2:
-                clicked_entity = npc
-                break
+                # Check if player is close enough to interact
+                dist = math.sqrt((self.x - npc.x)**2 + (self.y - npc.y)**2)
+                if dist < 2.0:  # Same proximity requirement as item pickup
+                    clicked_entity = npc
+                    break
+                else:
+                    # Use pathfinding to move towards the NPC
+                    path = level.find_path(self.x, self.y, npc.x, npc.y, self.size)
+                    if path:
+                        self.path = path
+                        self.path_index = 0
+                        self.target_x = npc.x
+                        self.target_y = npc.y
+                    else:
+                        if self.game_log:
+                            self.game_log.add_message(f"Can't reach {npc.name}!", "system")
+                    clicked_entity = npc  # Still set clicked_entity to prevent movement
+                    break
         
         # Check items
         if not clicked_entity:
@@ -296,10 +324,18 @@ class Player:
                 if self.game_log:
                     self.game_log.add_message("Can't move there!", "system")
         
-        # Interact with clicked entity
+        # Interact with clicked entity (only if close enough)
         if clicked_entity:
             if hasattr(clicked_entity, 'interact'):
-                clicked_entity.interact(self)
+                # For NPCs, check if we're close enough to actually interact
+                if clicked_entity.entity_type == "npc":
+                    dist = math.sqrt((self.x - clicked_entity.x)**2 + (self.y - clicked_entity.y)**2)
+                    if dist < 2.0:  # Only interact if close enough
+                        clicked_entity.interact(self)
+                    # If not close enough, we've already set up pathfinding above
+                else:
+                    # For other entities, interact normally
+                    clicked_entity.interact(self)
     
     def update(self, level):
         """Update player logic"""
