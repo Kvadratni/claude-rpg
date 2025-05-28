@@ -22,8 +22,8 @@ class Player:
         self.level = 1
         self.health = 100
         self.max_health = 100
-        self.mana = 50
-        self.max_mana = 50
+        self.stamina = 50
+        self.max_stamina = 50
         self.experience = 0
         self.experience_to_next = 100
         self.gold = 50
@@ -131,6 +131,28 @@ class Player:
                     self.x = new_x
                     self.y = new_y
                     self.moving = True
+                    
+                    # Play footstep sounds occasionally while moving
+                    if hasattr(self, 'footstep_timer'):
+                        self.footstep_timer += 1
+                    else:
+                        self.footstep_timer = 0
+                    
+                    if self.footstep_timer >= 20:  # Play footstep every 20 frames
+                        self.footstep_timer = 0
+                        audio = getattr(self.asset_loader, 'audio_manager', None) if self.asset_loader else None
+                        if audio and level:
+                            # Determine surface type based on current tile
+                            tile_x = int(self.x)
+                            tile_y = int(self.y)
+                            if 0 <= tile_x < level.width and 0 <= tile_y < level.height:
+                                tile_type = level.tiles[tile_y][tile_x]
+                                if tile_type == level.TILE_STONE:
+                                    audio.play_footstep("stone")
+                                elif tile_type == level.TILE_WATER:
+                                    audio.play_footstep("water")
+                                else:
+                                    audio.play_footstep("dirt")  # Default for grass/dirt
                 
                 # Update direction based on movement (but don't rotate sprite)
                 if abs(dx) > abs(dy):
@@ -180,6 +202,8 @@ class Player:
                             if audio:
                                 if item.name.lower().find('gold') != -1 or item.name.lower().find('coin') != -1:
                                     audio.play_ui_sound("coin")
+                                elif item.item_type == "consumable":
+                                    audio.play_sound("ui", "leather_item")  # Use leather item sound for potions
                                 else:
                                     audio.play_ui_sound("click")
                             if self.game_log:
@@ -257,14 +281,24 @@ class Player:
         if self.attack_cooldown > 0:
             self.attack_cooldown -= 1
         
-        # Regenerate mana
-        if self.mana < self.max_mana and random.random() < 0.01:
-            self.mana += 1
+        # Regenerate stamina slowly over time
+        if self.stamina < self.max_stamina and random.random() < 0.02:
+            self.stamina += 1
     
     def attack(self, enemies):
         """Attack nearby enemies"""
+        # Check if player has enough stamina to attack
+        stamina_cost = 10  # Cost 10 stamina per attack
+        if self.stamina < stamina_cost:
+            if self.game_log:
+                self.game_log.add_message("Not enough stamina to attack!", "combat")
+            return
+        
         # Get audio manager
         audio = getattr(self.asset_loader, 'audio_manager', None) if self.asset_loader else None
+        
+        # Consume stamina
+        self.stamina -= stamina_cost
         
         for enemy in enemies[:]:
             # Calculate distance to enemy
@@ -307,9 +341,16 @@ class Player:
                         if self.game_log:
                             self.game_log.add_message(f"Enemy {enemy.name} defeated!", "combat")
                         # Experience is handled in the level class
+                    
+                    # Trigger combat music when player attacks
+                    if audio and not audio.is_combat_music_active():
+                        audio.start_combat_music()
     
     def take_damage(self, damage):
         """Take damage"""
+        # Get audio manager
+        audio = getattr(self.asset_loader, 'audio_manager', None) if self.asset_loader else None
+        
         # Apply defense reduction
         defense = self.defense
         if self.equipped_armor:
@@ -317,6 +358,11 @@ class Player:
         
         actual_damage = max(1, damage - defense)
         self.health = max(0, self.health - actual_damage)
+        
+        # Play hurt sound
+        if audio:
+            audio.play_combat_sound("blade_slice")  # Use blade slice as hurt sound
+        
         if self.game_log:
             self.game_log.add_message(f"Player takes {actual_damage} damage! ({self.health}/{self.max_health})", "combat")
         
@@ -328,11 +374,11 @@ class Player:
         if self.game_log:
             self.game_log.add_message(f"Player healed for {amount}! ({self.health}/{self.max_health})", "item")
     
-    def restore_mana(self, amount):
-        """Restore player mana"""
-        self.mana = min(self.max_mana, self.mana + amount)
+    def restore_stamina(self, amount):
+        """Restore player stamina"""
+        self.stamina = min(self.max_stamina, self.stamina + amount)
         if self.game_log:
-            self.game_log.add_message(f"Player restored {amount} mana! ({self.mana}/{self.max_mana})", "item")
+            self.game_log.add_message(f"Player restored {amount} stamina! ({self.stamina}/{self.max_stamina})", "item")
     
     def gain_experience(self, exp):
         """Gain experience points"""
@@ -358,9 +404,9 @@ class Player:
         
         # Increase stats
         self.max_health += 20
-        self.max_mana += 10
+        self.max_stamina += 10
         self.health = self.max_health  # Full heal on level up
-        self.mana = self.max_mana
+        self.stamina = self.max_stamina
         self.attack_damage += 5
         self.defense += 2
         
@@ -370,7 +416,7 @@ class Player:
         if self.game_log:
             self.game_log.add_message(f"Level up! Now level {self.level}", "experience")
             self.game_log.add_message(f"Health increased to {self.max_health}", "experience")
-            self.game_log.add_message(f"Mana increased to {self.max_mana}", "experience")
+            self.game_log.add_message(f"Stamina increased to {self.max_stamina}", "experience")
             self.game_log.add_message(f"Attack increased to {self.attack_damage}", "experience")
             self.game_log.add_message(f"Defense increased to {self.defense}", "experience")
     
@@ -391,12 +437,12 @@ class Player:
             # Apply item effects
             if "health" in item.effect:
                 self.heal(item.effect["health"])
-            if "mana" in item.effect:
-                self.restore_mana(item.effect["mana"])
+            if "stamina" in item.effect:
+                self.restore_stamina(item.effect["stamina"])
             
-            # Play consumption sound
+            # Play consumption sound - use metal pot sounds for potions
             if audio:
-                audio.play_ui_sound("click")
+                audio.play_sound("ambient", "metal_pot")
             
             # Remove item after use
             self.remove_item(item)
@@ -414,9 +460,12 @@ class Player:
             if self.game_log:
                 self.game_log.add_message(f"Equipped {item.name}", "item")
         elif item.item_type == "armor":
-            # Play equip sound
+            # Play equip sound - use cloth equip sounds for armor
             if audio:
-                audio.play_ui_sound("click")
+                if "leather" in item.name.lower() or "cloth" in item.name.lower():
+                    audio.play_sound("ui", "cloth_equip")
+                else:
+                    audio.play_sound("ui", "armor_equip")
             
             # Equip armor
             old_armor = self.equipped_armor
@@ -488,10 +537,10 @@ class Player:
         health_width = int((self.health / self.max_health) * bar_width)
         pygame.draw.rect(screen, (0, 255, 0), (x - bar_width//2, y, health_width, bar_height))
         
-        # Mana bar
+        # Stamina bar
         pygame.draw.rect(screen, (50, 50, 100), (x - bar_width//2, y + bar_height + 1, bar_width, bar_height - 1))
-        mana_width = int((self.mana / self.max_mana) * bar_width)
-        pygame.draw.rect(screen, (0, 100, 255), (x - bar_width//2, y + bar_height + 1, mana_width, bar_height - 1))
+        stamina_width = int((self.stamina / self.max_stamina) * bar_width)
+        pygame.draw.rect(screen, (0, 100, 255), (x - bar_width//2, y + bar_height + 1, stamina_width, bar_height - 1))
     
     def render_inventory(self, screen):
         """Render inventory UI"""
@@ -505,8 +554,8 @@ class Player:
             "level": self.level,
             "health": self.health,
             "max_health": self.max_health,
-            "mana": self.mana,
-            "max_mana": self.max_mana,
+            "stamina": self.stamina,
+            "max_stamina": self.max_stamina,
             "experience": self.experience,
             "experience_to_next": self.experience_to_next,
             "gold": self.gold,
@@ -526,8 +575,8 @@ class Player:
         player.level = data["level"]
         player.health = data["health"]
         player.max_health = data["max_health"]
-        player.mana = data["mana"]
-        player.max_mana = data["max_mana"]
+        player.stamina = data.get("stamina", data.get("mana", 50))  # Backward compatibility
+        player.max_stamina = data.get("max_stamina", data.get("max_mana", 50))  # Backward compatibility
         player.experience = data["experience"]
         player.experience_to_next = data["experience_to_next"]
         player.gold = data["gold"]

@@ -34,10 +34,12 @@ class AssetLoader:
             "water_tile": "water_tile.png",
             "wall_tile": "wall_tile.png",
             "dirt_tile": "dirt_tile.png",  # Added dirt tile
+            "door_tile": "door_tile.png",  # Added door tile
             "player_sprite": "player_sprite.png",
             "goblin_sprite": "goblin_sprite.png",
             "orc_boss_sprite": "orc_boss_sprite.png",
             "npc_shopkeeper": "npc_shopkeeper.png",
+            "elder_npc": "elder_npc.png",  # Added elder NPC
             "tree": "tree.png",
             "rock": "rock.png",
             "menu_background": "menu_background.png",  # Added menu background
@@ -53,7 +55,8 @@ class AssetLoader:
             "studded_leather": "studded_leather.png",
             "scale_mail": "scale_mail.png",
             "health_potion": "health_potion.png",
-            "mana_potion": "mana_potion.png"
+            "stamina_potion": "stamina_potion.png",
+            "coin": "coin.png"  # Added coin sprite
         }
         
         for name, filename in image_files.items():
@@ -82,10 +85,12 @@ class AssetLoader:
             "water_tile": (50, 100, 200),
             "wall_tile": (100, 100, 100),
             "dirt_tile": (139, 69, 19),  # Brown for dirt
+            "door_tile": (139, 69, 19),  # Brown for door
             "player_sprite": (100, 150, 255),
             "goblin_sprite": (0, 100, 0),
             "orc_boss_sprite": (139, 0, 0),
             "npc_shopkeeper": (255, 215, 0),
+            "elder_npc": (128, 0, 128),  # Purple for elder
             "tree": (34, 139, 34),
             "rock": (128, 128, 128),
             # Item colors
@@ -100,7 +105,8 @@ class AssetLoader:
             "studded_leather": (160, 82, 45),
             "scale_mail": (105, 105, 105),
             "health_potion": (255, 0, 0),
-            "mana_potion": (0, 0, 255)
+            "stamina_potion": (0, 0, 255),
+            "coin": (255, 215, 0)  # Gold for coin
         }
         
         color = colors.get(name, (255, 255, 255))

@@ -25,6 +25,8 @@ class AudioManager:
         # Music-related attributes
         self.current_music = None
         self.music_paused = False
+        self.combat_music_active = False
+        self.previous_music = None  # Store music to return to after combat
         
         if self.enabled:
             try:
@@ -126,7 +128,8 @@ class AudioManager:
         self.music_files = {}
         music_files = {
             'menu': 'menu_music.mp3',
-            'game': 'game_music.mp3'
+            'game': 'game_music.mp3',
+            'combat': 'combat_music.mp3'  # Added combat music
         }
         
         for music_name, filename in music_files.items():
@@ -353,3 +356,39 @@ class AudioManager:
             pygame.mixer.music.stop()
             self.current_music = None
             self.music_paused = False
+    
+    def start_combat_music(self):
+        """Start combat music, storing current music to return to later"""
+        if not self.enabled or self.combat_music_active:
+            return False
+        
+        # Store the current music to return to after combat
+        if self.current_music and self.current_music != 'combat':
+            self.previous_music = self.current_music
+        
+        # Start combat music
+        if self.play_music('combat', loop=True, fade_in_ms=500):
+            self.combat_music_active = True
+            print("Combat music started")
+            return True
+        return False
+    
+    def end_combat_music(self):
+        """End combat music and return to previous music"""
+        if not self.enabled or not self.combat_music_active:
+            return False
+        
+        self.combat_music_active = False
+        
+        # Return to previous music or default to game music
+        music_to_play = self.previous_music if self.previous_music else 'game'
+        
+        if self.play_music(music_to_play, loop=True, fade_in_ms=1000):
+            print(f"Combat ended, returning to {music_to_play} music")
+            self.previous_music = None
+            return True
+        return False
+    
+    def is_combat_music_active(self):
+        """Check if combat music is currently active"""
+        return self.combat_music_active

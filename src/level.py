@@ -48,6 +48,10 @@ class Level:
         self.items = []
         self.objects = []  # Static objects like trees, rocks, etc.
         
+        # Combat state tracking
+        self.enemies_in_combat = set()  # Track which enemies are in combat
+        self.combat_music_timer = 0     # Timer for combat music fade out
+        
         # Spawn entities
         self.spawn_entities()
         
@@ -246,8 +250,13 @@ class Level:
         else:
             self.tile_sprites[self.TILE_DIRT] = self.iso_renderer.create_diamond_tile((150, 100, 50))
         
-        # Door (fallback)
-        self.tile_sprites[self.TILE_DOOR] = self.iso_renderer.create_cube_tile((150, 100, 50), (120, 80, 40), (100, 60, 30))
+        # Door - try to use loaded image, fall back to generated sprite
+        door_image = self.asset_loader.get_image("door_tile")
+        if door_image:
+            rotated_door = pygame.transform.rotate(door_image, 45)
+            self.tile_sprites[self.TILE_DOOR] = pygame.transform.scale(rotated_door, (self.tile_width, self.tile_height))
+        else:
+            self.tile_sprites[self.TILE_DOOR] = self.iso_renderer.create_cube_tile((150, 100, 50), (120, 80, 40), (100, 60, 30))
     
     def spawn_entities(self):
         """Spawn entities in the level"""
@@ -314,10 +323,10 @@ class Level:
                 lambda x, y: Item(x, y, armor_name, item_type="armor", effect={"defense": defense_bonus}, asset_loader=self.asset_loader)
             )
         
-        # Add mana potions
+        # Add stamina potions
         for _ in range(10):
             self.spawn_entity_at_valid_position(
-                lambda x, y: Item(x, y, "Mana Potion", item_type="consumable", effect={"mana": 30}, asset_loader=self.asset_loader)
+                lambda x, y: Item(x, y, "Stamina Potion", item_type="consumable", effect={"stamina": 30}, asset_loader=self.asset_loader)
             )
     
     def spawn_objects(self):
@@ -567,8 +576,28 @@ class Level:
         for enemy in self.enemies[:]:
             enemy.update(self, self.player)
             
+            # Track combat state for music
+            enemy_in_combat = enemy.state in ["chasing", "attacking"]
+            enemy_id = id(enemy)  # Use object id as unique identifier
+            
+            if enemy_in_combat:
+                if enemy_id not in self.enemies_in_combat:
+                    self.enemies_in_combat.add(enemy_id)
+                    # Start combat music if this is the first enemy to enter combat
+                    if len(self.enemies_in_combat) == 1:
+                        audio = getattr(self.asset_loader, 'audio_manager', None)
+                        if audio:
+                            audio.start_combat_music()
+            else:
+                if enemy_id in self.enemies_in_combat:
+                    self.enemies_in_combat.discard(enemy_id)
+            
             # Check if enemy is dead
             if enemy.health <= 0:
+                # Remove from combat tracking if dead
+                if enemy_id in self.enemies_in_combat:
+                    self.enemies_in_combat.discard(enemy_id)
+                
                 self.enemies.remove(enemy)
                 self.player.gain_experience(enemy.experience)
                 
@@ -578,10 +607,31 @@ class Level:
                     if item_type == "consumable":
                         item = Item(enemy.x, enemy.y, "Health Potion", item_type="consumable", effect={"health": 50}, asset_loader=self.asset_loader)
                     elif item_type == "weapon":
-                        item = Item(enemy.x, enemy.y, "Weapon", item_type="weapon", effect={"damage": 5 + random.randint(0, 10)}, asset_loader=self.asset_loader)
+                        # Use specific weapon names for drops
+                        weapon_names = ["Iron Sword", "Steel Axe", "Bronze Mace", "Silver Dagger", "War Hammer"]
+                        weapon_name = random.choice(weapon_names)
+                        damage_bonus = 5 + random.randint(0, 10)
+                        item = Item(enemy.x, enemy.y, weapon_name, item_type="weapon", effect={"damage": damage_bonus}, asset_loader=self.asset_loader)
                     else:
-                        item = Item(enemy.x, enemy.y, "Armor", item_type="armor", effect={"defense": 5 + random.randint(0, 10)}, asset_loader=self.asset_loader)
+                        # Use specific armor names for drops
+                        armor_names = ["Leather Armor", "Chain Mail", "Plate Armor", "Studded Leather", "Scale Mail"]
+                        armor_name = random.choice(armor_names)
+                        defense_bonus = 5 + random.randint(0, 10)
+                        item = Item(enemy.x, enemy.y, armor_name, item_type="armor", effect={"defense": defense_bonus}, asset_loader=self.asset_loader)
                     self.items.append(item)
+        
+        # Handle combat music transitions
+        if len(self.enemies_in_combat) == 0:
+            # No enemies in combat, start timer to end combat music
+            self.combat_music_timer += 1
+            if self.combat_music_timer >= 180:  # 3 seconds at 60 FPS
+                audio = getattr(self.asset_loader, 'audio_manager', None)
+                if audio and audio.is_combat_music_active():
+                    audio.end_combat_music()
+                self.combat_music_timer = 0
+        else:
+            # Reset timer if combat is active
+            self.combat_music_timer = 0
         
         # Update NPCs
         for npc in self.npcs:
@@ -657,6 +707,9 @@ class Level:
         # Blit game surface to main screen
         screen.blit(game_surface, (0, 0))
         
+        # Render XP bar at the top
+        self.render_xp_bar(screen)
+        
         # Render UI on top
         self.render_ui(screen)
     
@@ -673,26 +726,27 @@ class Level:
         # Draw border
         pygame.draw.rect(ui_panel, (100, 100, 100), (0, 0, screen_width, ui_height), 2)
         
-        # Left side - Player stats
+        # Left side - Player stats with circular health/stamina bars
         font = pygame.font.Font(None, 24)
         small_font = pygame.font.Font(None, 20)
         
-        stats_text = [
-            f"Level: {self.player.level}",
-            f"Health: {self.player.health}/{self.player.max_health}",
-            f"Mana: {self.player.mana}/{self.player.max_mana}",
-            f"Exp: {self.player.experience}/{self.player.experience_to_next}",
-            f"Gold: {self.player.gold}"
-        ]
+        # Render circular health and stamina bars
+        self.render_circular_bars(ui_panel, 20, 30)
         
-        for i, text in enumerate(stats_text):
-            surface = small_font.render(text, True, (255, 255, 255))
-            ui_panel.blit(surface, (10, 10 + i * 22))
+        # Player level and gold (moved to top right of circles area)
+        stats_x = 160
+        level_text = f"Level {self.player.level}"
+        gold_text = f"Gold: {self.player.gold}"
+        
+        level_surface = small_font.render(level_text, True, (255, 215, 0))  # Gold color for level
+        gold_surface = small_font.render(gold_text, True, (255, 215, 0))   # Gold color for gold
+        ui_panel.blit(level_surface, (stats_x, 15))
+        ui_panel.blit(gold_surface, (stats_x, 35))
         
         # Center-left - Equipment display
-        equipment_x = 200
-        slot_size = 80  # Increased from 60 to 80
-        slot_y = 30  # Moved down from 10 to 30
+        equipment_x = 280
+        slot_size = 80
+        slot_y = 30
         
         # Current weapon display
         weapon_rect = pygame.Rect(equipment_x, slot_y, slot_size, slot_size)
@@ -722,8 +776,8 @@ class Level:
             no_weapon_rect = no_weapon.get_rect(center=weapon_rect.center)
             ui_panel.blit(no_weapon, no_weapon_rect)
         
-        # Current armor display - moved further right to prevent overlap
-        armor_x = equipment_x + slot_size + 30  # Increased spacing from 80 to 110
+        # Current armor display
+        armor_x = equipment_x + slot_size + 30
         armor_rect = pygame.Rect(armor_x, slot_y, slot_size, slot_size)
         pygame.draw.rect(ui_panel, (60, 60, 60), armor_rect)
         pygame.draw.rect(ui_panel, (100, 100, 100), armor_rect, 2)
@@ -751,8 +805,8 @@ class Level:
             no_armor_rect = no_armor.get_rect(center=armor_rect.center)
             ui_panel.blit(no_armor, no_armor_rect)
         
-        # Inventory button - adjust position to account for larger slots
-        inv_button_x = armor_x + slot_size + 20  # Updated to use slot_size
+        # Inventory button
+        inv_button_x = armor_x + slot_size + 20
         inv_button = pygame.Rect(inv_button_x, 20, 100, 40)
         pygame.draw.rect(ui_panel, (80, 80, 80), inv_button)
         pygame.draw.rect(ui_panel, (120, 120, 120), inv_button, 2)
@@ -764,7 +818,7 @@ class Level:
         # Store button rect for click detection (adjust for screen position)
         self.inventory_button_rect = pygame.Rect(inv_button_x, screen_height - ui_height + 20, 100, 40)
         
-        # Right side - Game log (non-transparent)
+        # Right side - Game log with proper message rendering
         log_x = screen_width - 350
         log_width = 340
         log_height = ui_height - 20
@@ -777,17 +831,25 @@ class Level:
         log_title = font.render("Game Log:", True, (200, 200, 200))
         log_panel.blit(log_title, (5, 5))
         
-        # Render recent messages
+        # Render recent messages properly
         if hasattr(self.player, 'game_log') and self.player.game_log:
             recent_messages = self.player.game_log.messages[-6:]  # Last 6 messages
             for i, message_data in enumerate(recent_messages):
-                if isinstance(message_data, tuple) and len(message_data) >= 2:
+                # Handle both old tuple format and new dict format
+                if isinstance(message_data, dict):
+                    message = message_data.get('text', str(message_data))
+                    msg_type = message_data.get('type', 'system')
+                elif isinstance(message_data, tuple) and len(message_data) >= 2:
                     message, msg_type = message_data[:2]
                 else:
                     message = str(message_data)
                     msg_type = "system"
+                
                 color = self.player.game_log.get_message_color(msg_type)
-                msg_surface = small_font.render(message[:45], True, color)  # Truncate long messages
+                # Truncate long messages to fit in the log panel
+                if len(message) > 40:
+                    message = message[:37] + "..."
+                msg_surface = small_font.render(message, True, color)
                 log_panel.blit(msg_surface, (5, 30 + i * 18))
         
         ui_panel.blit(log_panel, (log_x, 10))
@@ -795,14 +857,133 @@ class Level:
         # Blit the entire UI panel to screen
         screen.blit(ui_panel, (0, screen_height - ui_height))
         
-        # Instructions (moved to top)
+        # Instructions (moved down to avoid XP bar)
         instructions = [
             "Left Click: Move/Interact/Attack  |  Right Click: Inspect  |  SPACE: Attack  |  ESC: Menu"
         ]
         
         for i, text in enumerate(instructions):
             surface = small_font.render(text, True, (200, 200, 200))
-            screen.blit(surface, (10, 10 + i * 20))
+            screen.blit(surface, (10, 40 + i * 20))  # Moved down from 10 to 40
+    
+    def render_circular_bars(self, surface, x, y):
+        """Render circular health and stamina bars"""
+        import math
+        
+        # Circle parameters
+        radius = 35
+        thickness = 8
+        
+        # Health circle (red)
+        health_center = (x + radius, y + radius)
+        health_percentage = self.player.health / self.player.max_health
+        
+        # Draw background circle for health
+        pygame.draw.circle(surface, (60, 20, 20), health_center, radius, thickness)
+        
+        # Draw health arc
+        if health_percentage > 0:
+            # Calculate arc angle (0 to 2*pi)
+            end_angle = health_percentage * 2 * math.pi - math.pi/2  # Start from top
+            start_angle = -math.pi/2
+            
+            # Draw filled arc for health
+            points = [health_center]
+            for angle in range(int(start_angle * 180 / math.pi), int(end_angle * 180 / math.pi) + 1):
+                angle_rad = angle * math.pi / 180
+                point_x = health_center[0] + (radius - thickness//2) * math.cos(angle_rad)
+                point_y = health_center[1] + (radius - thickness//2) * math.sin(angle_rad)
+                points.append((point_x, point_y))
+            
+            if len(points) > 2:
+                # Draw the health arc as a thick line
+                for i in range(int(start_angle * 180 / math.pi), int(end_angle * 180 / math.pi)):
+                    angle_rad = i * math.pi / 180
+                    start_x = health_center[0] + (radius - thickness) * math.cos(angle_rad)
+                    start_y = health_center[1] + (radius - thickness) * math.sin(angle_rad)
+                    end_x = health_center[0] + radius * math.cos(angle_rad)
+                    end_y = health_center[1] + radius * math.sin(angle_rad)
+                    pygame.draw.line(surface, (220, 50, 50), (start_x, start_y), (end_x, end_y), 2)
+        
+        # Health text - show current/max format
+        health_text = f"{self.player.health}/{self.player.max_health}"
+        font = pygame.font.Font(None, 18)  # Smaller font to fit the text
+        text_surface = font.render(health_text, True, (255, 255, 255))
+        text_rect = text_surface.get_rect(center=health_center)
+        surface.blit(text_surface, text_rect)
+        
+        # Health label
+        health_label = font.render("Health", True, (255, 255, 255))
+        surface.blit(health_label, (x, y + radius * 2 + 10))
+        
+        # Stamina circle (blue) - using stamina instead of mana
+        stamina_center = (x + radius * 3, y + radius)
+        stamina_percentage = self.player.stamina / self.player.max_stamina
+        
+        # Draw background circle for stamina
+        pygame.draw.circle(surface, (20, 20, 60), stamina_center, radius, thickness)
+        
+        # Draw stamina arc
+        if stamina_percentage > 0:
+            # Calculate arc angle (0 to 2*pi)
+            end_angle = stamina_percentage * 2 * math.pi - math.pi/2  # Start from top
+            start_angle = -math.pi/2
+            
+            # Draw the stamina arc as a thick line
+            for i in range(int(start_angle * 180 / math.pi), int(end_angle * 180 / math.pi)):
+                angle_rad = i * math.pi / 180
+                start_x = stamina_center[0] + (radius - thickness) * math.cos(angle_rad)
+                start_y = stamina_center[1] + (radius - thickness) * math.sin(angle_rad)
+                end_x = stamina_center[0] + radius * math.cos(angle_rad)
+                end_y = stamina_center[1] + radius * math.sin(angle_rad)
+                pygame.draw.line(surface, (50, 150, 220), (start_x, start_y), (end_x, end_y), 2)
+        
+        # Stamina text - show current/max format
+        stamina_text = f"{self.player.stamina}/{self.player.max_stamina}"
+        text_surface = font.render(stamina_text, True, (255, 255, 255))
+        text_rect = text_surface.get_rect(center=stamina_center)
+        surface.blit(text_surface, text_rect)
+        
+        # Stamina label
+        stamina_label = font.render("Stamina", True, (255, 255, 255))
+        surface.blit(stamina_label, (x + radius * 2, y + radius * 2 + 10))
+    
+    def render_xp_bar(self, screen):
+        """Render experience bar at the top of the screen"""
+        screen_width = screen.get_width()
+        
+        # XP bar dimensions
+        bar_width = screen_width - 40  # Leave 20px margin on each side
+        bar_height = 20
+        bar_x = 20
+        bar_y = 10
+        
+        # Calculate XP percentage
+        xp_percentage = self.player.experience / self.player.experience_to_next
+        
+        # Draw background
+        pygame.draw.rect(screen, (40, 40, 40), (bar_x, bar_y, bar_width, bar_height))
+        pygame.draw.rect(screen, (100, 100, 100), (bar_x, bar_y, bar_width, bar_height), 2)
+        
+        # Draw XP fill
+        if xp_percentage > 0:
+            fill_width = int(bar_width * xp_percentage)
+            # Gradient effect - brighter in the middle
+            for i in range(fill_width):
+                intensity = 1.0 - abs(i - fill_width/2) / (fill_width/2) if fill_width > 0 else 1.0
+                color = (
+                    int(255 * intensity * 0.8),  # Gold color
+                    int(215 * intensity * 0.8),
+                    int(0 * intensity * 0.8)
+                )
+                pygame.draw.line(screen, color, (bar_x + i, bar_y + 2), (bar_x + i, bar_y + bar_height - 2))
+        
+        # Draw XP text
+        font = pygame.font.Font(None, 18)
+        xp_text = f"XP: {self.player.experience}/{self.player.experience_to_next}"
+        text_surface = font.render(xp_text, True, (255, 255, 255))
+        text_rect = text_surface.get_rect(center=(bar_x + bar_width//2, bar_y + bar_height//2))
+        screen.blit(text_surface, text_rect)
     
     def get_save_data(self):
         """Get data for saving"""
@@ -816,6 +997,7 @@ class Level:
             "objects": [obj.get_save_data() for obj in self.objects],
             "camera_x": self.camera_x,
             "camera_y": self.camera_y
+            # Note: Combat state is not saved as it should reset on load
         }
     
     @classmethod
@@ -826,6 +1008,10 @@ class Level:
         level.heightmap = data["heightmap"]
         level.camera_x = data["camera_x"]
         level.camera_y = data["camera_y"]
+        
+        # Reset combat state on load
+        level.enemies_in_combat = set()
+        level.combat_music_timer = 0
         
         # Recreate entities
         level.enemies = []

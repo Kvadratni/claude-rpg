@@ -120,6 +120,11 @@ class NPC(Entity):
                 if npc_image:
                     self.sprite = pygame.transform.scale(npc_image, (size, size))
                     return
+            elif "Elder" in self.name:
+                elder_image = self.asset_loader.get_image("elder_npc")
+                if elder_image:
+                    self.sprite = pygame.transform.scale(elder_image, (size, size))
+                    return
         
         # Fallback to generated sprite
         self.sprite = pygame.Surface((size, size), pygame.SRCALPHA)
@@ -146,6 +151,16 @@ class NPC(Entity):
     
     def interact(self, player):
         """Interact with the NPC"""
+        # Get audio manager
+        audio = getattr(self.asset_loader, 'audio_manager', None) if self.asset_loader else None
+        
+        # Play dialog sound
+        if audio:
+            if "Elder" in self.name:
+                audio.play_magic_sound("turn_page")  # Use page turn for elder wisdom
+            else:
+                audio.play_ui_sound("button_click")  # Generic NPC talk sound
+        
         if self.dialog:
             print(f"{self.name}: {self.dialog[self.dialog_index]}")
             self.dialog_index = (self.dialog_index + 1) % len(self.dialog)
@@ -301,6 +316,18 @@ class Enemy(Entity):
     
     def attack_player(self, player):
         """Attack the player"""
+        # Get audio manager
+        audio = getattr(self.asset_loader, 'audio_manager', None) if self.asset_loader else None
+        
+        # Play attack sound
+        if audio:
+            if "Goblin" in self.name:
+                audio.play_creature_sound("goblin")
+            elif self.is_boss:
+                audio.play_creature_sound("dragon")  # Use dragon growl for boss
+            else:
+                audio.play_combat_sound("weapon_hit")  # Generic attack sound
+        
         damage_dealt = self.damage + random.randint(-5, 5)  # Random damage variation
         if player.take_damage(damage_dealt):
             print(f"{self.name} defeated the player!")
@@ -309,9 +336,28 @@ class Enemy(Entity):
     
     def take_damage(self, damage):
         """Take damage"""
+        # Get audio manager
+        audio = getattr(self.asset_loader, 'audio_manager', None) if self.asset_loader else None
+        
         actual_damage = max(1, damage - random.randint(0, 3))  # Random defense
         self.health -= actual_damage
+        
+        # Play hurt sound
+        if audio:
+            if "Goblin" in self.name:
+                audio.play_creature_sound("goblin")
+            elif self.is_boss:
+                audio.play_creature_sound("dragon")
+            else:
+                # Use a combat sound for generic hurt
+                audio.play_combat_sound("blade_slice")
+        
         print(f"{self.name} takes {actual_damage} damage! ({self.health}/{self.max_health})")
+        
+        # Play death sound if enemy dies
+        if self.health <= 0 and audio:
+            audio.play_ui_sound("defeat")  # Use defeat sound for enemy death
+        
         return self.health <= 0
     
     def render(self, screen, iso_renderer, camera_x, camera_y):
@@ -390,7 +436,7 @@ class Item(Entity):
             "Studded Leather": "studded_leather",
             "Scale Mail": "scale_mail",
             "Health Potion": "health_potion",
-            "Mana Potion": "mana_potion"
+            "Stamina Potion": "stamina_potion"
         }
         
         # Try to use individual sprite files
