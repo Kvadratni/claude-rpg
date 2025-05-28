@@ -33,6 +33,12 @@ class AssetLoader:
             "stone_tile": "stone_tile.png", 
             "water_tile": "water_tile.png",
             "wall_tile": "wall_tile.png",
+            "wall_corner_tl": "wall_corner_tl.png",
+            "wall_corner_tr": "wall_corner_tr.png", 
+            "wall_corner_bl": "wall_corner_bl.png",
+            "wall_corner_br": "wall_corner_br.png",
+            "wall_horizontal": "wall_horizontal.png",
+            "wall_vertical": "wall_vertical.png",
             "wall_window_horizontal": "wall_window_horizonal.png",  # Note: filename has typo "horizonal"
             "wall_window_vertical": "wall_window_vertical.png",
             "dirt_tile": "dirt_tile.png",  # Added dirt tile
@@ -107,6 +113,12 @@ class AssetLoader:
             "stone_tile": (150, 150, 150),
             "water_tile": (50, 100, 200),
             "wall_tile": (100, 100, 100),
+            "wall_corner_tl": (90, 90, 90),    # Slightly darker for corners
+            "wall_corner_tr": (90, 90, 90),
+            "wall_corner_bl": (90, 90, 90), 
+            "wall_corner_br": (90, 90, 90),
+            "wall_horizontal": (110, 110, 110), # Slightly lighter for directional walls
+            "wall_vertical": (110, 110, 110),
             "wall_window_horizontal": (120, 120, 150),  # Slightly blue-tinted for window walls
             "wall_window_vertical": (120, 120, 150),    # Slightly blue-tinted for window walls
             "dirt_tile": (139, 69, 19),  # Brown for dirt

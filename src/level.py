@@ -26,8 +26,11 @@ class Level:
     TILE_WALL_CORNER_BR = 9  # Bottom-right corner
     TILE_WALL_HORIZONTAL = 10  # Horizontal wall
     TILE_WALL_VERTICAL = 11    # Vertical wall
-    TILE_WALL_WINDOW = 12      # Wall with window
+    TILE_WALL_WINDOW = 12      # Wall with window (generic)
     TILE_BRICK = 13            # Brick floor for building interiors
+    # Specific window wall types
+    TILE_WALL_WINDOW_HORIZONTAL = 14  # Horizontal wall with window
+    TILE_WALL_WINDOW_VERTICAL = 15    # Vertical wall with window
     
     def __init__(self, level_name, player, asset_loader):
         self.name = level_name
@@ -200,14 +203,14 @@ class Level:
                 elif is_top or is_bottom:
                     # Add some windows to horizontal walls (not too many)
                     if random.random() < 0.3 and width > 6:  # 30% chance for windows on longer walls
-                        tiles[y][x] = self.TILE_WALL_WINDOW
+                        tiles[y][x] = self.TILE_WALL_WINDOW_HORIZONTAL
                     else:
                         tiles[y][x] = self.TILE_WALL_HORIZONTAL
                 # Vertical walls (left and right)
                 elif is_left or is_right:
                     # Add some windows to vertical walls
                     if random.random() < 0.25 and height > 6:  # 25% chance for windows on taller walls
-                        tiles[y][x] = self.TILE_WALL_WINDOW
+                        tiles[y][x] = self.TILE_WALL_WINDOW_VERTICAL
                     else:
                         tiles[y][x] = self.TILE_WALL_VERTICAL
                 else:
@@ -342,13 +345,9 @@ class Level:
             # Create variations of the wall sprite
             self.tile_sprites[self.TILE_WALL] = base_wall_sprite
             
-            # Create corner variations by adding corner decorations
-            self.create_wall_corner_sprites(base_wall_sprite)
-            
-            # Create horizontal/vertical wall variations
-            self.create_wall_directional_sprites(base_wall_sprite)
-            
-            # Load dedicated window wall assets
+            # Load dedicated wall assets instead of creating programmatically
+            self.load_corner_wall_sprites()
+            self.load_directional_wall_sprites()
             self.load_window_wall_sprites()
             
         else:
@@ -364,6 +363,8 @@ class Level:
             self.tile_sprites[self.TILE_WALL_HORIZONTAL] = base_wall
             self.tile_sprites[self.TILE_WALL_VERTICAL] = base_wall
             self.tile_sprites[self.TILE_WALL_WINDOW] = base_wall
+            self.tile_sprites[self.TILE_WALL_WINDOW_HORIZONTAL] = base_wall
+            self.tile_sprites[self.TILE_WALL_WINDOW_VERTICAL] = base_wall
         
         dirt_image = self.asset_loader.get_image("dirt_tile")
         if dirt_image:
@@ -485,6 +486,78 @@ class Level:
                         (window_x + window_width // 2, window_y + window_height), 1)
         
         self.tile_sprites[self.TILE_WALL_WINDOW] = window_wall
+    
+    def load_window_wall_sprites(self):
+        """Load dedicated window wall assets"""
+        wall_height = self.tile_height + 32  # Match other wall heights
+        
+        # Load horizontal window wall
+        h_window_image = self.asset_loader.get_image("wall_window_horizontal")
+        if h_window_image:
+            scaled_h_window = pygame.transform.scale(h_window_image, (self.tile_width + 8, wall_height))
+            self.tile_sprites[self.TILE_WALL_WINDOW_HORIZONTAL] = scaled_h_window
+            # Also use as generic window wall for backward compatibility
+            self.tile_sprites[self.TILE_WALL_WINDOW] = scaled_h_window
+        else:
+            # Fallback to programmatically created window wall
+            self.create_wall_window_sprite(self.tile_sprites[self.TILE_WALL])
+        
+        # Load vertical window wall
+        v_window_image = self.asset_loader.get_image("wall_window_vertical")
+        if v_window_image:
+            scaled_v_window = pygame.transform.scale(v_window_image, (self.tile_width + 8, wall_height))
+            self.tile_sprites[self.TILE_WALL_WINDOW_VERTICAL] = scaled_v_window
+        else:
+            # Fallback to horizontal window wall or programmatic creation
+            if hasattr(self, 'tile_sprites') and self.TILE_WALL_WINDOW_HORIZONTAL in self.tile_sprites:
+                self.tile_sprites[self.TILE_WALL_WINDOW_VERTICAL] = self.tile_sprites[self.TILE_WALL_WINDOW_HORIZONTAL]
+            else:
+                self.create_wall_window_sprite(self.tile_sprites[self.TILE_WALL])
+    
+    def load_corner_wall_sprites(self):
+        """Load dedicated corner wall assets"""
+        wall_height = self.tile_height + 32  # Match other wall heights
+        
+        # Load all corner wall assets
+        corner_assets = {
+            self.TILE_WALL_CORNER_TL: "wall_corner_tl",
+            self.TILE_WALL_CORNER_TR: "wall_corner_tr", 
+            self.TILE_WALL_CORNER_BL: "wall_corner_bl",
+            self.TILE_WALL_CORNER_BR: "wall_corner_br"
+        }
+        
+        for tile_type, asset_name in corner_assets.items():
+            corner_image = self.asset_loader.get_image(asset_name)
+            if corner_image:
+                scaled_corner = pygame.transform.scale(corner_image, (self.tile_width + 8, wall_height))
+                self.tile_sprites[tile_type] = scaled_corner
+            else:
+                # Fallback to programmatically created corner
+                self.create_wall_corner_sprites(self.tile_sprites[self.TILE_WALL])
+                break  # If one fails, use programmatic creation for all
+    
+    def load_directional_wall_sprites(self):
+        """Load dedicated horizontal and vertical wall assets"""
+        wall_height = self.tile_height + 32  # Match other wall heights
+        
+        # Load horizontal wall
+        h_wall_image = self.asset_loader.get_image("wall_horizontal")
+        if h_wall_image:
+            scaled_h_wall = pygame.transform.scale(h_wall_image, (self.tile_width + 8, wall_height))
+            self.tile_sprites[self.TILE_WALL_HORIZONTAL] = scaled_h_wall
+        else:
+            # Fallback to programmatically created horizontal wall
+            self.create_wall_directional_sprites(self.tile_sprites[self.TILE_WALL])
+        
+        # Load vertical wall
+        v_wall_image = self.asset_loader.get_image("wall_vertical")
+        if v_wall_image:
+            scaled_v_wall = pygame.transform.scale(v_wall_image, (self.tile_width + 8, wall_height))
+            self.tile_sprites[self.TILE_WALL_VERTICAL] = scaled_v_wall
+        else:
+            # Fallback to programmatically created vertical wall if not already done
+            if self.TILE_WALL_HORIZONTAL not in self.tile_sprites:
+                self.create_wall_directional_sprites(self.tile_sprites[self.TILE_WALL])
     
     def spawn_entities(self):
         """Spawn entities in specific story locations"""
@@ -1505,7 +1578,8 @@ class Level:
                     game_surface.blit(door_sprite, door_rect)
                 elif tile_type in [self.TILE_WALL, self.TILE_WALL_CORNER_TL, self.TILE_WALL_CORNER_TR, 
                                    self.TILE_WALL_CORNER_BL, self.TILE_WALL_CORNER_BR, 
-                                   self.TILE_WALL_HORIZONTAL, self.TILE_WALL_VERTICAL, self.TILE_WALL_WINDOW]:
+                                   self.TILE_WALL_HORIZONTAL, self.TILE_WALL_VERTICAL, self.TILE_WALL_WINDOW,
+                                   self.TILE_WALL_WINDOW_HORIZONTAL, self.TILE_WALL_WINDOW_VERTICAL]:
                     # Render all wall types with better positioning and subtle shadow
                     # Add shadow first
                     shadow_offset = 2
