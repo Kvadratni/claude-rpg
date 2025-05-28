@@ -1,0 +1,232 @@
+"""
+Game class - Main game controller
+"""
+
+import pygame
+import sys
+from .menu import MainMenu
+from .level import Level
+from .player import Player
+from .save_system import SaveSystem
+from .assets import AssetLoader
+from .settings import Settings
+from .game_log import GameLog
+
+class Game:
+    """Main game class that controls the game flow"""
+    
+    # Game states
+    STATE_MENU = 0
+    STATE_PLAYING = 1
+    STATE_PAUSED = 2
+    STATE_GAME_OVER = 3
+    
+    def __init__(self):
+        """Initialize the game"""
+        # Initialize settings first
+        self.settings = Settings()
+        
+        self.width = self.settings.get("window_width")
+        self.height = self.settings.get("window_height")
+        self.min_width = 800
+        self.min_height = 600
+        
+        flags = pygame.RESIZABLE
+        if self.settings.get("fullscreen"):
+            flags |= pygame.FULLSCREEN
+            
+        self.screen = pygame.display.set_mode((self.width, self.height), flags)
+        pygame.display.set_caption("Claude RPG")
+        
+        self.clock = pygame.time.Clock()
+        self.running = True
+        self.state = Game.STATE_MENU
+        
+        # Initialize systems
+        self.save_system = SaveSystem()
+        self.asset_loader = AssetLoader()
+        self.game_log = GameLog()
+        
+        # Initialize game components
+        self.menu = MainMenu(self)
+        self.player = None
+        self.current_level = None
+        
+        # Load resources
+        self.load_resources()
+        
+        # Welcome message
+        self.game_log.add_message("Welcome to Claude RPG!", "system")
+    
+    def load_resources(self):
+        """Load game resources"""
+        # This would typically load sprites, sounds, etc.
+        pass
+    
+    def new_game(self):
+        """Start a new game"""
+        # Create player at the center of the much bigger map
+        self.player = Player(60, 60, self.asset_loader, self.game_log)
+        
+        # Create the first level
+        self.current_level = Level("town", self.player, self.asset_loader)
+        
+        # Switch to playing state
+        self.state = Game.STATE_PLAYING
+        
+        # Log game start
+        self.game_log.add_message("A new adventure begins...", "system")
+    
+    def load_game(self, save_name):
+        """Load a saved game"""
+        game_data = self.save_system.load_game(save_name)
+        if game_data:
+            # Create player and level from saved data
+            self.player = Player.from_save_data(game_data["player"], self.asset_loader, self.game_log)
+            self.current_level = Level.from_save_data(game_data["level"], self.player, self.asset_loader)
+            self.state = Game.STATE_PLAYING
+            self.game_log.add_message(f"Game loaded: {save_name}", "system")
+            return True
+        return False
+    
+    def save_game(self, save_name):
+        """Save the current game"""
+        if self.player and self.current_level:
+            game_data = {
+                "player": self.player.get_save_data(),
+                "level": self.current_level.get_save_data()
+            }
+            return self.save_system.save_game(save_name, game_data)
+        return False
+    
+    def handle_events(self):
+        """Handle pygame events"""
+        for event in pygame.event.get():
+            if event.type == pygame.QUIT:
+                self.running = False
+            elif event.type == pygame.VIDEORESIZE:
+                # Handle window resize
+                self.width = max(self.min_width, event.w)
+                self.height = max(self.min_height, event.h)
+                self.screen = pygame.display.set_mode((self.width, self.height), pygame.RESIZABLE)
+                
+                # Update settings
+                self.settings.set("window_width", self.width)
+                self.settings.set("window_height", self.height)
+                self.settings.save_settings()
+                
+                self.game_log.add_message(f"Window resized to {self.width}x{self.height}", "system")
+                
+            if self.state == Game.STATE_MENU:
+                self.menu.handle_event(event)
+            elif self.state == Game.STATE_PLAYING:
+                # Handle inventory events first
+                if self.player.inventory.show:
+                    result = self.player.inventory.handle_input(event)
+                    if result:
+                        action, item = result
+                        if action == "use":
+                            self.player.use_item(item)
+                        elif action == "drop":
+                            self.player.remove_item(item)
+                            # Add item to level at player position
+                            self.current_level.items.append(item)
+                            item.x, item.y = self.player.x, self.player.y
+                elif event.type == pygame.KEYDOWN:
+                    if event.key == pygame.K_ESCAPE:
+                        self.state = Game.STATE_PAUSED
+                        self.menu.show_pause_menu()
+                    elif event.key == pygame.K_i:
+                        # Toggle inventory
+                        self.player.inventory.show = not self.player.inventory.show
+                        if self.player.inventory.show:
+                            self.game_log.add_message("Inventory opened", "system")
+                        else:
+                            self.game_log.add_message("Inventory closed", "system")
+                    elif event.key == pygame.K_f and (event.mod & pygame.KMOD_META) and (event.mod & pygame.KMOD_SHIFT):
+                        # Toggle fullscreen with Cmd+Shift+F (Meta is Cmd on Mac)
+                        self.toggle_fullscreen()
+                else:
+                    self.current_level.handle_event(event)
+            elif self.state == Game.STATE_PAUSED:
+                self.menu.handle_event(event)
+    
+    def toggle_fullscreen(self):
+        """Toggle fullscreen mode"""
+        if self.screen.get_flags() & pygame.FULLSCREEN:
+            # Exit fullscreen
+            self.screen = pygame.display.set_mode((self.width, self.height), pygame.RESIZABLE)
+            print("Exited fullscreen")
+        else:
+            # Enter fullscreen
+            self.screen = pygame.display.set_mode((0, 0), pygame.FULLSCREEN)
+            print("Entered fullscreen")
+    
+    def update(self):
+        """Update game logic"""
+        # Update game log
+        self.game_log.update()
+        
+        if self.state == Game.STATE_MENU:
+            self.menu.update()
+        elif self.state == Game.STATE_PLAYING:
+            self.current_level.update()
+            
+            # Check if player died
+            if self.player.health <= 0:
+                self.game_over()
+        elif self.state == Game.STATE_PAUSED:
+            self.menu.update()
+        elif self.state == Game.STATE_GAME_OVER:
+            self.menu.update()
+    
+    def game_over(self):
+        """Handle player death"""
+        self.game_log.add_message("You have been defeated!", "combat")
+        self.game_log.add_message("Game Over", "system")
+        self.state = Game.STATE_GAME_OVER
+        self.menu.show_game_over_menu()
+    
+    def render(self):
+        """Render the game"""
+        self.screen.fill((0, 0, 0))
+        
+        if self.state == Game.STATE_MENU:
+            self.menu.render(self.screen)
+        elif self.state == Game.STATE_PLAYING:
+            self.current_level.render(self.screen)
+            
+            # Render player UI overlays
+            self.player.render_inventory(self.screen)
+            
+            # Render game log
+            self.game_log.render(self.screen)
+        elif self.state == Game.STATE_PAUSED:
+            # Render the game in the background
+            self.current_level.render(self.screen)
+            # Render game log
+            self.game_log.render(self.screen)
+            # Render pause menu on top
+            self.menu.render(self.screen)
+        elif self.state == Game.STATE_GAME_OVER:
+            # Render the game in the background (darkened)
+            self.current_level.render(self.screen)
+            # Render game log
+            self.game_log.render(self.screen)
+            # Dark overlay
+            overlay = pygame.Surface((self.width, self.height))
+            overlay.set_alpha(128)
+            overlay.fill((0, 0, 0))
+            self.screen.blit(overlay, (0, 0))
+            # Render game over menu
+            self.menu.render(self.screen)
+        
+        pygame.display.flip()
+    
+    def run(self):
+        """Main game loop"""
+        while self.running:
+            self.handle_events()
+            self.update()
+            self.render()
+            self.clock.tick(60)  # 60 FPS

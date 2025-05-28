@@ -1,0 +1,9 @@
+# rpg isometric features
+Claude RPG needs to be redesigned as a proper isometric RPG with:
+1. True isometric rendering (diamond-shaped tiles)
+2. Proper sprite depth sorting
+3. More RPG features (inventory, equipment, NPCs, quests)
+4. Better graphics and animations
+5. Multiple levels/areas
+6. More complex combat system
+
