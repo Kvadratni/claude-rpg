@@ -25,6 +25,17 @@ class Settings:
             "vsync": True
         }
         
+        # Available resolutions
+        self.available_resolutions = [
+            (800, 600),
+            (1024, 768),
+            (1280, 720),
+            (1366, 768),
+            (1600, 900),
+            (1920, 1080),
+            (2560, 1440)
+        ]
+        
         # Load settings
         self.settings = self.defaults.copy()
         self.load_settings()
@@ -67,3 +78,24 @@ class Settings:
         """Reset all settings to defaults"""
         self.settings = self.defaults.copy()
         return self.save_settings()
+    
+    def get_current_resolution(self):
+        """Get current resolution as tuple"""
+        return (self.get("window_width"), self.get("window_height"))
+    
+    def set_resolution(self, width, height):
+        """Set resolution"""
+        self.set("window_width", width)
+        self.set("window_height", height)
+        return self.save_settings()
+    
+    def get_available_resolutions(self):
+        """Get list of available resolutions"""
+        return self.available_resolutions
+    
+    def apply_audio_settings(self, audio_manager):
+        """Apply audio settings to the audio manager"""
+        if audio_manager:
+            audio_manager.set_master_volume(self.get("master_volume"))
+            audio_manager.set_sfx_volume(self.get("sfx_volume"))
+            audio_manager.set_music_volume(self.get("music_volume"))

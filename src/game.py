@@ -55,6 +55,10 @@ class Game:
         # Load resources
         self.load_resources()
         
+        # Apply initial settings
+        if hasattr(self.asset_loader, 'audio_manager'):
+            self.settings.apply_audio_settings(self.asset_loader.audio_manager)
+        
         # Welcome message
         self.game_log.add_message("Welcome to Claude RPG!", "system")
     
