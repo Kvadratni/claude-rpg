@@ -122,7 +122,9 @@ class Game:
             elif self.state == Game.STATE_PLAYING:
                 # Handle inventory events first
                 if self.player.inventory.show:
-                    result = self.player.inventory.handle_input(event)
+                    # Get audio manager
+                    audio = getattr(self.asset_loader, 'audio_manager', None)
+                    result = self.player.inventory.handle_input(event, audio)
                     if result:
                         action, item = result
                         if action == "use":
@@ -136,12 +138,23 @@ class Game:
                     if event.key == pygame.K_ESCAPE:
                         self.state = Game.STATE_PAUSED
                         self.menu.show_pause_menu()
+                        # Pause music when entering pause menu
+                        audio = getattr(self.asset_loader, 'audio_manager', None)
+                        if audio:
+                            audio.pause_music()
                     elif event.key == pygame.K_i:
+                        # Get audio manager
+                        audio = getattr(self.asset_loader, 'audio_manager', None)
+                        
                         # Toggle inventory
                         self.player.inventory.show = not self.player.inventory.show
                         if self.player.inventory.show:
+                            if audio:
+                                audio.play_ui_sound("inventory_open")
                             self.game_log.add_message("Inventory opened", "system")
                         else:
+                            if audio:
+                                audio.play_ui_sound("inventory_close")
                             self.game_log.add_message("Inventory closed", "system")
                     elif event.key == pygame.K_f and (event.mod & pygame.KMOD_META) and (event.mod & pygame.KMOD_SHIFT):
                         # Toggle fullscreen with Cmd+Shift+F (Meta is Cmd on Mac)
@@ -182,6 +195,17 @@ class Game:
     
     def game_over(self):
         """Handle player death"""
+        # Get audio manager
+        audio = getattr(self.asset_loader, 'audio_manager', None)
+        
+        # Play defeat sound
+        if audio:
+            audio.play_ui_sound("defeat")
+        
+        # Switch back to menu music for game over screen
+        if self.menu and hasattr(self.menu, 'start_menu_music'):
+            self.menu.start_menu_music()
+        
         self.game_log.add_message("You have been defeated!", "combat")
         self.game_log.add_message("Game Over", "system")
         self.state = Game.STATE_GAME_OVER
@@ -199,20 +223,17 @@ class Game:
             # Render player UI overlays
             self.player.render_inventory(self.screen)
             
-            # Render game log
-            self.game_log.render(self.screen)
+            # Don't render game log here - it's handled in level UI
         elif self.state == Game.STATE_PAUSED:
             # Render the game in the background
             self.current_level.render(self.screen)
-            # Render game log
-            self.game_log.render(self.screen)
+            # Don't render game log here - it's handled in level UI
             # Render pause menu on top
             self.menu.render(self.screen)
         elif self.state == Game.STATE_GAME_OVER:
             # Render the game in the background (darkened)
             self.current_level.render(self.screen)
-            # Render game log
-            self.game_log.render(self.screen)
+            # Don't render game log here - it's handled in level UI
             # Dark overlay
             overlay = pygame.Surface((self.width, self.height))
             overlay.set_alpha(128)

@@ -40,6 +40,7 @@ class AssetLoader:
             "npc_shopkeeper": "npc_shopkeeper.png",
             "tree": "tree.png",
             "rock": "rock.png",
+            "menu_background": "menu_background.png",  # Added menu background
             # Individual item sprites
             "iron_sword": "iron_sword.png",
             "steel_axe": "steel_axe.png",
@@ -112,10 +113,10 @@ class AssetLoader:
         return surface
     
     def load_sounds(self):
-        """Load sound assets (placeholder for now)"""
-        # For now, we'll skip sound loading as requested
-        # but keep the structure for future use
-        pass
+        """Load sound assets using the audio manager"""
+        from .audio import AudioManager
+        self.audio_manager = AudioManager()
+        print("Audio system integrated into AssetLoader")
     
     def load_fonts(self):
         """Load font assets"""
@@ -129,8 +130,8 @@ class AssetLoader:
         return self.images.get(name)
     
     def get_sound(self, name):
-        """Get a sound by name"""
-        return self.sounds.get(name)
+        """Get a sound by name - now uses audio manager"""
+        return getattr(self, 'audio_manager', None)
     
     def get_font(self, name):
         """Get a font by name"""

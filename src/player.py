@@ -153,6 +153,9 @@ class Player:
     
     def handle_mouse_click(self, world_x, world_y, level):
         """Handle mouse click for movement and interaction"""
+        # Get audio manager
+        audio = getattr(self.asset_loader, 'audio_manager', None) if self.asset_loader else None
+        
         # Check if clicking on an entity first
         clicked_entity = None
         
@@ -173,6 +176,12 @@ class Player:
                     if dist < 2.0:
                         if self.add_item(item):
                             level.items.remove(item)
+                            # Play pickup sound based on item type
+                            if audio:
+                                if item.name.lower().find('gold') != -1 or item.name.lower().find('coin') != -1:
+                                    audio.play_ui_sound("coin")
+                                else:
+                                    audio.play_ui_sound("click")
                             if self.game_log:
                                 self.game_log.add_message(f"Picked up {item.name}", "item")
                         else:
@@ -254,6 +263,9 @@ class Player:
     
     def attack(self, enemies):
         """Attack nearby enemies"""
+        # Get audio manager
+        audio = getattr(self.asset_loader, 'audio_manager', None) if self.asset_loader else None
+        
         for enemy in enemies[:]:
             # Calculate distance to enemy
             dx = enemy.x - self.x
@@ -275,6 +287,13 @@ class Player:
                     in_range = True
                 
                 if in_range:
+                    # Play combat sound
+                    if audio:
+                        if self.equipped_weapon and 'axe' in self.equipped_weapon.name.lower():
+                            audio.play_combat_sound("axe_hit")
+                        else:
+                            audio.play_combat_sound("sword_hit")
+                    
                     # Calculate damage with weapon bonus
                     damage = self.attack_damage
                     if self.equipped_weapon:
@@ -327,8 +346,15 @@ class Player:
     
     def level_up(self):
         """Level up the player"""
+        # Get audio manager
+        audio = getattr(self.asset_loader, 'audio_manager', None) if self.asset_loader else None
+        
         self.experience -= self.experience_to_next
         self.level += 1
+        
+        # Play level up sound
+        if audio:
+            audio.play_ui_sound("achievement")
         
         # Increase stats
         self.max_health += 20
@@ -358,6 +384,9 @@ class Player:
     
     def use_item(self, item):
         """Use an item"""
+        # Get audio manager
+        audio = getattr(self.asset_loader, 'audio_manager', None) if self.asset_loader else None
+        
         if item.item_type == "consumable":
             # Apply item effects
             if "health" in item.effect:
@@ -365,9 +394,17 @@ class Player:
             if "mana" in item.effect:
                 self.restore_mana(item.effect["mana"])
             
+            # Play consumption sound
+            if audio:
+                audio.play_ui_sound("click")
+            
             # Remove item after use
             self.remove_item(item)
         elif item.item_type == "weapon":
+            # Play equip sound
+            if audio:
+                audio.play_combat_sound("draw_weapon")
+            
             # Equip weapon
             old_weapon = self.equipped_weapon
             self.equipped_weapon = item
@@ -377,6 +414,10 @@ class Player:
             if self.game_log:
                 self.game_log.add_message(f"Equipped {item.name}", "item")
         elif item.item_type == "armor":
+            # Play equip sound
+            if audio:
+                audio.play_ui_sound("click")
+            
             # Equip armor
             old_armor = self.equipped_armor
             self.equipped_armor = item
@@ -454,7 +495,7 @@ class Player:
     
     def render_inventory(self, screen):
         """Render inventory UI"""
-        self.inventory.render(screen)
+        self.inventory.render(screen, self.equipped_weapon, self.equipped_armor)
     
     def get_save_data(self):
         """Get data for saving"""

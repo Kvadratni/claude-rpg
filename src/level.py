@@ -596,15 +596,20 @@ class Level:
         screen_width = screen.get_width()
         screen_height = screen.get_height()
         
-        # Update camera
-        self.update_camera(screen_width, screen_height)
+        # Reserve space for bottom UI
+        ui_height = 150
+        game_area_height = screen_height - ui_height
         
-        # Clear screen
-        screen.fill((0, 0, 0))
+        # Update camera
+        self.update_camera(screen_width, game_area_height)
+        
+        # Create game area surface
+        game_surface = pygame.Surface((screen_width, game_area_height))
+        game_surface.fill((0, 0, 0))
         
         # Calculate visible tile range - much larger rendering area
         visible_width = (screen_width // self.tile_width) + 30  # Much larger area
-        visible_height = (screen_height // (self.tile_height // 2)) + 30  # Much larger area
+        visible_height = (game_area_height // (self.tile_height // 2)) + 30  # Much larger area
         
         # Calculate center tile
         center_x = int(self.player.x)
@@ -616,7 +621,7 @@ class Level:
         start_y = max(0, center_y - visible_height)  # Remove // 2 to get full range
         end_y = min(self.height, center_y + visible_height)
         
-        # Render tiles
+        # Render tiles to game surface
         for y in range(start_y, end_y):
             for x in range(start_x, end_x):
                 tile_type = self.tiles[y][x]
@@ -632,7 +637,7 @@ class Level:
                 screen_y -= height * 16
                 
                 # Draw tile
-                screen.blit(sprite, (screen_x - self.tile_width // 2, screen_y - self.tile_height // 2))
+                game_surface.blit(sprite, (screen_x - self.tile_width // 2, screen_y - self.tile_height // 2))
         
         # Collect all entities for depth sorting
         all_entities = []
@@ -645,11 +650,14 @@ class Level:
         # Sort entities by depth
         sorted_entities = sort_by_depth(all_entities)
         
-        # Render entities
+        # Render entities to game surface
         for entity in sorted_entities:
-            entity.render(screen, self.iso_renderer, self.camera_x, self.camera_y)
+            entity.render(game_surface, self.iso_renderer, self.camera_x, self.camera_y)
         
-        # Render UI
+        # Blit game surface to main screen
+        screen.blit(game_surface, (0, 0))
+        
+        # Render UI on top
         self.render_ui(screen)
     
     def render_ui(self, screen):
@@ -683,42 +691,68 @@ class Level:
         
         # Center-left - Equipment display
         equipment_x = 200
+        slot_size = 80  # Increased from 60 to 80
+        slot_y = 30  # Moved down from 10 to 30
         
         # Current weapon display
-        weapon_rect = pygame.Rect(equipment_x, 10, 60, 60)
+        weapon_rect = pygame.Rect(equipment_x, slot_y, slot_size, slot_size)
         pygame.draw.rect(ui_panel, (60, 60, 60), weapon_rect)
         pygame.draw.rect(ui_panel, (100, 100, 100), weapon_rect, 2)
         
+        # Weapon label above slot
+        weapon_text = font.render("Weapon", True, (255, 255, 255))
+        ui_panel.blit(weapon_text, (equipment_x, slot_y - 25))
+        
         if self.player.equipped_weapon:
-            # Draw weapon icon (simplified)
-            pygame.draw.rect(ui_panel, (192, 192, 192), (equipment_x + 15, 20, 30, 40))
-            weapon_text = font.render("Weapon:", True, (255, 255, 255))
-            ui_panel.blit(weapon_text, (equipment_x, 75))
-            weapon_name = small_font.render(self.player.equipped_weapon.name, True, (255, 255, 255))
-            ui_panel.blit(weapon_name, (equipment_x, 95))
+            # Draw actual weapon sprite if available
+            if hasattr(self.player.equipped_weapon, 'sprite') and self.player.equipped_weapon.sprite:
+                scaled_weapon = pygame.transform.scale(self.player.equipped_weapon.sprite, (slot_size - 8, slot_size - 8))
+                weapon_sprite_rect = scaled_weapon.get_rect()
+                weapon_sprite_rect.center = weapon_rect.center
+                ui_panel.blit(scaled_weapon, weapon_sprite_rect)
+            else:
+                # Fallback to simple shape
+                pygame.draw.rect(ui_panel, (192, 192, 192), (equipment_x + 20, slot_y + 15, slot_size - 40, slot_size - 20))
+            
+            # Weapon name below slot
+            weapon_name = small_font.render(self.player.equipped_weapon.name[:12], True, (255, 255, 255))
+            ui_panel.blit(weapon_name, (equipment_x, slot_y + slot_size + 5))
         else:
             no_weapon = small_font.render("No Weapon", True, (150, 150, 150))
-            ui_panel.blit(no_weapon, (equipment_x + 5, 35))
+            no_weapon_rect = no_weapon.get_rect(center=weapon_rect.center)
+            ui_panel.blit(no_weapon, no_weapon_rect)
         
-        # Current armor display
-        armor_x = equipment_x + 80
-        armor_rect = pygame.Rect(armor_x, 10, 60, 60)
+        # Current armor display - moved further right to prevent overlap
+        armor_x = equipment_x + slot_size + 30  # Increased spacing from 80 to 110
+        armor_rect = pygame.Rect(armor_x, slot_y, slot_size, slot_size)
         pygame.draw.rect(ui_panel, (60, 60, 60), armor_rect)
         pygame.draw.rect(ui_panel, (100, 100, 100), armor_rect, 2)
         
+        # Armor label above slot
+        armor_text = font.render("Armor", True, (255, 255, 255))
+        ui_panel.blit(armor_text, (armor_x, slot_y - 25))
+        
         if self.player.equipped_armor:
-            # Draw armor icon (simplified)
-            pygame.draw.ellipse(ui_panel, (139, 69, 19), (armor_x + 15, 20, 30, 40))
-            armor_text = font.render("Armor:", True, (255, 255, 255))
-            ui_panel.blit(armor_text, (armor_x, 75))
-            armor_name = small_font.render(self.player.equipped_armor.name, True, (255, 255, 255))
-            ui_panel.blit(armor_name, (armor_x, 95))
+            # Draw actual armor sprite if available
+            if hasattr(self.player.equipped_armor, 'sprite') and self.player.equipped_armor.sprite:
+                scaled_armor = pygame.transform.scale(self.player.equipped_armor.sprite, (slot_size - 8, slot_size - 8))
+                armor_sprite_rect = scaled_armor.get_rect()
+                armor_sprite_rect.center = armor_rect.center
+                ui_panel.blit(scaled_armor, armor_sprite_rect)
+            else:
+                # Fallback to simple shape
+                pygame.draw.ellipse(ui_panel, (139, 69, 19), (armor_x + 20, slot_y + 15, slot_size - 40, slot_size - 20))
+            
+            # Armor name below slot
+            armor_name = small_font.render(self.player.equipped_armor.name[:12], True, (255, 255, 255))
+            ui_panel.blit(armor_name, (armor_x, slot_y + slot_size + 5))
         else:
             no_armor = small_font.render("No Armor", True, (150, 150, 150))
-            ui_panel.blit(no_armor, (armor_x + 5, 35))
+            no_armor_rect = no_armor.get_rect(center=armor_rect.center)
+            ui_panel.blit(no_armor, no_armor_rect)
         
-        # Inventory button
-        inv_button_x = armor_x + 100
+        # Inventory button - adjust position to account for larger slots
+        inv_button_x = armor_x + slot_size + 20  # Updated to use slot_size
         inv_button = pygame.Rect(inv_button_x, 20, 100, 40)
         pygame.draw.rect(ui_panel, (80, 80, 80), inv_button)
         pygame.draw.rect(ui_panel, (120, 120, 120), inv_button, 2)

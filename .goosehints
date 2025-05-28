@@ -1,0 +1,158 @@
+# Claude RPG - Goose Development Hints
+
+## Project Overview
+This is an isometric RPG game built with Python and Pygame. The game features a player character exploring a large world, fighting enemies, collecting items, and managing inventory/equipment.
+
+## Development Notes
+**IMPORTANT**: The user will be running the game during development sessions. The game can be started with:
+```bash
+cd /Users/mnovich/Development/claude-rpg && uv run claude-rpg
+```
+
+## Recent Major Updates (Latest Session)
+### ✅ Bottom Menu UI Fixes
+- **Fixed overlapping slots**: Weapon and armor slots now have proper spacing (110px apart instead of 80px)
+- **Larger slots**: Increased slot size from 60x60 to 80x80 pixels for better text fit
+- **Better positioning**: Moved slots down by 20px (from Y=10 to Y=30) for improved layout
+- **Sprite rendering**: Added proper sprite rendering for equipped weapons and armor in bottom menu
+- **Text positioning**: Fixed weapon and armor name positioning below slots
+
+### ✅ Music System Integration
+- **Added background music support**: Integrated `menu_music.mp3` and `game_music.mp3`
+- **Smart music transitions**: Menu music plays in menus, game music during gameplay
+- **Volume control**: Music volume set to 15% (0.15) for ambient background audio
+- **Pause/resume functionality**: Music pauses with game, resumes on return
+- **Fade transitions**: 1000ms fade-in/out effects for smooth music changes
+- **State-based music**: Automatic music switching based on game state (menu/game/pause/game over)
+
+## Current Status
+**RESOLVED ISSUES**:
+1. ✅ Bottom menu UI layout and spacing
+2. ✅ Equipment slot sprite rendering 
+3. ✅ Background music integration
+4. ✅ Music volume balancing
+
+**WORKING FEATURES**:
+- Inventory system with proper sprite display
+- Equipment slots showing actual item sprites
+- Background music system with appropriate volume levels
+- Smooth transitions between menu and game music
+- Proper UI spacing and text positioning
+
+## Project Structure
+```
+/Users/mnovich/Development/claude-rpg/
+├── src/
+│   ├── game.py           # Main game controller and state management
+│   ├── player.py         # Player class with inventory management
+│   ├── inventory.py      # Inventory UI rendering and interaction
+│   ├── level.py          # Level generation, entity spawning, UI rendering
+│   ├── entity.py         # Entity classes (Item, Enemy, NPC, etc.)
+│   ├── assets.py         # Asset loading system
+│   ├── audio.py          # Audio system with music and SFX support
+│   ├── isometric.py      # Isometric rendering utilities
+│   ├── menu.py           # Main menu system with music integration
+│   ├── save_system.py    # Game save/load functionality
+│   ├── settings.py       # Game settings management
+│   └── game_log.py       # Game message logging
+├── assets/
+│   ├── images/           # All sprite files (PNG format)
+│   └── sounds/           # Audio files including music
+│       ├── menu_music.mp3
+│       ├── game_music.mp3
+│       └── [various SFX categories]/
+├── main.py               # Entry point
+└── pyproject.toml        # Project configuration
+```
+
+## Key Files and Recent Changes
+
+### 1. src/level.py - Bottom Menu UI (Lines ~700-800)
+- **Equipment display section**: Enhanced weapon and armor slot rendering
+- **Sprite integration**: Added proper sprite scaling and positioning
+- **Layout improvements**: Better spacing and text positioning
+
+### 2. src/audio.py - Music System
+- **Music loading**: Added `load_music()` method for MP3 files
+- **Music control**: Added play_music(), stop_music(), pause_music(), resume_music()
+- **Volume management**: Set music volume to 15% for ambient background audio
+- **State tracking**: Current music tracking and playback status
+
+### 3. src/menu.py - Music Integration
+- **Music control methods**: Added start_menu_music() and start_game_music()
+- **State transitions**: Music changes appropriately when entering/exiting game
+- **Audio manager integration**: Proper audio manager access and control
+
+### 4. src/game.py - Game State Music
+- **Pause music handling**: Music pauses when game is paused
+- **Game over music**: Returns to menu music on game over
+- **State transition music**: Proper music control during state changes
+
+## Asset Loading System
+- All sprites are successfully loaded (console shows "Loaded image: iron_sword", etc.)
+- Music files are loaded from assets/sounds/ directory
+- Asset loader is properly integrated and working
+- Individual sprite files exist for all items in assets/images/
+
+## Audio System Details
+### Music Files:
+- `menu_music.mp3` - Background music for menus
+- `game_music.mp3` - Background music during gameplay
+
+### Volume Levels:
+- Master Volume: 100% (1.0)
+- SFX Volume: 70% (0.7)
+- UI Volume: 60% (0.6)
+- Ambient Volume: 40% (0.4)
+- **Music Volume: 15% (0.15)** - Quiet ambient background
+
+### Music Behavior:
+- **Menu Music**: Plays in main menu, pause menu, game over screen
+- **Game Music**: Plays during active gameplay
+- **Transitions**: 1000ms fade-in/out between music changes
+- **Pause/Resume**: Music pauses with game, resumes on return
+
+## Recent Accomplishments
+1. ✅ Successfully integrated tree.png and rock.png sprites
+2. ✅ Fixed collision detection system  
+3. ✅ Balanced enemy movement speeds
+4. ✅ Enhanced inventory system with sprite support
+5. ✅ Added proper equipment slots with visual previews
+6. ✅ **Fixed bottom menu UI - larger slots, proper spacing, sprite rendering**
+7. ✅ **Integrated background music system with volume control**
+8. ✅ **Added music state management and transitions**
+
+## How to Test
+1. Run: `cd /Users/mnovich/Development/claude-rpg && uv run claude-rpg`
+2. **Music Testing**: 
+   - Menu music should play on startup
+   - Game music should start when beginning new game or loading save
+   - Music should pause when pressing ESC (pause menu)
+   - Music should resume when returning to game
+   - Music should return to menu music on game over
+3. **UI Testing**:
+   - Start new game, pick up weapons/armor, equip them
+   - Check bottom menu shows proper sprites and text
+   - Verify slots don't overlap and text fits properly
+4. Press 'I' to open inventory and verify sprite display
+
+## Expected Behavior
+- Bottom menu displays proper weapon/armor sprites with good spacing
+- Background music plays appropriately based on game state
+- Music volume is ambient (15%) and doesn't interfere with gameplay
+- Equipment slots are large enough for text and properly spaced
+- Smooth music transitions between menu and game states
+
+## Sprite Files Available
+All individual sprite files are loaded successfully:
+- Weapons: iron_sword, steel_axe, bronze_mace, silver_dagger, war_hammer
+- Armor: leather_armor, chain_mail, plate_armor, studded_leather, scale_mail  
+- Consumables: health_potion, mana_potion
+- Music: menu_music.mp3, game_music.mp3
+
+## Current State
+- Game runs successfully with background music
+- Player can move, pick up items, equip items with proper UI display
+- Bottom menu shows equipped items with actual sprites (not colored shapes)
+- Music system works with appropriate volume levels and state transitions
+- All major UI and audio issues have been resolved

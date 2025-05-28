@@ -33,7 +33,7 @@ class Inventory:
             return self.items[index]
         return None
     
-    def render(self, screen):
+    def render(self, screen, equipped_weapon=None, equipped_armor=None):
         """Render the inventory with equipment slots"""
         if not self.show:
             return
@@ -71,6 +71,13 @@ class Inventory:
         weapon_label = small_font.render("Weapon", True, (200, 200, 200))
         inv_surface.blit(weapon_label, (eq_start_x, eq_start_y - 20))
         
+        # Draw equipped weapon sprite
+        if equipped_weapon and hasattr(equipped_weapon, 'sprite') and equipped_weapon.sprite:
+            scaled_weapon = pygame.transform.scale(equipped_weapon.sprite, (56, 56))
+            weapon_rect = scaled_weapon.get_rect()
+            weapon_rect.center = weapon_slot.center
+            inv_surface.blit(scaled_weapon, weapon_rect)
+        
         # Armor slot
         armor_slot = pygame.Rect(eq_start_x, eq_start_y + 80, 60, 60)
         pygame.draw.rect(inv_surface, (80, 80, 80), armor_slot)
@@ -78,6 +85,13 @@ class Inventory:
         
         armor_label = small_font.render("Armor", True, (200, 200, 200))
         inv_surface.blit(armor_label, (eq_start_x, eq_start_y + 60))
+        
+        # Draw equipped armor sprite
+        if equipped_armor and hasattr(equipped_armor, 'sprite') and equipped_armor.sprite:
+            scaled_armor = pygame.transform.scale(equipped_armor.sprite, (56, 56))
+            armor_rect = scaled_armor.get_rect()
+            armor_rect.center = armor_slot.center
+            inv_surface.blit(scaled_armor, armor_rect)
         
         # Inventory grid on the right
         grid_start_x = 120
@@ -106,19 +120,27 @@ class Inventory:
             # Draw item if present
             if i < len(self.items):
                 item = self.items[i]
-                # Draw item icon (simplified)
-                if item.item_type == "weapon":
-                    pygame.draw.rect(inv_surface, (192, 192, 192), (slot_x + 10, slot_y + 5, 20, 30))
-                elif item.item_type == "armor":
-                    pygame.draw.ellipse(inv_surface, (139, 69, 19), (slot_x + 10, slot_y + 10, 20, 20))
-                elif item.item_type == "consumable":
-                    if "Health" in item.name:
-                        color = (255, 0, 0)
-                    else:
-                        color = (0, 0, 255)
-                    pygame.draw.ellipse(inv_surface, color, (slot_x + 10, slot_y + 10, 20, 20))
+                # Use the actual item sprite if available
+                if hasattr(item, 'sprite') and item.sprite:
+                    # Scale down the sprite to fit in the inventory slot
+                    scaled_sprite = pygame.transform.scale(item.sprite, (slot_size - 4, slot_size - 4))
+                    sprite_rect = scaled_sprite.get_rect()
+                    sprite_rect.center = (slot_x + slot_size // 2, slot_y + slot_size // 2 - 5)
+                    inv_surface.blit(scaled_sprite, sprite_rect)
+                else:
+                    # Fallback to simple colored shapes
+                    if item.item_type == "weapon":
+                        pygame.draw.rect(inv_surface, (192, 192, 192), (slot_x + 10, slot_y + 5, 20, 30))
+                    elif item.item_type == "armor":
+                        pygame.draw.ellipse(inv_surface, (139, 69, 19), (slot_x + 10, slot_y + 10, 20, 20))
+                    elif item.item_type == "consumable":
+                        if "Health" in item.name:
+                            color = (255, 0, 0)
+                        else:
+                            color = (0, 0, 255)
+                        pygame.draw.ellipse(inv_surface, color, (slot_x + 10, slot_y + 10, 20, 20))
                 
-                # Item quantity or name
+                # Item name (shortened to fit)
                 item_text = small_font.render(item.name[:8], True, (255, 255, 255))
                 inv_surface.blit(item_text, (slot_x + 2, slot_y + slot_size - 15))
         
@@ -154,7 +176,7 @@ class Inventory:
         self.slot_size = slot_size
         self.slots_per_row = slots_per_row
     
-    def handle_input(self, event):
+    def handle_input(self, event, audio_manager=None):
         """Handle inventory input with mouse support"""
         if not self.show:
             return None
@@ -178,28 +200,46 @@ class Inventory:
                         if 0 <= slot_index < self.max_size:
                             if event.button == 1:  # Left click - select
                                 self.selected_slot = slot_index
+                                if audio_manager:
+                                    audio_manager.play_ui_sound("click")
                             elif event.button == 3:  # Right click - use/equip
                                 if slot_index < len(self.items):
+                                    if audio_manager:
+                                        audio_manager.play_ui_sound("click")
                                     return ("use", self.items[slot_index])
         
         elif event.type == pygame.KEYDOWN:
             if event.key == pygame.K_UP:
                 self.selected_slot = max(0, self.selected_slot - self.slots_per_row)
+                if audio_manager:
+                    audio_manager.play_ui_sound("select")
             elif event.key == pygame.K_DOWN:
                 self.selected_slot = min(self.max_size - 1, self.selected_slot + self.slots_per_row)
+                if audio_manager:
+                    audio_manager.play_ui_sound("select")
             elif event.key == pygame.K_LEFT:
                 self.selected_slot = max(0, self.selected_slot - 1)
+                if audio_manager:
+                    audio_manager.play_ui_sound("select")
             elif event.key == pygame.K_RIGHT:
                 self.selected_slot = min(self.max_size - 1, self.selected_slot + 1)
+                if audio_manager:
+                    audio_manager.play_ui_sound("select")
             elif event.key == pygame.K_e or event.key == pygame.K_RETURN:
                 # Use/equip selected item
                 if self.selected_slot < len(self.items):
+                    if audio_manager:
+                        audio_manager.play_ui_sound("click")
                     return ("use", self.items[self.selected_slot])
             elif event.key == pygame.K_d:
                 # Drop selected item
                 if self.selected_slot < len(self.items):
+                    if audio_manager:
+                        audio_manager.play_ui_sound("item_drop")
                     return ("drop", self.items[self.selected_slot])
             elif event.key == pygame.K_ESCAPE or event.key == pygame.K_i:
+                if audio_manager:
+                    audio_manager.play_ui_sound("inventory_close")
                 self.show = False
         
         return None
