@@ -271,6 +271,30 @@ class Player:
                     clicked_entity = npc  # Still set clicked_entity to prevent movement
                     break
         
+        # Check chests
+        if not clicked_entity:
+            for chest in level.chests:
+                # Use larger detection area for easier clicking
+                if abs(world_x - chest.x) < 1.2 and abs(world_y - chest.y) < 1.2:
+                    # Check if player is close enough to interact
+                    dist = math.sqrt((self.x - chest.x)**2 + (self.y - chest.y)**2)
+                    if dist < 2.0:  # Same proximity requirement as item pickup
+                        clicked_entity = chest
+                        break
+                    else:
+                        # Use pathfinding to move towards the chest
+                        path = level.find_path(self.x, self.y, chest.x, chest.y, self.size)
+                        if path:
+                            self.path = path
+                            self.path_index = 0
+                            self.target_x = chest.x
+                            self.target_y = chest.y
+                        else:
+                            if self.game_log:
+                                self.game_log.add_message(f"Can't reach {chest.name}!", "system")
+                        clicked_entity = chest  # Still set clicked_entity to prevent movement
+                        break
+        
         # Check items
         if not clicked_entity:
             for item in level.items[:]:

@@ -33,6 +33,8 @@ class AssetLoader:
             "stone_tile": "stone_tile.png", 
             "water_tile": "water_tile.png",
             "wall_tile": "wall_tile.png",
+            "wall_window_horizontal": "wall_window_horizonal.png",  # Note: filename has typo "horizonal"
+            "wall_window_vertical": "wall_window_vertical.png",
             "dirt_tile": "dirt_tile.png",  # Added dirt tile
             "door_tile": "door_tile.png",  # Added door tile
             "brick_tile": "brick_tile.png",  # Added brick tile for building interiors
@@ -105,6 +107,8 @@ class AssetLoader:
             "stone_tile": (150, 150, 150),
             "water_tile": (50, 100, 200),
             "wall_tile": (100, 100, 100),
+            "wall_window_horizontal": (120, 120, 150),  # Slightly blue-tinted for window walls
+            "wall_window_vertical": (120, 120, 150),    # Slightly blue-tinted for window walls
             "dirt_tile": (139, 69, 19),  # Brown for dirt
             "door_tile": (139, 69, 19),  # Brown for door
             "brick_tile": (150, 80, 60),  # Reddish-brown for brick

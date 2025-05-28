@@ -7,7 +7,7 @@ import random
 import math
 import heapq
 from .isometric import IsometricRenderer, sort_by_depth
-from .entity import Entity, NPC, Enemy, Item
+from .entity import Entity, NPC, Enemy, Item, Chest
 
 class Level:
     """Game level class"""
@@ -57,6 +57,7 @@ class Level:
         self.enemies = []
         self.items = []
         self.objects = []  # Static objects like trees, rocks, etc.
+        self.chests = []   # Treasure chests
         
         # Combat state tracking
         self.enemies_in_combat = set()  # Track which enemies are in combat
@@ -347,8 +348,8 @@ class Level:
             # Create horizontal/vertical wall variations
             self.create_wall_directional_sprites(base_wall_sprite)
             
-            # Create window variation
-            self.create_wall_window_sprite(base_wall_sprite)
+            # Load dedicated window wall assets
+            self.load_window_wall_sprites()
             
         else:
             # Fallback to generated sprites
@@ -498,6 +499,9 @@ class Level:
         
         # Spawn environmental objects
         self.spawn_story_objects()
+        
+        # Spawn treasure chests
+        self.spawn_chests()
     
     def spawn_story_enemies(self):
         """Spawn enemies in specific story locations"""
@@ -612,6 +616,54 @@ class Level:
             if self.is_valid_story_position(x, y):
                 rock = Entity(x, y, "Rock", entity_type="object", blocks_movement=True, asset_loader=self.asset_loader)
                 self.objects.append(rock)
+    
+    def spawn_chests(self):
+        """Spawn treasure chests in strategic locations"""
+        # Wooden chests - common, scattered around
+        wooden_chest_positions = [
+            (35, 35),   # Forest area
+            (25, 85),   # Near village outskirts
+            (85, 95),   # Lake area
+            (45, 50),   # Between village and forest
+            (75, 55),   # North of village
+        ]
+        
+        for x, y in wooden_chest_positions:
+            if self.is_valid_story_position(x, y):
+                chest = Chest(x, y, "wooden", self.asset_loader)
+                self.chests.append(chest)
+        
+        # Iron chests - better loot, fewer locations
+        iron_chest_positions = [
+            (30, 25),   # Deep in forest
+            (95, 85),   # Far lake shore
+            (40, 40),   # Forest clearing
+        ]
+        
+        for x, y in iron_chest_positions:
+            if self.is_valid_story_position(x, y):
+                chest = Chest(x, y, "iron", self.asset_loader)
+                self.chests.append(chest)
+        
+        # Gold chest - high-value loot, hidden location
+        gold_chest_positions = [
+            (90, 25),   # Mountain area (near orc chief)
+        ]
+        
+        for x, y in gold_chest_positions:
+            if self.is_valid_story_position(x, y):
+                chest = Chest(x, y, "gold", self.asset_loader)
+                self.chests.append(chest)
+        
+        # Magical chest - rare, powerful items
+        magical_chest_positions = [
+            (15, 15),   # Hidden corner of the map
+        ]
+        
+        for x, y in magical_chest_positions:
+            if self.is_valid_story_position(x, y):
+                chest = Chest(x, y, "magical", self.asset_loader)
+                self.chests.append(chest)
     
     def is_valid_story_position(self, x, y):
         """Check if a position is valid for story entity placement"""
@@ -778,6 +830,18 @@ class Level:
                 
                 # Use circular collision for objects
                 collision_distance = size + 0.35  # Slightly tighter collision
+                if distance < collision_distance:
+                    return True
+        
+        # Check collision with chests using circular collision
+        for chest in self.chests:
+            if chest.blocks_movement and chest != exclude_entity:
+                dist_x = x - chest.x
+                dist_y = y - chest.y
+                distance = math.sqrt(dist_x * dist_x + dist_y * dist_y)
+                
+                # Use circular collision for chests
+                collision_distance = size + 0.35  # Same as objects
                 if distance < collision_distance:
                     return True
         
@@ -1212,6 +1276,19 @@ class Level:
                     clicked_entity = npc
                     break
         
+        # Check chests for info
+        if not clicked_entity:
+            for chest in self.chests:
+                if abs(world_x - chest.x) < 1.2 and abs(world_y - chest.y) < 1.2:
+                    if self.player.game_log:
+                        status = "Empty" if chest.is_opened else "Unopened"
+                        chest_info = f"{chest.name} ({status})"
+                        if not chest.is_opened:
+                            chest_info += f" - {len(chest.loot_items)} items inside"
+                        self.player.game_log.add_message(chest_info, "system")
+                    clicked_entity = chest
+                    break
+        
         # Check items for info
         if not clicked_entity:
             for item in self.items:
@@ -1457,6 +1534,7 @@ class Level:
         all_entities.extend(self.npcs)
         all_entities.extend(self.items)
         all_entities.extend(self.objects)
+        all_entities.extend(self.chests)
         
         # Sort entities by depth
         sorted_entities = sort_by_depth(all_entities)
@@ -1760,6 +1838,7 @@ class Level:
             "npcs": [npc.get_save_data() for npc in self.npcs],
             "items": [item.get_save_data() for item in self.items],
             "objects": [obj.get_save_data() for obj in self.objects],
+            "chests": [chest.get_save_data() for chest in self.chests],
             "camera_x": self.camera_x,
             "camera_y": self.camera_y
             # Note: Combat state is not saved as it should reset on load
@@ -1798,5 +1877,10 @@ class Level:
         for obj_data in data["objects"]:
             obj = Entity.from_save_data(obj_data, asset_loader)
             level.objects.append(obj)
+        
+        level.chests = []
+        for chest_data in data.get("chests", []):  # Use get() for backward compatibility
+            chest = Chest.from_save_data(chest_data, asset_loader)
+            level.chests.append(chest)
         
         return level
