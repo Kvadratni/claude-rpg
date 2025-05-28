@@ -152,9 +152,17 @@ class Inventory:
                     elif item.item_type == "consumable":
                         if "Health" in item.name:
                             color = (255, 0, 0)
-                        else:
+                        elif "Stamina" in item.name:
                             color = (0, 0, 255)
+                        elif "Mana" in item.name:
+                            color = (0, 191, 255)
+                        elif "Antidote" in item.name:
+                            color = (0, 255, 0)
+                        else:
+                            color = (255, 165, 0)
                         pygame.draw.ellipse(inv_surface, color, (slot_x + 10, slot_y + 10, 20, 20))
+                    elif item.item_type == "misc":
+                        pygame.draw.circle(inv_surface, (255, 215, 0), (slot_x + 20, slot_y + 20), 10)
                 
                 # Item name (shortened to fit)
                 item_text = small_font.render(item.name[:8], True, (255, 255, 255))

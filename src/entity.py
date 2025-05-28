@@ -498,25 +498,46 @@ class Item(Entity):
         """Create item sprite using individual sprite files"""
         size = 36  # Increased from 24 to 36
         
-        # Map item names to sprite names
+        # Map item names to sprite names with values
         sprite_mapping = {
-            "Iron Sword": "iron_sword",
-            "Steel Axe": "steel_axe", 
-            "Bronze Mace": "bronze_mace",
-            "Silver Dagger": "silver_dagger",
-            "War Hammer": "war_hammer",
-            "Leather Armor": "leather_armor",
-            "Chain Mail": "chain_mail",
-            "Plate Armor": "plate_armor", 
-            "Studded Leather": "studded_leather",
-            "Scale Mail": "scale_mail",
-            "Health Potion": "health_potion",
-            "Stamina Potion": "stamina_potion"
+            # Weapons
+            "Iron Sword": ("iron_sword", 100),
+            "Steel Axe": ("steel_axe", 150), 
+            "Bronze Mace": ("bronze_mace", 80),
+            "Silver Dagger": ("silver_dagger", 120),
+            "War Hammer": ("war_hammer", 200),
+            "Magic Bow": ("magic_bow", 180),
+            "Crystal Staff": ("crystal_staff", 220),
+            "Throwing Knife": ("throwing_knife", 90),
+            "Crossbow": ("crossbow", 160),
+            # Armor
+            "Leather Armor": ("leather_armor", 80),
+            "Chain Mail": ("chain_mail", 120),
+            "Plate Armor": ("plate_armor", 200), 
+            "Studded Leather": ("studded_leather", 100),
+            "Scale Mail": ("scale_mail", 160),
+            "Dragon Scale Armor": ("dragon_scale_armor", 300),
+            "Mage Robes": ("mage_robes", 180),
+            "Royal Armor": ("royal_armor", 350),
+            # Consumables
+            "Health Potion": ("health_potion", 25),
+            "Stamina Potion": ("stamina_potion", 20),
+            "Mana Potion": ("mana_potion", 30),
+            "Antidote": ("antidote", 35),
+            "Strength Potion": ("strength_potion", 50),
+            # Miscellaneous
+            "Gold Ring": ("gold_ring", 250),
+            "Magic Scroll": ("magic_scroll", 200),
+            "Crystal Gem": ("crystal_gem", 150)
         }
+        
+        # Set item value if not already set
+        if self.value == 0 and self.name in sprite_mapping:
+            self.value = sprite_mapping[self.name][1]
         
         # Try to use individual sprite files
         if self.asset_loader and self.name in sprite_mapping:
-            sprite_name = sprite_mapping[self.name]
+            sprite_name = sprite_mapping[self.name][0]
             item_image = self.asset_loader.get_image(sprite_name)
             if item_image:
                 self.sprite = pygame.transform.scale(item_image, (size, size))

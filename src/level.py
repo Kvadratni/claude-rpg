@@ -19,6 +19,14 @@ class Level:
     TILE_WATER = 3
     TILE_WALL = 4
     TILE_DOOR = 5
+    # New wall variations
+    TILE_WALL_CORNER_TL = 6  # Top-left corner
+    TILE_WALL_CORNER_TR = 7  # Top-right corner
+    TILE_WALL_CORNER_BL = 8  # Bottom-left corner
+    TILE_WALL_CORNER_BR = 9  # Bottom-right corner
+    TILE_WALL_HORIZONTAL = 10  # Horizontal wall
+    TILE_WALL_VERTICAL = 11    # Vertical wall
+    TILE_WALL_WINDOW = 12      # Wall with window
     
     def __init__(self, level_name, player, asset_loader):
         self.name = level_name
@@ -157,17 +165,54 @@ class Level:
         return tiles
     
     def create_building(self, tiles, start_x, start_y, width, height):
-        """Create a building structure with double doors"""
-        # Building walls
+        """Create a building structure with varied wall types and windows"""
+        # Building interior floor
+        for y in range(start_y + 1, start_y + height - 1):
+            for x in range(start_x + 1, start_x + width - 1):
+                tiles[y][x] = self.TILE_STONE  # Interior floor
+        
+        # Building walls with proper corners and variations
         for y in range(start_y, start_y + height):
             for x in range(start_x, start_x + width):
-                if (x == start_x or x == start_x + width - 1 or 
-                    y == start_y or y == start_y + height - 1):
-                    tiles[y][x] = self.TILE_WALL
+                # Skip interior
+                if (x > start_x and x < start_x + width - 1 and 
+                    y > start_y and y < start_y + height - 1):
+                    continue
+                
+                # Determine wall type based on position
+                is_top = (y == start_y)
+                is_bottom = (y == start_y + height - 1)
+                is_left = (x == start_x)
+                is_right = (x == start_x + width - 1)
+                
+                # Corners
+                if is_top and is_left:
+                    tiles[y][x] = self.TILE_WALL_CORNER_TL
+                elif is_top and is_right:
+                    tiles[y][x] = self.TILE_WALL_CORNER_TR
+                elif is_bottom and is_left:
+                    tiles[y][x] = self.TILE_WALL_CORNER_BL
+                elif is_bottom and is_right:
+                    tiles[y][x] = self.TILE_WALL_CORNER_BR
+                # Horizontal walls (top and bottom)
+                elif is_top or is_bottom:
+                    # Add some windows to horizontal walls (not too many)
+                    if random.random() < 0.3 and width > 6:  # 30% chance for windows on longer walls
+                        tiles[y][x] = self.TILE_WALL_WINDOW
+                    else:
+                        tiles[y][x] = self.TILE_WALL_HORIZONTAL
+                # Vertical walls (left and right)
+                elif is_left or is_right:
+                    # Add some windows to vertical walls
+                    if random.random() < 0.25 and height > 6:  # 25% chance for windows on taller walls
+                        tiles[y][x] = self.TILE_WALL_WINDOW
+                    else:
+                        tiles[y][x] = self.TILE_WALL_VERTICAL
                 else:
-                    tiles[y][x] = self.TILE_STONE  # Interior floor
+                    # Fallback to regular wall
+                    tiles[y][x] = self.TILE_WALL
         
-        # Add double doors (2 tiles wide)
+        # Add double doors (2 tiles wide) - replace bottom wall sections
         door_center_x = start_x + width // 2
         door_y = start_y + height - 1
         
@@ -251,6 +296,7 @@ class Level:
                 if tile_type in [self.TILE_GRASS, self.TILE_DIRT, self.TILE_STONE, self.TILE_DOOR]:
                     row.append(True)
                 else:
+                    # All wall types are not walkable
                     row.append(False)
             walkable.append(row)
         
@@ -284,12 +330,38 @@ class Level:
         else:
             self.tile_sprites[self.TILE_WATER] = self.iso_renderer.create_diamond_tile((50, 100, 200))
         
+        # Load base wall image
         wall_image = self.asset_loader.get_image("wall_tile")
         if wall_image:
-            # Don't rotate the wall tile - use it as-is
-            self.tile_sprites[self.TILE_WALL] = pygame.transform.scale(wall_image, (self.tile_width, self.tile_height + 16))
+            # Scale wall to be taller and more prominent
+            wall_height = self.tile_height + 32  # Make walls taller
+            base_wall_sprite = pygame.transform.scale(wall_image, (self.tile_width + 8, wall_height))
+            
+            # Create variations of the wall sprite
+            self.tile_sprites[self.TILE_WALL] = base_wall_sprite
+            
+            # Create corner variations by adding corner decorations
+            self.create_wall_corner_sprites(base_wall_sprite)
+            
+            # Create horizontal/vertical wall variations
+            self.create_wall_directional_sprites(base_wall_sprite)
+            
+            # Create window variation
+            self.create_wall_window_sprite(base_wall_sprite)
+            
         else:
-            self.tile_sprites[self.TILE_WALL] = self.iso_renderer.create_cube_tile((200, 200, 200), (150, 150, 150), (100, 100, 100))
+            # Fallback to generated sprites
+            base_wall = self.iso_renderer.create_cube_tile((200, 200, 200), (150, 150, 150), (100, 100, 100))
+            self.tile_sprites[self.TILE_WALL] = base_wall
+            
+            # Create simple variations for fallback
+            self.tile_sprites[self.TILE_WALL_CORNER_TL] = base_wall
+            self.tile_sprites[self.TILE_WALL_CORNER_TR] = base_wall
+            self.tile_sprites[self.TILE_WALL_CORNER_BL] = base_wall
+            self.tile_sprites[self.TILE_WALL_CORNER_BR] = base_wall
+            self.tile_sprites[self.TILE_WALL_HORIZONTAL] = base_wall
+            self.tile_sprites[self.TILE_WALL_VERTICAL] = base_wall
+            self.tile_sprites[self.TILE_WALL_WINDOW] = base_wall
         
         dirt_image = self.asset_loader.get_image("dirt_tile")
         if dirt_image:
@@ -298,13 +370,110 @@ class Level:
         else:
             self.tile_sprites[self.TILE_DIRT] = self.iso_renderer.create_diamond_tile((150, 100, 50))
         
-        # Door - don't rotate, use as-is like walls, and render with dirt base
+        # Door - create enhanced door with better visibility
         door_image = self.asset_loader.get_image("door_tile")
         if door_image:
-            # Don't rotate the door tile - use it as-is like walls
-            self.tile_sprites[self.TILE_DOOR] = pygame.transform.scale(door_image, (self.tile_width, self.tile_height + 16))
+            # Scale door to be taller and more prominent
+            door_height = self.tile_height + 24  # Make doors taller than normal tiles
+            scaled_door = pygame.transform.scale(door_image, (self.tile_width, door_height))
+            
+            # Create enhanced door sprite with shadow and highlight
+            enhanced_door = pygame.Surface((self.tile_width + 4, door_height + 4), pygame.SRCALPHA)
+            
+            # Add shadow (dark outline)
+            shadow_door = scaled_door.copy()
+            shadow_door.fill((0, 0, 0, 100), special_flags=pygame.BLEND_RGBA_MULT)
+            enhanced_door.blit(shadow_door, (2, 2))
+            
+            # Add main door
+            enhanced_door.blit(scaled_door, (0, 0))
+            
+            # Add highlight for better visibility
+            highlight = pygame.Surface((self.tile_width, door_height), pygame.SRCALPHA)
+            highlight.fill((255, 255, 200, 30))  # Subtle yellow highlight
+            enhanced_door.blit(highlight, (0, 0), special_flags=pygame.BLEND_ALPHA_SDL2)
+            
+            self.tile_sprites[self.TILE_DOOR] = enhanced_door
         else:
             self.tile_sprites[self.TILE_DOOR] = self.iso_renderer.create_cube_tile((150, 100, 50), (120, 80, 40), (100, 60, 30))
+    
+    def create_wall_corner_sprites(self, base_wall_sprite):
+        """Create corner wall variations from base wall sprite"""
+        # Top-left corner - add corner accent
+        tl_corner = base_wall_sprite.copy()
+        # Add a small corner decoration (darker edge)
+        corner_size = 8
+        pygame.draw.rect(tl_corner, (120, 120, 120), (0, 0, corner_size, corner_size))
+        self.tile_sprites[self.TILE_WALL_CORNER_TL] = tl_corner
+        
+        # Top-right corner
+        tr_corner = base_wall_sprite.copy()
+        pygame.draw.rect(tr_corner, (120, 120, 120), 
+                        (base_wall_sprite.get_width() - corner_size, 0, corner_size, corner_size))
+        self.tile_sprites[self.TILE_WALL_CORNER_TR] = tr_corner
+        
+        # Bottom-left corner
+        bl_corner = base_wall_sprite.copy()
+        pygame.draw.rect(bl_corner, (120, 120, 120), 
+                        (0, base_wall_sprite.get_height() - corner_size, corner_size, corner_size))
+        self.tile_sprites[self.TILE_WALL_CORNER_BL] = bl_corner
+        
+        # Bottom-right corner
+        br_corner = base_wall_sprite.copy()
+        pygame.draw.rect(br_corner, (120, 120, 120), 
+                        (base_wall_sprite.get_width() - corner_size, 
+                         base_wall_sprite.get_height() - corner_size, corner_size, corner_size))
+        self.tile_sprites[self.TILE_WALL_CORNER_BR] = br_corner
+    
+    def create_wall_directional_sprites(self, base_wall_sprite):
+        """Create horizontal and vertical wall variations"""
+        # Horizontal wall - add horizontal line accent
+        h_wall = base_wall_sprite.copy()
+        wall_width = base_wall_sprite.get_width()
+        wall_height = base_wall_sprite.get_height()
+        # Add horizontal accent line
+        pygame.draw.line(h_wall, (180, 180, 180), 
+                        (wall_width // 4, wall_height // 2), 
+                        (3 * wall_width // 4, wall_height // 2), 2)
+        self.tile_sprites[self.TILE_WALL_HORIZONTAL] = h_wall
+        
+        # Vertical wall - add vertical line accent
+        v_wall = base_wall_sprite.copy()
+        # Add vertical accent line
+        pygame.draw.line(v_wall, (180, 180, 180), 
+                        (wall_width // 2, wall_height // 4), 
+                        (wall_width // 2, 3 * wall_height // 4), 2)
+        self.tile_sprites[self.TILE_WALL_VERTICAL] = v_wall
+    
+    def create_wall_window_sprite(self, base_wall_sprite):
+        """Create window wall variation"""
+        window_wall = base_wall_sprite.copy()
+        wall_width = base_wall_sprite.get_width()
+        wall_height = base_wall_sprite.get_height()
+        
+        # Create window rectangle
+        window_width = wall_width // 3
+        window_height = wall_height // 4
+        window_x = (wall_width - window_width) // 2
+        window_y = (wall_height - window_height) // 2
+        
+        # Draw window frame (darker)
+        pygame.draw.rect(window_wall, (80, 80, 80), 
+                        (window_x - 2, window_y - 2, window_width + 4, window_height + 4))
+        
+        # Draw window interior (lighter, like glass)
+        pygame.draw.rect(window_wall, (150, 200, 255), 
+                        (window_x, window_y, window_width, window_height))
+        
+        # Add window cross pattern
+        pygame.draw.line(window_wall, (100, 100, 100), 
+                        (window_x, window_y + window_height // 2), 
+                        (window_x + window_width, window_y + window_height // 2), 1)
+        pygame.draw.line(window_wall, (100, 100, 100), 
+                        (window_x + window_width // 2, window_y), 
+                        (window_x + window_width // 2, window_y + window_height), 1)
+        
+        self.tile_sprites[self.TILE_WALL_WINDOW] = window_wall
     
     def spawn_entities(self):
         """Spawn entities in specific story locations"""
@@ -534,14 +703,34 @@ class Level:
         return True
     
     def check_collision(self, x, y, size=0.4, exclude_entity=None):
-        """Check collision with level geometry and entities - improved precision"""
+        """Check collision with level geometry and entities - improved precision with door handling"""
         # Check if the position is within level bounds with proper margin
         margin = size + 0.1
         if x < margin or x >= self.width - margin or y < margin or y >= self.height - margin:
             return True
         
-        # Get the entity's bounding box corners
-        half_size = size * 0.7  # Slightly smaller collision box for better movement
+        # Check if we're near a door - if so, use much more lenient collision
+        tile_x = int(x)
+        tile_y = int(y)
+        is_near_door = False
+        
+        if 0 <= tile_x < self.width and 0 <= tile_y < self.height:
+            # Check current tile and adjacent tiles for doors
+            for dx in [-1, 0, 1]:
+                for dy in [-1, 0, 1]:
+                    check_x = tile_x + dx
+                    check_y = tile_y + dy
+                    if (0 <= check_x < self.width and 0 <= check_y < self.height):
+                        if self.tiles[check_y][check_x] == self.TILE_DOOR:
+                            is_near_door = True
+                            break
+                if is_near_door:
+                    break
+        
+        # For door areas, use much smaller collision box
+        effective_size = size * 0.5 if is_near_door else size * 0.7
+        half_size = effective_size
+        
         corners = [
             (x - half_size, y - half_size),  # Top-left
             (x + half_size, y - half_size),  # Top-right
@@ -551,12 +740,12 @@ class Level:
         
         # Check each corner against tiles
         for corner_x, corner_y in corners:
-            tile_x = int(corner_x)
-            tile_y = int(corner_y)
+            corner_tile_x = int(corner_x)
+            corner_tile_y = int(corner_y)
             
             # Ensure tile coordinates are within bounds
-            if 0 <= tile_x < self.width and 0 <= tile_y < self.height:
-                if not self.walkable[tile_y][tile_x]:
+            if 0 <= corner_tile_x < self.width and 0 <= corner_tile_y < self.height:
+                if not self.walkable[corner_tile_y][corner_tile_x]:
                     return True
         
         # Also check center point
@@ -566,7 +755,11 @@ class Level:
             if not self.walkable[center_tile_y][center_tile_x]:
                 return True
         
-        # Check collision with objects using circular collision
+        # Skip object collision checking near doors to allow easier passage
+        if is_near_door:
+            return False
+        
+        # Check collision with objects using circular collision (only when not near doors)
         for obj in self.objects:
             if obj.blocks_movement and obj != exclude_entity:
                 dist_x = x - obj.x
@@ -662,7 +855,10 @@ class Level:
                 # Final destination is also tile center
                 path.append((end_grid_x + 0.5, end_grid_y + 0.5))
                 
-                return path
+                # Smooth the path to reduce unnecessary waypoints
+                smoothed_path = self.smooth_path(path, entity_size)
+                
+                return smoothed_path
             
             # Check all 8 neighbors
             neighbors = [
@@ -713,6 +909,73 @@ class Level:
         dy = abs(y1 - y2)
         # Use diagonal distance heuristic
         return max(dx, dy) + (1.414 - 1) * min(dx, dy)
+    
+    def smooth_path(self, path, entity_size=0.4):
+        """Smooth path by removing unnecessary waypoints using line-of-sight checks"""
+        if len(path) <= 2:
+            return path
+        
+        smoothed = [path[0]]  # Always keep the start point
+        current_index = 0
+        
+        while current_index < len(path) - 1:
+            # Try to find the farthest point we can reach directly
+            farthest_reachable = current_index + 1
+            
+            for i in range(current_index + 2, len(path)):
+                if self.has_line_of_sight(path[current_index], path[i], entity_size):
+                    farthest_reachable = i
+                else:
+                    break  # Can't reach further, stop checking
+            
+            # Add the farthest reachable point
+            if farthest_reachable < len(path):
+                smoothed.append(path[farthest_reachable])
+                current_index = farthest_reachable
+            else:
+                break
+        
+        # Always ensure the final destination is included
+        if smoothed[-1] != path[-1]:
+            smoothed.append(path[-1])
+        
+        return smoothed
+    
+    def has_line_of_sight(self, start, end, entity_size=0.4):
+        """Check if there's a clear line of sight between two points"""
+        start_x, start_y = start
+        end_x, end_y = end
+        
+        # Calculate the number of steps to check along the line
+        dx = end_x - start_x
+        dy = end_y - start_y
+        distance = math.sqrt(dx * dx + dy * dy)
+        
+        if distance == 0:
+            return True
+        
+        # Check points along the line
+        steps = int(distance * 2)  # Check every 0.5 units
+        for i in range(1, steps):
+            t = i / steps
+            check_x = start_x + dx * t
+            check_y = start_y + dy * t
+            
+            # Check if this point is walkable
+            grid_x = int(check_x)
+            grid_y = int(check_y)
+            
+            if not (0 <= grid_x < self.width and 0 <= grid_y < self.height):
+                return False
+            
+            if not self.walkable[grid_y][grid_x]:
+                return False
+            
+            # Check for blocking objects
+            if self.check_collision(check_x, check_y, entity_size):
+                return False
+        
+        return True
     
     def is_position_walkable(self, x, y, entity_size=0.4):
         """Check if a grid position is walkable for pathfinding"""
@@ -1019,27 +1282,49 @@ class Level:
                     num_drops = 2 if enemy.is_boss else 1
                     
                     for _ in range(num_drops):
-                        item_type = random.choice(["consumable", "weapon", "armor"])
+                        item_type = random.choice(["consumable", "weapon", "armor", "misc"])
                         if item_type == "consumable":
-                            potion_type = random.choice(["Health Potion", "Stamina Potion"])
+                            potion_types = ["Health Potion", "Stamina Potion", "Mana Potion", "Antidote", "Strength Potion"]
+                            potion_type = random.choice(potion_types)
+                            
                             if potion_type == "Health Potion":
                                 item = Item(enemy.x, enemy.y, "Health Potion", item_type="consumable", 
                                           effect={"health": 50}, asset_loader=self.asset_loader)
-                            else:
+                            elif potion_type == "Stamina Potion":
                                 item = Item(enemy.x, enemy.y, "Stamina Potion", item_type="consumable", 
                                           effect={"stamina": 30}, asset_loader=self.asset_loader)
+                            elif potion_type == "Mana Potion":
+                                item = Item(enemy.x, enemy.y, "Mana Potion", item_type="consumable", 
+                                          effect={"mana": 40}, asset_loader=self.asset_loader)
+                            elif potion_type == "Antidote":
+                                item = Item(enemy.x, enemy.y, "Antidote", item_type="consumable", 
+                                          effect={"cure_poison": True}, asset_loader=self.asset_loader)
+                            else:  # Strength Potion
+                                item = Item(enemy.x, enemy.y, "Strength Potion", item_type="consumable", 
+                                          effect={"damage_boost": 10, "duration": 60}, asset_loader=self.asset_loader)
                         elif item_type == "weapon":
-                            weapon_names = ["Iron Sword", "Steel Axe", "Bronze Mace", "Silver Dagger", "War Hammer"]
+                            weapon_names = ["Iron Sword", "Steel Axe", "Bronze Mace", "Silver Dagger", "War Hammer", 
+                                          "Magic Bow", "Crystal Staff", "Throwing Knife", "Crossbow"]
                             weapon_name = random.choice(weapon_names)
                             damage_bonus = (10 if enemy.is_boss else 5) + random.randint(0, 10)
                             item = Item(enemy.x, enemy.y, weapon_name, item_type="weapon", 
                                       effect={"damage": damage_bonus}, asset_loader=self.asset_loader)
-                        else:
-                            armor_names = ["Leather Armor", "Chain Mail", "Plate Armor", "Studded Leather", "Scale Mail"]
+                        elif item_type == "armor":
+                            armor_names = ["Leather Armor", "Chain Mail", "Plate Armor", "Studded Leather", "Scale Mail",
+                                         "Dragon Scale Armor", "Mage Robes", "Royal Armor"]
                             armor_name = random.choice(armor_names)
                             defense_bonus = (8 if enemy.is_boss else 4) + random.randint(0, 8)
                             item = Item(enemy.x, enemy.y, armor_name, item_type="armor", 
                                       effect={"defense": defense_bonus}, asset_loader=self.asset_loader)
+                        else:  # misc items
+                            misc_items = [
+                                ("Gold Ring", {"magic_resistance": 5}),
+                                ("Magic Scroll", {"spell_power": 15}),
+                                ("Crystal Gem", {"value": 100})
+                            ]
+                            item_name, effect = random.choice(misc_items)
+                            item = Item(enemy.x, enemy.y, item_name, item_type="misc", 
+                                      effect=effect, asset_loader=self.asset_loader)
                         
                         self.items.append(item)
                         
@@ -1111,15 +1396,44 @@ class Level:
                 # Adjust for height
                 screen_y -= height * 16
                 
-                # Special handling for doors - render dirt underneath first
+                # Special handling for doors - render stone underneath first for better contrast
                 if tile_type == self.TILE_DOOR:
-                    # Render dirt base first
-                    dirt_sprite = self.tile_sprites[self.TILE_DIRT]
-                    game_surface.blit(dirt_sprite, (screen_x - self.tile_width // 2, screen_y - self.tile_height // 2))
+                    # Render stone base first (better than dirt for door contrast)
+                    stone_sprite = self.tile_sprites[self.TILE_STONE]
+                    game_surface.blit(stone_sprite, (screen_x - self.tile_width // 2, screen_y - self.tile_height // 2))
                     
-                    # Then render door on top
+                    # Add subtle glow effect around door for better visibility
+                    glow_radius = 3
+                    glow_color = (255, 255, 150, 50)  # Soft yellow glow
+                    glow_surface = pygame.Surface((self.tile_width + glow_radius * 2, self.tile_height + glow_radius * 2), pygame.SRCALPHA)
+                    pygame.draw.ellipse(glow_surface, glow_color, glow_surface.get_rect())
+                    game_surface.blit(glow_surface, (screen_x - self.tile_width // 2 - glow_radius, screen_y - self.tile_height // 2 - glow_radius), special_flags=pygame.BLEND_ALPHA_SDL2)
+                    
+                    # Then render door on top with slight offset for better positioning
                     door_sprite = self.tile_sprites[self.TILE_DOOR]
-                    game_surface.blit(door_sprite, (screen_x - self.tile_width // 2, screen_y - self.tile_height // 2))
+                    door_rect = door_sprite.get_rect()
+                    door_rect.centerx = screen_x
+                    door_rect.bottom = screen_y + self.tile_height // 2 + 8  # Slightly lower positioning
+                    game_surface.blit(door_sprite, door_rect)
+                elif tile_type in [self.TILE_WALL, self.TILE_WALL_CORNER_TL, self.TILE_WALL_CORNER_TR, 
+                                   self.TILE_WALL_CORNER_BL, self.TILE_WALL_CORNER_BR, 
+                                   self.TILE_WALL_HORIZONTAL, self.TILE_WALL_VERTICAL, self.TILE_WALL_WINDOW]:
+                    # Render all wall types with better positioning and subtle shadow
+                    # Add shadow first
+                    shadow_offset = 2
+                    wall_sprite = self.tile_sprites[tile_type]
+                    shadow_sprite = wall_sprite.copy()
+                    shadow_sprite.fill((0, 0, 0, 80), special_flags=pygame.BLEND_RGBA_MULT)
+                    shadow_rect = shadow_sprite.get_rect()
+                    shadow_rect.centerx = screen_x + shadow_offset
+                    shadow_rect.bottom = screen_y + self.tile_height // 2 + 16 + shadow_offset
+                    game_surface.blit(shadow_sprite, shadow_rect)
+                    
+                    # Then render wall
+                    wall_rect = wall_sprite.get_rect()
+                    wall_rect.centerx = screen_x
+                    wall_rect.bottom = screen_y + self.tile_height // 2 + 16  # Position walls properly
+                    game_surface.blit(wall_sprite, wall_rect)
                 else:
                     # Normal tile rendering
                     sprite = self.tile_sprites[tile_type]
@@ -1152,6 +1466,8 @@ class Level:
         # Render shops on top of everything
         for npc in self.npcs:
             if hasattr(npc, 'shop') and npc.shop:
+                # Set player items for sell mode
+                npc.shop.set_player_items(self.player.inventory.items)
                 npc.shop.render(screen)
         
         # Render dialogue window on top of everything

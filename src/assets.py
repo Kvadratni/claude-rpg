@@ -50,14 +50,33 @@ class AssetLoader:
             "bronze_mace": "bronze_mace.png",
             "silver_dagger": "silver_dagger.png",
             "war_hammer": "war_hammer.png",
+            # New weapons
+            "magic_bow": "magic_bow.png",
+            "crystal_staff": "crystal_staff.png",
+            "throwing_knife": "throwing_knife.png",
+            "crossbow": "crossbow.png",
+            # Armor
             "leather_armor": "leather_armor.png",
             "chain_mail": "chain_mail.png",
             "plate_armor": "plate_armor.png",
             "studded_leather": "studded_leather.png",
             "scale_mail": "scale_mail.png",
+            # New armor
+            "dragon_scale_armor": "dragon_scale_armor.png",
+            "mage_robes": "mage_robes.png",
+            "royal_armor": "royal_armor.png",
+            # Consumables
             "health_potion": "health_potion.png",
             "stamina_potion": "stamina_potion.png",
-            "coin": "coin.png"  # Added coin sprite
+            # New consumables
+            "mana_potion": "mana_potion.png",
+            "antidote": "antidote.png",
+            "strength_potion": "strength_potion.png",
+            # Miscellaneous items
+            "coin": "coin.png",
+            "gold_ring": "gold_ring.png",
+            "magic_scroll": "magic_scroll.png",
+            "crystal_gem": "crystal_gem.png"
         }
         
         for name, filename in image_files.items():
@@ -101,14 +120,32 @@ class AssetLoader:
             "bronze_mace": (205, 127, 50),
             "silver_dagger": (211, 211, 211),
             "war_hammer": (105, 105, 105),
+            # New weapons
+            "magic_bow": (255, 215, 0),  # Gold bow
+            "crystal_staff": (138, 43, 226),  # Purple staff
+            "throwing_knife": (192, 192, 192),  # Silver
+            "crossbow": (139, 69, 19),  # Brown wood
+            # Armor
             "leather_armor": (139, 69, 19),
             "chain_mail": (128, 128, 128),
             "plate_armor": (192, 192, 192),
             "studded_leather": (160, 82, 45),
             "scale_mail": (105, 105, 105),
+            # New armor
+            "dragon_scale_armor": (0, 100, 0),  # Dark green
+            "mage_robes": (75, 0, 130),  # Indigo
+            "royal_armor": (255, 215, 0),  # Gold
+            # Consumables
             "health_potion": (255, 0, 0),
             "stamina_potion": (0, 0, 255),
-            "coin": (255, 215, 0)  # Gold for coin
+            "mana_potion": (0, 191, 255),  # Deep sky blue
+            "antidote": (0, 255, 0),  # Green
+            "strength_potion": (255, 165, 0),  # Orange
+            # Miscellaneous
+            "coin": (255, 215, 0),  # Gold for coin
+            "gold_ring": (255, 215, 0),  # Gold
+            "magic_scroll": (245, 245, 220),  # Beige
+            "crystal_gem": (0, 191, 255)  # Crystal blue
         }
         
         color = colors.get(name, (255, 255, 255))
