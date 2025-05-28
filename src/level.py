@@ -27,6 +27,7 @@ class Level:
     TILE_WALL_HORIZONTAL = 10  # Horizontal wall
     TILE_WALL_VERTICAL = 11    # Vertical wall
     TILE_WALL_WINDOW = 12      # Wall with window
+    TILE_BRICK = 13            # Brick floor for building interiors
     
     def __init__(self, level_name, player, asset_loader):
         self.name = level_name
@@ -166,10 +167,10 @@ class Level:
     
     def create_building(self, tiles, start_x, start_y, width, height):
         """Create a building structure with varied wall types and windows"""
-        # Building interior floor
+        # Building interior floor - use brick tiles for more realistic interiors
         for y in range(start_y + 1, start_y + height - 1):
             for x in range(start_x + 1, start_x + width - 1):
-                tiles[y][x] = self.TILE_STONE  # Interior floor
+                tiles[y][x] = self.TILE_BRICK  # Interior brick floor
         
         # Building walls with proper corners and variations
         for y in range(start_y, start_y + height):
@@ -293,7 +294,7 @@ class Level:
             for x in range(self.width):
                 # Check if tile is walkable
                 tile_type = self.tiles[y][x]
-                if tile_type in [self.TILE_GRASS, self.TILE_DIRT, self.TILE_STONE, self.TILE_DOOR]:
+                if tile_type in [self.TILE_GRASS, self.TILE_DIRT, self.TILE_STONE, self.TILE_DOOR, self.TILE_BRICK]:
                     row.append(True)
                 else:
                     # All wall types are not walkable
@@ -369,6 +370,15 @@ class Level:
             self.tile_sprites[self.TILE_DIRT] = pygame.transform.scale(rotated_dirt, (self.tile_width, self.tile_height))
         else:
             self.tile_sprites[self.TILE_DIRT] = self.iso_renderer.create_diamond_tile((150, 100, 50))
+        
+        # Brick tile for building interiors
+        brick_image = self.asset_loader.get_image("brick_tile")
+        if brick_image:
+            rotated_brick = pygame.transform.rotate(brick_image, 45)
+            self.tile_sprites[self.TILE_BRICK] = pygame.transform.scale(rotated_brick, (self.tile_width, self.tile_height))
+        else:
+            # Fallback to a reddish-brown color for brick
+            self.tile_sprites[self.TILE_BRICK] = self.iso_renderer.create_diamond_tile((150, 80, 60))
         
         # Door - create enhanced door with better visibility
         door_image = self.asset_loader.get_image("door_tile")
@@ -1223,7 +1233,8 @@ class Level:
                     self.TILE_STONE: "Stone Path",
                     self.TILE_WATER: "Water",
                     self.TILE_WALL: "Wall",
-                    self.TILE_DOOR: "Door"
+                    self.TILE_DOOR: "Door",
+                    self.TILE_BRICK: "Brick Floor"
                 }
                 tile_type = self.tiles[tile_y][tile_x]
                 tile_name = tile_names.get(tile_type, "Unknown")
@@ -1276,7 +1287,7 @@ class Level:
                 self.player.gain_experience(enemy.experience)
                 
                 # Improved loot drops - more frequent and varied
-                drop_chance = 0.6 if enemy.is_boss else 0.4  # 60% for bosses, 40% for regular enemies
+                drop_chance = 0.9 if enemy.is_boss else 0.8  # 90% for bosses, 80% for regular enemies
                 if random.random() < drop_chance:
                     # Multiple possible drops for bosses
                     num_drops = 2 if enemy.is_boss else 1
