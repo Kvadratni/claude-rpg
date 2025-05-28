@@ -174,13 +174,37 @@ class NPC(Entity):
             self.shop.open_shop()
             if player.game_log:
                 player.game_log.add_message(f"{self.name}: Welcome to my shop!", "dialog")
+            
+            # Update quest progress for talking to shopkeeper
+            if hasattr(player, 'game') and hasattr(player.game, 'quest_manager'):
+                player.game.quest_manager.update_quest_progress("talk", self.name)
         else:
-            # Regular dialog
+            # Open dialogue window instead of just logging messages
             if self.dialog:
-                message = self.dialog[self.dialog_index]
-                if player.game_log:
-                    player.game_log.add_message(f"{self.name}: {message}", "dialog")
-                self.dialog_index = (self.dialog_index + 1) % len(self.dialog)
+                from .dialogue import DialogueWindow
+                
+                # Create dialogue window with all dialogue lines
+                dialogue_window = DialogueWindow(self.name, self.dialog, self.asset_loader)
+                
+                # Store dialogue window in player or level for rendering
+                if hasattr(player, 'current_dialogue'):
+                    player.current_dialogue = dialogue_window
+                
+                # Quest giving logic for Village Elder
+                if "Elder" in self.name and hasattr(player, 'game') and hasattr(player.game, 'quest_manager'):
+                    quest_manager = player.game.quest_manager
+                    
+                    # Check if we should offer the main quest
+                    if "main_story" not in quest_manager.active_quests and "main_story" not in quest_manager.completed_quests:
+                        # Check if tutorial is completed
+                        if "tutorial" in quest_manager.completed_quests:
+                            quest_manager.start_quest("main_story")
+                            if player.game_log:
+                                player.game_log.add_message("New Quest: The Orc Threat", "quest")
+                
+                # Update quest progress for talking to NPCs
+                if hasattr(player, 'game') and hasattr(player.game, 'quest_manager'):
+                    player.game.quest_manager.update_quest_progress("talk", self.name)
             
             # Handle shop (legacy)
             if self.shop_items:

@@ -61,6 +61,7 @@ class Player:
         self.show_stats = False
         self.show_dialog = False
         self.dialog_text = ""
+        self.current_dialogue = None  # For dialogue windows
         
         # Create player sprite
         self.create_sprite()
@@ -106,6 +107,10 @@ class Player:
             for npc in level.npcs:
                 if hasattr(npc, 'shop') and npc.shop and npc.shop.show:
                     return  # Don't allow movement while shop is open
+        
+        # Check if dialogue window is open - if so, disable movement
+        if self.current_dialogue and self.current_dialogue.show:
+            return  # Don't allow movement while dialogue is open
         
         # Follow current path if we have one
         if self.path and self.path_index < len(self.path):
@@ -213,6 +218,10 @@ class Player:
             for npc in level.npcs:
                 if hasattr(npc, 'shop') and npc.shop and npc.shop.show:
                     return  # Don't allow movement while shop is open
+        
+        # Check if dialogue window is open - if so, disable mouse movement
+        if self.current_dialogue and self.current_dialogue.show:
+            return  # Don't allow movement while dialogue is open
         
         # Get audio manager
         audio = getattr(self.asset_loader, 'audio_manager', None) if self.asset_loader else None
@@ -391,26 +400,40 @@ class Player:
                     in_range = True
                 
                 if in_range:
-                    # Play combat sound
-                    if audio:
-                        if self.equipped_weapon and 'axe' in self.equipped_weapon.name.lower():
-                            audio.play_combat_sound("axe_hit")
-                        else:
-                            audio.play_combat_sound("sword_hit")
+                    # Calculate base damage (unarmed combat)
+                    base_damage = 15  # Base unarmed damage
+                    damage = base_damage
                     
-                    # Calculate damage with weapon bonus
-                    damage = self.attack_damage
+                    # Add weapon bonus if equipped
                     if self.equipped_weapon:
                         damage += self.equipped_weapon.effect.get("damage", 0)
+                        # Play weapon-specific sound
+                        if audio:
+                            if 'axe' in self.equipped_weapon.name.lower():
+                                audio.play_combat_sound("axe_hit")
+                            else:
+                                audio.play_combat_sound("sword_hit")
+                    else:
+                        # Unarmed combat sound
+                        if audio:
+                            audio.play_combat_sound("weapon_hit")  # Generic punch sound
                     
                     # Random damage variation
-                    damage += random.randint(-5, 5)
+                    damage += random.randint(-3, 3)
                     
                     # Attack the enemy
                     if enemy.take_damage(damage):
                         if self.game_log:
                             self.game_log.add_message(f"Enemy {enemy.name} defeated!", "combat")
                         # Experience is handled in the level class
+                    
+                    # Show different attack messages for armed vs unarmed
+                    if self.equipped_weapon:
+                        if self.game_log:
+                            self.game_log.add_message(f"Hit with {self.equipped_weapon.name} for {damage} damage!", "combat")
+                    else:
+                        if self.game_log:
+                            self.game_log.add_message(f"Punched for {damage} damage!", "combat")
                     
                     # Trigger combat music when player attacks
                     if audio and not audio.is_combat_music_active():
@@ -492,7 +515,13 @@ class Player:
     
     def add_item(self, item):
         """Add item to inventory"""
-        return self.inventory.add_item(item)
+        success = self.inventory.add_item(item)
+        if success:
+            # Update quest progress for item collection
+            if hasattr(self, 'game') and hasattr(self.game, 'quest_manager'):
+                self.game.quest_manager.update_quest_progress("collect", item.name)
+                self.game.quest_manager.update_quest_progress("collect", "any")
+        return success
     
     def remove_item(self, item):
         """Remove item from inventory"""
@@ -527,6 +556,11 @@ class Player:
             if old_weapon:
                 self.inventory.add_item(old_weapon)
             self.inventory.remove_item(item)
+            
+            # Update quest progress for equipment
+            if hasattr(self, 'game') and hasattr(self.game, 'quest_manager'):
+                self.game.quest_manager.update_quest_progress("equip", "weapon")
+            
             if self.game_log:
                 self.game_log.add_message(f"Equipped {item.name}", "item")
         elif item.item_type == "armor":
@@ -543,6 +577,11 @@ class Player:
             if old_armor:
                 self.inventory.add_item(old_armor)
             self.inventory.remove_item(item)
+            
+            # Update quest progress for equipment
+            if hasattr(self, 'game') and hasattr(self.game, 'quest_manager'):
+                self.game.quest_manager.update_quest_progress("equip", "armor")
+            
             if self.game_log:
                 self.game_log.add_message(f"Equipped {item.name}", "item")
     

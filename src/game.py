@@ -69,17 +69,25 @@ class Game:
     
     def new_game(self):
         """Start a new game"""
-        # Create player at the center of the much bigger map
-        self.player = Player(60, 60, self.asset_loader, self.game_log)
+        # Create player at the village center (story starting point)
+        self.player = Player(60, 82, self.asset_loader, self.game_log)
         
         # Create the first level
-        self.current_level = Level("town", self.player, self.asset_loader)
+        self.current_level = Level("village", self.player, self.asset_loader)
+        
+        # Initialize quest system
+        from .quest_system import QuestManager
+        self.quest_manager = QuestManager(self.player, self.game_log)
+        
+        # Start tutorial quest automatically
+        self.quest_manager.start_quest("tutorial")
         
         # Switch to playing state
         self.state = Game.STATE_PLAYING
         
-        # Log game start
-        self.game_log.add_message("A new adventure begins...", "system")
+        # Log game start with story context
+        self.game_log.add_message("Welcome to Eldermoor Village!", "system")
+        self.game_log.add_message("The village elder seeks your help...", "story")
     
     def load_game(self, save_name):
         """Load a saved game"""
@@ -188,6 +196,12 @@ class Game:
             self.menu.update()
         elif self.state == Game.STATE_PLAYING:
             self.current_level.update()
+            
+            # Update quest system
+            if hasattr(self, 'quest_manager'):
+                # Connect quest manager to player for quest progress tracking
+                if not hasattr(self.player, 'game'):
+                    self.player.game = self
             
             # Check if player died
             if self.player.health <= 0:

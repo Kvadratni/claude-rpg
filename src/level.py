@@ -60,7 +60,7 @@ class Level:
         self.create_tile_sprites()
     
     def generate_level(self):
-        """Generate a well-designed level layout"""
+        """Generate a well-designed static level layout"""
         tiles = []
         
         # Initialize with grass
@@ -76,44 +76,80 @@ class Level:
                 if x == 0 or x == self.width - 1 or y == 0 or y == self.height - 1:
                     tiles[y][x] = self.TILE_WALL
         
-        # Create a central town area with stone paths
-        town_center_x, town_center_y = 60, 60
+        # VILLAGE AREA (Center-South)
+        village_center_x, village_center_y = 60, 80
         
-        # Main cross roads through the center
-        for x in range(20, 100):
-            tiles[town_center_y][x] = self.TILE_STONE
-            tiles[town_center_y + 1][x] = self.TILE_STONE
-        
-        for y in range(20, 100):
-            tiles[y][town_center_x] = self.TILE_STONE
-            tiles[y][town_center_x + 1] = self.TILE_STONE
-        
-        # Create town buildings
-        self.create_building(tiles, 25, 25, 15, 10)  # Top-left building
-        self.create_building(tiles, 80, 25, 15, 10)  # Top-right building
-        self.create_building(tiles, 25, 85, 15, 10)  # Bottom-left building
-        self.create_building(tiles, 80, 85, 15, 10)  # Bottom-right building
-        
-        # Central marketplace
-        for y in range(55, 66):
-            for x in range(55, 66):
+        # Village square with stone paths
+        for x in range(50, 71):
+            for y in range(75, 86):
                 tiles[y][x] = self.TILE_STONE
         
-        # Create a lake in the northeast
-        self.create_lake(tiles, 85, 35, 12)
+        # Village buildings
+        self.create_building(tiles, 45, 70, 12, 8)   # Shopkeeper's store
+        self.create_building(tiles, 65, 70, 12, 8)   # Elder's house
+        self.create_building(tiles, 52, 88, 16, 10)  # Village hall
         
-        # Create a forest area in the southwest
-        self.create_forest_clearing(tiles, 25, 75, 20)
+        # Village paths
+        for x in range(30, 91):  # Main east-west road
+            tiles[82][x] = self.TILE_STONE
+            tiles[83][x] = self.TILE_STONE
         
-        # Add dirt paths connecting areas
-        self.create_dirt_path(tiles, 40, 30, 60, 30)  # Horizontal path
-        self.create_dirt_path(tiles, 30, 40, 30, 80)  # Vertical path
-        self.create_dirt_path(tiles, 70, 40, 70, 80)  # Another vertical path
+        for y in range(60, 95):  # Main north-south road
+            tiles[y][60] = self.TILE_STONE
+            tiles[y][61] = self.TILE_STONE
         
-        # Ensure player starting area is clear
-        start_x, start_y = 60, 60
-        for dy in range(-3, 4):
-            for dx in range(-3, 4):
+        # FOREST AREA (North-West) - Goblin territory
+        forest_center_x, forest_center_y = 30, 30
+        for y in range(15, 45):
+            for x in range(15, 45):
+                if random.random() < 0.4:  # 40% dirt patches in forest
+                    tiles[y][x] = self.TILE_DIRT
+        
+        # Forest clearing for combat
+        for y in range(25, 35):
+            for x in range(25, 35):
+                tiles[y][x] = self.TILE_DIRT
+        
+        # MOUNTAIN PASS (North-East) - Orc Chief lair
+        mountain_x, mountain_y = 90, 20
+        
+        # Rocky mountain path
+        for y in range(15, 35):
+            for x in range(80, 100):
+                if (x + y) % 3 == 0:  # Create rocky pattern
+                    tiles[y][x] = self.TILE_STONE
+                elif (x + y) % 4 == 0:
+                    tiles[y][x] = self.TILE_DIRT
+        
+        # Orc Chief arena
+        for y in range(18, 28):
+            for x in range(85, 95):
+                tiles[y][x] = self.TILE_STONE
+        
+        # LAKE AREA (South-East) - Peaceful area
+        lake_center_x, lake_center_y = 85, 85
+        self.create_lake(tiles, lake_center_x, lake_center_y, 12)
+        
+        # Lake shore paths
+        for x in range(75, 95):
+            tiles[95][x] = self.TILE_DIRT
+        for y in range(75, 95):
+            tiles[y][95] = self.TILE_DIRT
+        
+        # CONNECTING PATHS
+        # Village to Forest
+        self.create_dirt_path(tiles, 45, 75, 30, 40)
+        
+        # Village to Mountain
+        self.create_dirt_path(tiles, 70, 75, 85, 30)
+        
+        # Village to Lake
+        self.create_dirt_path(tiles, 70, 85, 85, 85)
+        
+        # Ensure player starting area is clear (village center)
+        start_x, start_y = 60, 82
+        for dy in range(-2, 3):
+            for dx in range(-2, 3):
                 if 0 <= start_x + dx < self.width and 0 <= start_y + dy < self.height:
                     if tiles[start_y + dy][start_x + dx] == self.TILE_WALL:
                         tiles[start_y + dy][start_x + dx] = self.TILE_STONE
@@ -260,91 +296,149 @@ class Level:
             self.tile_sprites[self.TILE_DOOR] = self.iso_renderer.create_cube_tile((150, 100, 50), (120, 80, 40), (100, 60, 30))
     
     def spawn_entities(self):
-        """Spawn entities in the level"""
-        # Spawn enemies
-        self.spawn_enemies()
+        """Spawn entities in specific story locations"""
+        # Spawn enemies in designated areas
+        self.spawn_story_enemies()
         
-        # Spawn NPCs
-        self.spawn_npcs()
+        # Spawn NPCs in village
+        self.spawn_story_npcs()
         
-        # Spawn items
-        self.spawn_items()
+        # Remove random item spawning - items only come from shops and enemy drops
+        # self.spawn_items()  # Commented out
         
-        # Spawn objects (trees, rocks, etc.)
-        self.spawn_objects()
+        # Spawn environmental objects
+        self.spawn_story_objects()
     
-    def spawn_enemies(self):
-        """Spawn enemies in the level"""
-        # Spawn 10 enemies
-        for _ in range(10):
-            self.spawn_entity_at_valid_position(
-                lambda x, y: Enemy(x, y, "Goblin", health=50, damage=10, experience=25, asset_loader=self.asset_loader)
-            )
+    def spawn_story_enemies(self):
+        """Spawn enemies in specific story locations"""
+        # Goblins in the forest (North-West)
+        goblin_positions = [
+            (25, 25), (30, 28), (35, 30), (28, 35), (32, 32),
+            (20, 30), (35, 25), (25, 35), (30, 20), (40, 35)
+        ]
         
-        # Spawn a boss enemy
-        self.spawn_entity_at_valid_position(
-            lambda x, y: Enemy(x, y, "Orc Chief", health=200, damage=20, experience=100, is_boss=True, asset_loader=self.asset_loader)
-        )
+        for x, y in goblin_positions:
+            if self.is_valid_story_position(x, y):
+                goblin = Enemy(x, y, "Goblin", health=40, damage=8, experience=25, asset_loader=self.asset_loader)
+                self.enemies.append(goblin)
+        
+        # Orc Chief in mountain lair (North-East) - Boss fight
+        orc_chief_x, orc_chief_y = 90, 23
+        if self.is_valid_story_position(orc_chief_x, orc_chief_y):
+            orc_chief = Enemy(orc_chief_x, orc_chief_y, "Orc Chief", 
+                            health=300, damage=25, experience=200, 
+                            is_boss=True, asset_loader=self.asset_loader)
+            self.enemies.append(orc_chief)
+        
+        # A few roaming enemies near village for early game
+        village_enemy_positions = [(40, 65), (75, 65), (45, 95)]
+        for x, y in village_enemy_positions:
+            if self.is_valid_story_position(x, y):
+                goblin = Enemy(x, y, "Goblin Scout", health=30, damage=6, experience=15, asset_loader=self.asset_loader)
+                self.enemies.append(goblin)
     
-    def spawn_npcs(self):
-        """Spawn NPCs in the level"""
-        # Spawn a shopkeeper with a shop
-        self.spawn_entity_at_valid_position(
-            lambda x, y: NPC(x, y, "Shopkeeper", 
-                           dialog=["Welcome to my shop!", "I have the finest goods in town!", "Come back anytime!"], 
-                           asset_loader=self.asset_loader, has_shop=True)
-        )
+    def spawn_story_npcs(self):
+        """Spawn NPCs in village locations"""
+        # Shopkeeper in the shop building
+        shopkeeper_x, shopkeeper_y = 51, 74  # Inside shop building
+        shopkeeper = NPC(shopkeeper_x, shopkeeper_y, "Shopkeeper", 
+                        dialog=[
+                            "Welcome to my shop!",
+                            "I have the finest goods in the village!",
+                            "Stay safe out there, traveler.",
+                            "The goblins have been more active lately..."
+                        ], 
+                        asset_loader=self.asset_loader, has_shop=True)
+        self.npcs.append(shopkeeper)
         
-        # Spawn a quest giver
-        self.spawn_entity_at_valid_position(
-            lambda x, y: NPC(x, y, "Village Elder", 
-                           dialog=["Our village is in danger.", "Please defeat the Orc Chief!", "You are our only hope."], 
-                           asset_loader=self.asset_loader)
-        )
+        # Village Elder in his house - Quest giver
+        elder_x, elder_y = 71, 74  # Inside elder's house
+        elder = NPC(elder_x, elder_y, "Village Elder", 
+                   dialog=[
+                       "Welcome, brave traveler!",
+                       "Our village faces a terrible threat.",
+                       "Goblins from the northern forest raid our supplies.",
+                       "Their leader, an Orc Chief, commands them from the mountains.",
+                       "Please, help us defeat this menace!",
+                       "The fate of our village rests in your hands."
+                   ], 
+                   asset_loader=self.asset_loader)
+        self.npcs.append(elder)
+        
+        # Village Guard - Tutorial NPC
+        guard_x, guard_y = 60, 78  # In village square
+        guard = NPC(guard_x, guard_y, "Village Guard", 
+                   dialog=[
+                       "Greetings, newcomer!",
+                       "Click to move, space to attack.",
+                       "Visit the shopkeeper for supplies.",
+                       "Be careful in the northern forest!",
+                       "The goblins there are dangerous."
+                   ], 
+                   asset_loader=self.asset_loader)
+        self.npcs.append(guard)
     
-    def spawn_items(self):
-        """Spawn items in the level"""
-        # Spawn more health potions
-        for _ in range(15):  # Increased from 5 to 15
-            self.spawn_entity_at_valid_position(
-                lambda x, y: Item(x, y, "Health Potion", item_type="consumable", effect={"health": 50}, asset_loader=self.asset_loader)
-            )
+    def spawn_story_objects(self):
+        """Spawn environmental objects in story-appropriate locations"""
+        # Dense forest in goblin territory
+        forest_tree_positions = []
+        for y in range(15, 45):
+            for x in range(15, 45):
+                if random.random() < 0.3 and self.is_valid_tree_terrain(x, y):
+                    # Avoid the combat clearing
+                    if not (25 <= x <= 35 and 25 <= y <= 35):
+                        forest_tree_positions.append((x, y))
         
-        # Spawn more weapons
-        for _ in range(5):  # Increased from 1 to 5
-            weapon_names = ["Iron Sword", "Steel Axe", "Bronze Mace", "Silver Dagger", "War Hammer"]
-            weapon_name = random.choice(weapon_names)
-            damage_bonus = random.randint(10, 25)
-            self.spawn_entity_at_valid_position(
-                lambda x, y: Item(x, y, weapon_name, item_type="weapon", effect={"damage": damage_bonus}, asset_loader=self.asset_loader)
-            )
+        for x, y in forest_tree_positions:
+            tree = Entity(x, y, "Tree", entity_type="object", blocks_movement=True, asset_loader=self.asset_loader)
+            self.objects.append(tree)
         
-        # Spawn more armor
-        for _ in range(5):  # Increased from 1 to 5
-            armor_names = ["Leather Armor", "Chain Mail", "Plate Armor", "Studded Leather", "Scale Mail"]
-            armor_name = random.choice(armor_names)
-            defense_bonus = random.randint(5, 15)
-            self.spawn_entity_at_valid_position(
-                lambda x, y: Item(x, y, armor_name, item_type="armor", effect={"defense": defense_bonus}, asset_loader=self.asset_loader)
-            )
+        # Scattered trees around village and paths
+        village_tree_positions = [
+            (35, 70), (80, 70), (35, 90), (80, 90),
+            (50, 60), (70, 60), (50, 100), (70, 100),
+            (25, 82), (95, 82), (60, 55), (60, 105)
+        ]
         
-        # Add stamina potions
-        for _ in range(10):
-            self.spawn_entity_at_valid_position(
-                lambda x, y: Item(x, y, "Stamina Potion", item_type="consumable", effect={"stamina": 30}, asset_loader=self.asset_loader)
-            )
+        for x, y in village_tree_positions:
+            if self.is_valid_tree_terrain(x, y) and self.is_valid_story_position(x, y):
+                tree = Entity(x, y, "Tree", entity_type="object", blocks_movement=True, asset_loader=self.asset_loader)
+                self.objects.append(tree)
+        
+        # Rocks in mountain area
+        mountain_rock_positions = [
+            (82, 18), (88, 16), (95, 20), (85, 25), (92, 28),
+            (80, 22), (97, 25), (83, 30), (90, 32), (86, 19)
+        ]
+        
+        for x, y in mountain_rock_positions:
+            if self.is_valid_story_position(x, y):
+                rock = Entity(x, y, "Rock", entity_type="object", blocks_movement=True, asset_loader=self.asset_loader)
+                self.objects.append(rock)
+        
+        # Decorative rocks around lake
+        lake_rock_positions = [(78, 88), (92, 78), (88, 92), (82, 82)]
+        for x, y in lake_rock_positions:
+            if self.is_valid_story_position(x, y):
+                rock = Entity(x, y, "Rock", entity_type="object", blocks_movement=True, asset_loader=self.asset_loader)
+                self.objects.append(rock)
     
-    def spawn_objects(self):
-        """Spawn static objects in the level"""
-        # Spawn many more trees with proper terrain restrictions
-        for _ in range(80):  # Increased from 20 to 80
-            self.spawn_tree_at_valid_position()
+    def is_valid_story_position(self, x, y):
+        """Check if a position is valid for story entity placement"""
+        # Check if position is within bounds
+        if not (0 <= x < self.width and 0 <= y < self.height):
+            return False
         
-        # Spawn rocks with proper sprites
-        for _ in range(25):  # Increased from 15 to 25
-            self.spawn_entity_at_valid_position(
-                lambda x, y: Entity(x, y, "Rock", entity_type="object", blocks_movement=True, asset_loader=self.asset_loader)
-            )
+        # Check if tile is walkable
+        if not self.walkable[y][x]:
+            return False
+        
+        # Don't place entities too close to player starting position
+        start_x, start_y = 60, 82
+        if abs(x - start_x) < 3 and abs(y - start_y) < 3:
+            return False
+        
+        return True
     
     def spawn_tree_at_valid_position(self):
         """Spawn a tree only on grass or dirt tiles"""
@@ -653,7 +747,13 @@ class Level:
     
     def handle_event(self, event):
         """Handle level events"""
-        # Check if any shop is open and handle shop events first
+        # Check if dialogue window is open and handle its events first
+        if self.player.current_dialogue and self.player.current_dialogue.show:
+            if event.type == pygame.MOUSEBUTTONDOWN and event.button == 1:
+                if self.player.current_dialogue.handle_click(event.pos):
+                    return  # Dialogue consumed the event
+        
+        # Check if any shop is open and handle shop events
         for npc in self.npcs:
             if hasattr(npc, 'shop') and npc.shop and npc.shop.show:
                 if event.type == pygame.MOUSEBUTTONDOWN and event.button == 1:
@@ -711,7 +811,11 @@ class Level:
             for npc in self.npcs:
                 if abs(world_x - npc.x) < 1.2 and abs(world_y - npc.y) < 1.2:
                     if self.player.game_log:
-                        self.player.game_log.add_message(f"{npc.name}: {npc.dialog[0] if npc.dialog else 'No dialog'}", "dialog")
+                        # Just show NPC info on right-click, not dialog
+                        npc_info = f"{npc.name}"
+                        if npc.has_shop:
+                            npc_info += " (Shopkeeper)"
+                        self.player.game_log.add_message(npc_info, "system")
                     clicked_entity = npc
                     break
         
@@ -779,27 +883,50 @@ class Level:
                 if enemy_id in self.enemies_in_combat:
                     self.enemies_in_combat.discard(enemy_id)
                 
+                # Update quest progress for enemy kills
+                if hasattr(self.player, 'game') and hasattr(self.player.game, 'quest_manager'):
+                    quest_manager = self.player.game.quest_manager
+                    quest_manager.update_quest_progress("kill", enemy.name)
+                    quest_manager.update_quest_progress("kill", "any")  # For generic kill quests
+                
                 self.enemies.remove(enemy)
                 self.player.gain_experience(enemy.experience)
                 
-                # Drop loot
-                if random.random() < 0.3:  # 30% chance to drop item
-                    item_type = random.choice(["consumable", "weapon", "armor"])
-                    if item_type == "consumable":
-                        item = Item(enemy.x, enemy.y, "Health Potion", item_type="consumable", effect={"health": 50}, asset_loader=self.asset_loader)
-                    elif item_type == "weapon":
-                        # Use specific weapon names for drops
-                        weapon_names = ["Iron Sword", "Steel Axe", "Bronze Mace", "Silver Dagger", "War Hammer"]
-                        weapon_name = random.choice(weapon_names)
-                        damage_bonus = 5 + random.randint(0, 10)
-                        item = Item(enemy.x, enemy.y, weapon_name, item_type="weapon", effect={"damage": damage_bonus}, asset_loader=self.asset_loader)
-                    else:
-                        # Use specific armor names for drops
-                        armor_names = ["Leather Armor", "Chain Mail", "Plate Armor", "Studded Leather", "Scale Mail"]
-                        armor_name = random.choice(armor_names)
-                        defense_bonus = 5 + random.randint(0, 10)
-                        item = Item(enemy.x, enemy.y, armor_name, item_type="armor", effect={"defense": defense_bonus}, asset_loader=self.asset_loader)
-                    self.items.append(item)
+                # Improved loot drops - more frequent and varied
+                drop_chance = 0.6 if enemy.is_boss else 0.4  # 60% for bosses, 40% for regular enemies
+                if random.random() < drop_chance:
+                    # Multiple possible drops for bosses
+                    num_drops = 2 if enemy.is_boss else 1
+                    
+                    for _ in range(num_drops):
+                        item_type = random.choice(["consumable", "weapon", "armor"])
+                        if item_type == "consumable":
+                            potion_type = random.choice(["Health Potion", "Stamina Potion"])
+                            if potion_type == "Health Potion":
+                                item = Item(enemy.x, enemy.y, "Health Potion", item_type="consumable", 
+                                          effect={"health": 50}, asset_loader=self.asset_loader)
+                            else:
+                                item = Item(enemy.x, enemy.y, "Stamina Potion", item_type="consumable", 
+                                          effect={"stamina": 30}, asset_loader=self.asset_loader)
+                        elif item_type == "weapon":
+                            weapon_names = ["Iron Sword", "Steel Axe", "Bronze Mace", "Silver Dagger", "War Hammer"]
+                            weapon_name = random.choice(weapon_names)
+                            damage_bonus = (10 if enemy.is_boss else 5) + random.randint(0, 10)
+                            item = Item(enemy.x, enemy.y, weapon_name, item_type="weapon", 
+                                      effect={"damage": damage_bonus}, asset_loader=self.asset_loader)
+                        else:
+                            armor_names = ["Leather Armor", "Chain Mail", "Plate Armor", "Studded Leather", "Scale Mail"]
+                            armor_name = random.choice(armor_names)
+                            defense_bonus = (8 if enemy.is_boss else 4) + random.randint(0, 8)
+                            item = Item(enemy.x, enemy.y, armor_name, item_type="armor", 
+                                      effect={"defense": defense_bonus}, asset_loader=self.asset_loader)
+                        
+                        self.items.append(item)
+                        
+                        # Offset multiple drops slightly
+                        if num_drops > 1:
+                            item.x += random.uniform(-0.5, 0.5)
+                            item.y += random.uniform(-0.5, 0.5)
         
         # Handle combat music transitions
         if len(self.enemies_in_combat) == 0:
@@ -906,6 +1033,10 @@ class Level:
         for npc in self.npcs:
             if hasattr(npc, 'shop') and npc.shop:
                 npc.shop.render(screen)
+        
+        # Render dialogue window on top of everything
+        if self.player.current_dialogue and self.player.current_dialogue.show:
+            self.player.current_dialogue.render(screen)
     
     def render_ui(self, screen):
         """Render enhanced game UI"""

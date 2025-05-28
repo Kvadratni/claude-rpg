@@ -22,6 +22,9 @@ class GameLog:
             "experience": (255, 255, 100),
             "system": (150, 150, 255),
             "dialog": (200, 200, 255),
+            "quest": (255, 215, 0),      # Gold for quest messages
+            "story": (255, 165, 0),      # Orange for story messages
+            "reward": (50, 255, 50),     # Bright green for rewards
             "error": (255, 50, 50)
         }
         
