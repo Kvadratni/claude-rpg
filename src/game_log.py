@@ -124,3 +124,7 @@ class GameLog:
     def get_recent_messages(self, count=10):
         """Get the most recent messages"""
         return self.messages[-count:] if len(self.messages) >= count else self.messages
+    
+    def get_message_color(self, msg_type):
+        """Get color for a message type"""
+        return self.colors.get(msg_type, self.colors["default"])

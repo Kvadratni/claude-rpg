@@ -95,6 +95,14 @@ An isometric RPG game built with Python and Pygame, featuring mouse-driven gamep
 - **Tile System**: 64x32 isometric tiles
 - **Asset Support**: PNG images with automatic scaling
 
+### Audio Assets
+- **Primary Source**: OpenGameArt.org Fantasy Sound Effects Library
+- **License**: CC-BY 3.0 (Attribution Required)
+- **Collection**: 45 comprehensive fantasy sound effects
+- **Categories**: Combat, magic spells, creature sounds, ambient effects, UI sounds
+- **Installation**: Download from [Fantasy Sound Effects Library](https://lpc.opengameart.org/content/fantasy-sound-effects-library)
+- **Directory Structure**: Organized by sound type in `assets/sounds/`
+
 ## Development
 
 ### Project Structure
@@ -115,7 +123,8 @@ claude-rpg/
 │   ├── game_log.py      # In-game messaging system
 │   └── menu.py          # Menu systems
 ├── assets/
-│   └── images/          # Game sprites and tiles
+│   ├── images/          # Game sprites and tiles
+│   └── sounds/          # Audio assets and sound effects
 ├── pyproject.toml       # Project configuration
 ├── README.md
 └── .gitignore

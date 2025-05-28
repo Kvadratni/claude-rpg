@@ -322,17 +322,43 @@ class Level:
     
     def spawn_objects(self):
         """Spawn static objects in the level"""
-        # Spawn trees with proper sprites
-        for _ in range(20):
-            self.spawn_entity_at_valid_position(
-                lambda x, y: Entity(x, y, "Tree", entity_type="object", blocks_movement=True, asset_loader=self.asset_loader)
-            )
+        # Spawn many more trees with proper terrain restrictions
+        for _ in range(80):  # Increased from 20 to 80
+            self.spawn_tree_at_valid_position()
         
         # Spawn rocks with proper sprites
-        for _ in range(15):
+        for _ in range(25):  # Increased from 15 to 25
             self.spawn_entity_at_valid_position(
                 lambda x, y: Entity(x, y, "Rock", entity_type="object", blocks_movement=True, asset_loader=self.asset_loader)
             )
+    
+    def spawn_tree_at_valid_position(self):
+        """Spawn a tree only on grass or dirt tiles"""
+        attempts = 0
+        max_attempts = 200
+        
+        while attempts < max_attempts:
+            x = random.randint(5, self.width - 6)
+            y = random.randint(5, self.height - 6)
+            
+            # Check if position is valid and on correct terrain
+            if self.is_valid_position(x, y) and self.is_valid_tree_terrain(x, y):
+                tree = Entity(x, y, "Tree", entity_type="object", blocks_movement=True, asset_loader=self.asset_loader)
+                self.objects.append(tree)
+                return tree
+            
+            attempts += 1
+        
+        return None
+    
+    def is_valid_tree_terrain(self, x, y):
+        """Check if a tree can be placed on this terrain type"""
+        if not (0 <= x < self.width and 0 <= y < self.height):
+            return False
+        
+        tile_type = self.tiles[y][x]
+        # Trees can only spawn on grass or dirt
+        return tile_type in [self.TILE_GRASS, self.TILE_DIRT]
     
     def spawn_entity_at_valid_position(self, entity_creator):
         """Spawn an entity at a valid position"""
@@ -457,6 +483,17 @@ class Level:
     
     def handle_click(self, pos):
         """Handle mouse click at position"""
+        # Check if clicking on inventory button
+        if hasattr(self, 'inventory_button_rect') and self.inventory_button_rect.collidepoint(pos):
+            # Toggle inventory
+            self.player.inventory.show = not self.player.inventory.show
+            if self.player.game_log:
+                if self.player.inventory.show:
+                    self.player.game_log.add_message("Inventory opened", "system")
+                else:
+                    self.player.game_log.add_message("Inventory closed", "system")
+            return
+        
         # Convert screen position to world position
         world_x, world_y = self.iso_renderer.screen_to_world(pos[0], pos[1], self.camera_x, self.camera_y)
         
@@ -616,47 +653,122 @@ class Level:
         self.render_ui(screen)
     
     def render_ui(self, screen):
-        """Render game UI"""
-        font = pygame.font.Font(None, 24)
+        """Render enhanced game UI"""
+        screen_width = screen.get_width()
+        screen_height = screen.get_height()
         
-        # Player stats
+        # Create UI panel at bottom
+        ui_height = 150
+        ui_panel = pygame.Surface((screen_width, ui_height))
+        ui_panel.fill((40, 40, 40))  # Dark gray background
+        
+        # Draw border
+        pygame.draw.rect(ui_panel, (100, 100, 100), (0, 0, screen_width, ui_height), 2)
+        
+        # Left side - Player stats
+        font = pygame.font.Font(None, 24)
+        small_font = pygame.font.Font(None, 20)
+        
         stats_text = [
             f"Level: {self.player.level}",
             f"Health: {self.player.health}/{self.player.max_health}",
             f"Mana: {self.player.mana}/{self.player.max_mana}",
             f"Exp: {self.player.experience}/{self.player.experience_to_next}",
-            f"Gold: {self.player.gold}",
-            f"Position: ({int(self.player.x)}, {int(self.player.y)})"
+            f"Gold: {self.player.gold}"
         ]
         
         for i, text in enumerate(stats_text):
-            surface = font.render(text, True, (255, 255, 255))
-            screen.blit(surface, (10, 10 + i * 25))
+            surface = small_font.render(text, True, (255, 255, 255))
+            ui_panel.blit(surface, (10, 10 + i * 22))
         
-        # Equipped items
+        # Center-left - Equipment display
+        equipment_x = 200
+        
+        # Current weapon display
+        weapon_rect = pygame.Rect(equipment_x, 10, 60, 60)
+        pygame.draw.rect(ui_panel, (60, 60, 60), weapon_rect)
+        pygame.draw.rect(ui_panel, (100, 100, 100), weapon_rect, 2)
+        
         if self.player.equipped_weapon:
-            weapon_text = f"Weapon: {self.player.equipped_weapon.name}"
-            surface = font.render(weapon_text, True, (255, 255, 255))
-            screen.blit(surface, (screen.get_width() - 200, 10))
+            # Draw weapon icon (simplified)
+            pygame.draw.rect(ui_panel, (192, 192, 192), (equipment_x + 15, 20, 30, 40))
+            weapon_text = font.render("Weapon:", True, (255, 255, 255))
+            ui_panel.blit(weapon_text, (equipment_x, 75))
+            weapon_name = small_font.render(self.player.equipped_weapon.name, True, (255, 255, 255))
+            ui_panel.blit(weapon_name, (equipment_x, 95))
+        else:
+            no_weapon = small_font.render("No Weapon", True, (150, 150, 150))
+            ui_panel.blit(no_weapon, (equipment_x + 5, 35))
+        
+        # Current armor display
+        armor_x = equipment_x + 80
+        armor_rect = pygame.Rect(armor_x, 10, 60, 60)
+        pygame.draw.rect(ui_panel, (60, 60, 60), armor_rect)
+        pygame.draw.rect(ui_panel, (100, 100, 100), armor_rect, 2)
         
         if self.player.equipped_armor:
-            armor_text = f"Armor: {self.player.equipped_armor.name}"
-            surface = font.render(armor_text, True, (255, 255, 255))
-            screen.blit(surface, (screen.get_width() - 200, 35))
+            # Draw armor icon (simplified)
+            pygame.draw.ellipse(ui_panel, (139, 69, 19), (armor_x + 15, 20, 30, 40))
+            armor_text = font.render("Armor:", True, (255, 255, 255))
+            ui_panel.blit(armor_text, (armor_x, 75))
+            armor_name = small_font.render(self.player.equipped_armor.name, True, (255, 255, 255))
+            ui_panel.blit(armor_name, (armor_x, 95))
+        else:
+            no_armor = small_font.render("No Armor", True, (150, 150, 150))
+            ui_panel.blit(no_armor, (armor_x + 5, 35))
         
-        # Instructions
+        # Inventory button
+        inv_button_x = armor_x + 100
+        inv_button = pygame.Rect(inv_button_x, 20, 100, 40)
+        pygame.draw.rect(ui_panel, (80, 80, 80), inv_button)
+        pygame.draw.rect(ui_panel, (120, 120, 120), inv_button, 2)
+        
+        inv_text = font.render("Inventory", True, (255, 255, 255))
+        text_rect = inv_text.get_rect(center=inv_button.center)
+        ui_panel.blit(inv_text, text_rect)
+        
+        # Store button rect for click detection (adjust for screen position)
+        self.inventory_button_rect = pygame.Rect(inv_button_x, screen_height - ui_height + 20, 100, 40)
+        
+        # Right side - Game log (non-transparent)
+        log_x = screen_width - 350
+        log_width = 340
+        log_height = ui_height - 20
+        
+        log_panel = pygame.Surface((log_width, log_height))
+        log_panel.fill((30, 30, 30))  # Darker background for log
+        pygame.draw.rect(log_panel, (80, 80, 80), (0, 0, log_width, log_height), 2)
+        
+        # Game log title
+        log_title = font.render("Game Log:", True, (200, 200, 200))
+        log_panel.blit(log_title, (5, 5))
+        
+        # Render recent messages
+        if hasattr(self.player, 'game_log') and self.player.game_log:
+            recent_messages = self.player.game_log.messages[-6:]  # Last 6 messages
+            for i, message_data in enumerate(recent_messages):
+                if isinstance(message_data, tuple) and len(message_data) >= 2:
+                    message, msg_type = message_data[:2]
+                else:
+                    message = str(message_data)
+                    msg_type = "system"
+                color = self.player.game_log.get_message_color(msg_type)
+                msg_surface = small_font.render(message[:45], True, color)  # Truncate long messages
+                log_panel.blit(msg_surface, (5, 30 + i * 18))
+        
+        ui_panel.blit(log_panel, (log_x, 10))
+        
+        # Blit the entire UI panel to screen
+        screen.blit(ui_panel, (0, screen_height - ui_height))
+        
+        # Instructions (moved to top)
         instructions = [
-            "Left Click: Move/Interact/Attack",
-            "Right Click: Inspect/Info",
-            "SPACE: Attack",
-            "I: Inventory",
-            "Cmd+Shift+F: Toggle Fullscreen",
-            "ESC: Pause Menu"
+            "Left Click: Move/Interact/Attack  |  Right Click: Inspect  |  SPACE: Attack  |  ESC: Menu"
         ]
         
         for i, text in enumerate(instructions):
-            surface = pygame.font.Font(None, 20).render(text, True, (200, 200, 200))
-            screen.blit(surface, (10, screen.get_height() - 110 + i * 20))
+            surface = small_font.render(text, True, (200, 200, 200))
+            screen.blit(surface, (10, 10 + i * 20))
     
     def get_save_data(self):
         """Get data for saving"""
