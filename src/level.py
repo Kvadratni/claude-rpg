@@ -190,15 +190,15 @@ class Level:
                 is_left = (x == start_x)
                 is_right = (x == start_x + width - 1)
                 
-                # Corners
+                # Corners - Swap TL with BR for isometric perspective
                 if is_top and is_left:
-                    tiles[y][x] = self.TILE_WALL_CORNER_TL
+                    tiles[y][x] = self.TILE_WALL_CORNER_BR  # Swap TL with BR
                 elif is_top and is_right:
-                    tiles[y][x] = self.TILE_WALL_CORNER_TR
+                    tiles[y][x] = self.TILE_WALL_CORNER_TR  # Keep TR as TR
                 elif is_bottom and is_left:
-                    tiles[y][x] = self.TILE_WALL_CORNER_BL
+                    tiles[y][x] = self.TILE_WALL_CORNER_BL  # Keep BL as BL  
                 elif is_bottom and is_right:
-                    tiles[y][x] = self.TILE_WALL_CORNER_BR
+                    tiles[y][x] = self.TILE_WALL_CORNER_TL  # Swap BR with TL
                 # Horizontal walls (top and bottom)
                 elif is_top or is_bottom:
                     # Add some windows to horizontal walls (not too many)
@@ -526,15 +526,21 @@ class Level:
             self.TILE_WALL_CORNER_BR: "wall_corner_br"
         }
         
+        # Track if any corner assets fail to load
+        failed_corners = []
+        
         for tile_type, asset_name in corner_assets.items():
             corner_image = self.asset_loader.get_image(asset_name)
             if corner_image:
                 scaled_corner = pygame.transform.scale(corner_image, (self.tile_width + 8, wall_height))
                 self.tile_sprites[tile_type] = scaled_corner
             else:
-                # Fallback to programmatically created corner
-                self.create_wall_corner_sprites(self.tile_sprites[self.TILE_WALL])
-                break  # If one fails, use programmatic creation for all
+                failed_corners.append(tile_type)
+        
+        # If any corners failed to load, create programmatic fallbacks for all
+        if failed_corners:
+            print(f"Warning: {len(failed_corners)} corner assets failed to load, using programmatic fallbacks")
+            self.create_wall_corner_sprites(self.tile_sprites[self.TILE_WALL])
     
     def load_directional_wall_sprites(self):
         """Load dedicated horizontal and vertical wall assets"""
@@ -547,6 +553,7 @@ class Level:
             self.tile_sprites[self.TILE_WALL_HORIZONTAL] = scaled_h_wall
         else:
             # Fallback to programmatically created horizontal wall
+            print("Warning: wall_horizontal asset not found, using programmatic fallback")
             self.create_wall_directional_sprites(self.tile_sprites[self.TILE_WALL])
         
         # Load vertical wall
@@ -555,8 +562,9 @@ class Level:
             scaled_v_wall = pygame.transform.scale(v_wall_image, (self.tile_width + 8, wall_height))
             self.tile_sprites[self.TILE_WALL_VERTICAL] = scaled_v_wall
         else:
-            # Fallback to programmatically created vertical wall if not already done
+            # Fallback to programmatically created vertical wall if horizontal also failed
             if self.TILE_WALL_HORIZONTAL not in self.tile_sprites:
+                print("Warning: wall_vertical asset not found, using programmatic fallback")
                 self.create_wall_directional_sprites(self.tile_sprites[self.TILE_WALL])
     
     def spawn_entities(self):

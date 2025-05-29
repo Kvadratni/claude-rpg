@@ -278,7 +278,7 @@ class Player:
                 if abs(world_x - chest.x) < 1.2 and abs(world_y - chest.y) < 1.2:
                     # Check if player is close enough to interact
                     dist = math.sqrt((self.x - chest.x)**2 + (self.y - chest.y)**2)
-                    if dist < 2.0:  # Same proximity requirement as item pickup
+                    if dist < 1.5:  # Must be right next to chest to interact
                         clicked_entity = chest
                         break
                     else:
