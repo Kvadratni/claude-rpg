@@ -32,8 +32,6 @@ class Player:
         self.attack_damage = 25
         self.attack_range = 1.2
         self.attacking = False
-        self.attack_cooldown = 0
-        self.max_attack_cooldown = 30
         self.defense = 5
         
         # Movement
@@ -346,20 +344,24 @@ class Player:
         # Check enemies for attack
         if not clicked_entity:
             for enemy in level.enemies:
-                # Use larger detection area for easier clicking
-                if abs(world_x - enemy.x) < 1.5 and abs(world_y - enemy.y) < 1.5:
+                # Use larger detection area for easier clicking - circular area around enemy
+                dx = world_x - enemy.x
+                dy = world_y - enemy.y
+                click_distance = math.sqrt(dx * dx + dy * dy)
+                
+                if click_distance < 1.0:  # Circular hitbox instead of square
                     # Check if player is close enough to attack
-                    dist = math.sqrt((self.x - enemy.x)**2 + (self.y - enemy.y)**2)
-                    if dist <= self.attack_range:
-                        # Attack immediately if in range
-                        if self.attack_cooldown <= 0:
+                    player_dist = math.sqrt((self.x - enemy.x)**2 + (self.y - enemy.y)**2)
+                    if player_dist <= self.attack_range:
+                        # Attack immediately if in range and have stamina
+                        stamina_cost = 10
+                        if self.stamina >= stamina_cost:
                             self.attack([enemy])
-                            self.attack_cooldown = self.max_attack_cooldown
                             if self.game_log:
                                 self.game_log.add_message(f"Attacking {enemy.name}!", "combat")
                         else:
                             if self.game_log:
-                                self.game_log.add_message("Attack on cooldown!", "combat")
+                                self.game_log.add_message("Not enough stamina to attack!", "combat")
                     else:
                         # Use pathfinding to move towards enemy for attack
                         path = level.find_path(self.x, self.y, enemy.x, enemy.y, self.size)
@@ -406,13 +408,10 @@ class Player:
         # This is now just for additional updates
         
         # Handle attacks
-        if self.attacking and self.attack_cooldown <= 0:
-            self.attack(level.enemies)
-            self.attack_cooldown = self.max_attack_cooldown
-        
-        # Update cooldowns
-        if self.attack_cooldown > 0:
-            self.attack_cooldown -= 1
+        if self.attacking:
+            stamina_cost = 10
+            if self.stamina >= stamina_cost:
+                self.attack(level.enemies)
         
         # Update projectile effects
         if hasattr(self, 'projectiles'):
@@ -462,59 +461,46 @@ class Player:
             dy = enemy.y - self.y
             distance = math.sqrt(dx * dx + dy * dy)
             
-            # Check if enemy is in range and in front of player
+            # Check if enemy is within attack range (circular area around player)
             if distance <= self.attack_range:
-                # Check if enemy is in the direction the player is facing
-                in_range = False
+                # Calculate base damage (unarmed combat)
+                base_damage = 15  # Base unarmed damage
+                damage = base_damage
                 
-                if self.direction == 0 and dy > 0:  # Down
-                    in_range = True
-                elif self.direction == 1 and dx < 0:  # Left
-                    in_range = True
-                elif self.direction == 2 and dy < 0:  # Up
-                    in_range = True
-                elif self.direction == 3 and dx > 0:  # Right
-                    in_range = True
+                # Add weapon bonus if equipped
+                if self.equipped_weapon:
+                    damage += self.equipped_weapon.effect.get("damage", 0)
+                    # Play weapon-specific sound
+                    if audio:
+                        if 'axe' in self.equipped_weapon.name.lower():
+                            audio.play_combat_sound("axe_hit")
+                        else:
+                            audio.play_combat_sound("sword_hit")
+                else:
+                    # Unarmed combat sound
+                    if audio:
+                        audio.play_combat_sound("weapon_hit")  # Generic punch sound
                 
-                if in_range:
-                    # Calculate base damage (unarmed combat)
-                    base_damage = 15  # Base unarmed damage
-                    damage = base_damage
-                    
-                    # Add weapon bonus if equipped
-                    if self.equipped_weapon:
-                        damage += self.equipped_weapon.effect.get("damage", 0)
-                        # Play weapon-specific sound
-                        if audio:
-                            if 'axe' in self.equipped_weapon.name.lower():
-                                audio.play_combat_sound("axe_hit")
-                            else:
-                                audio.play_combat_sound("sword_hit")
-                    else:
-                        # Unarmed combat sound
-                        if audio:
-                            audio.play_combat_sound("weapon_hit")  # Generic punch sound
-                    
-                    # Random damage variation
-                    damage += random.randint(-3, 3)
-                    
-                    # Attack the enemy
-                    if enemy.take_damage(damage):
-                        if self.game_log:
-                            self.game_log.add_message(f"Enemy {enemy.name} defeated!", "combat")
-                        # Experience is handled in the level class
-                    
-                    # Show different attack messages for armed vs unarmed
-                    if self.equipped_weapon:
-                        if self.game_log:
-                            self.game_log.add_message(f"Hit with {self.equipped_weapon.name} for {damage} damage!", "combat")
-                    else:
-                        if self.game_log:
-                            self.game_log.add_message(f"Punched for {damage} damage!", "combat")
-                    
-                    # Trigger combat music when player attacks
-                    if audio and not audio.is_combat_music_active():
-                        audio.start_combat_music()
+                # Random damage variation
+                damage += random.randint(-3, 3)
+                
+                # Attack the enemy
+                if enemy.take_damage(damage):
+                    if self.game_log:
+                        self.game_log.add_message(f"Enemy {enemy.name} defeated!", "combat")
+                    # Experience is handled in the level class
+                
+                # Show different attack messages for armed vs unarmed
+                if self.equipped_weapon:
+                    if self.game_log:
+                        self.game_log.add_message(f"Hit with {self.equipped_weapon.name} for {damage} damage!", "combat")
+                else:
+                    if self.game_log:
+                        self.game_log.add_message(f"Punched for {damage} damage!", "combat")
+                
+                # Trigger combat music when player attacks
+                if audio and not audio.is_combat_music_active():
+                    audio.start_combat_music()
     
     def ranged_attack(self, enemies, audio):
         """Perform ranged attack on enemies within range"""

@@ -64,10 +64,6 @@ class LevelRendererMixin:
         for entity in sorted_entities:
             entity.render(game_surface, self.camera_x, self.camera_y, self.iso_renderer)
         
-        # Debug: Render pathfinding visualization if player has a path
-        if hasattr(self.player, 'path') and self.player.path and len(self.player.path) > 1:
-            self.render_path_debug(game_surface, self.player.path)
-        
         # Blit game surface to main screen
         screen.blit(game_surface, (0, 0))
         
@@ -121,49 +117,3 @@ class LevelRendererMixin:
             self.wall_renderer.render_flat_wall(surface, screen_x, screen_y, tile_type, x, y)
         elif tile_type == self.TILE_DOOR:
             self.door_renderer.render_door_tile(surface, screen_x, screen_y, tile_type, self, self.tile_width, self.tile_height)
-    
-    def render_path_debug(self, surface, path):
-        """Render debug visualization of the current path"""
-        if len(path) < 2:
-            return
-        
-        # Draw path lines
-        for i in range(len(path) - 1):
-            start_world = path[i]
-            end_world = path[i + 1]
-            
-            # Convert world coordinates to screen coordinates
-            start_screen = self.iso_renderer.world_to_screen(start_world[0], start_world[1], self.camera_x, self.camera_y)
-            end_screen = self.iso_renderer.world_to_screen(end_world[0], end_world[1], self.camera_x, self.camera_y)
-            
-            # Draw line between waypoints
-            pygame.draw.line(surface, (255, 255, 0), start_screen, end_screen, 2)  # Yellow line
-        
-        # Draw waypoint circles
-        for i, waypoint in enumerate(path):
-            screen_pos = self.iso_renderer.world_to_screen(waypoint[0], waypoint[1], self.camera_x, self.camera_y)
-            
-            # Different colors for different waypoint types
-            if i == 0:
-                color = (0, 255, 0)  # Green for start
-            elif i == len(path) - 1:
-                color = (255, 0, 0)  # Red for end
-            else:
-                # Check if this waypoint is near a door
-                tile_x, tile_y = int(waypoint[0]), int(waypoint[1])
-                is_door_waypoint = False
-                
-                for dx in [-1, 0, 1]:
-                    for dy in [-1, 0, 1]:
-                        check_x, check_y = tile_x + dx, tile_y + dy
-                        if (0 <= check_x < self.width and 0 <= check_y < self.height):
-                            if self.tiles[check_y][check_x] == self.TILE_DOOR:
-                                is_door_waypoint = True
-                                break
-                    if is_door_waypoint:
-                        break
-                
-                color = (0, 255, 255) if is_door_waypoint else (255, 255, 255)  # Cyan for door waypoints, white for others
-            
-            pygame.draw.circle(surface, color, screen_pos, 4)
-            pygame.draw.circle(surface, (0, 0, 0), screen_pos, 4, 1)  # Black border
