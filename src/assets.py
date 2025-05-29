@@ -50,6 +50,28 @@ class AssetLoader:
             "npc_shopkeeper": "npc_shopkeeper.png",
             "elder_npc": "elder_npc.png",  # Added elder NPC
             "village_guard_sprite": "village_guard_sprite.png",  # Added village guard
+            # New NPCs
+            "guard_captain": "guard_captain.png",
+            "master_smith": "master_smith.png",
+            "innkeeper": "innkeeper.png",
+            "high_priest": "high_priest.png",
+            "mine_foreman": "mine_foreman.png",
+            "harbor_master": "harbor_master.png",
+            "caravan_master": "caravan_master.png",
+            "forest_ranger": "forest_ranger.png",
+            "master_herbalist": "master_herbalist.png",
+            "mysterious_wizard": "mysterious_wizard.png",
+            "old_hermit": "old_hermit.png",
+            # New Enemies
+            "bandit_scout": "bandit_scout.png",
+            "forest_sprite": "forest_sprite.png",
+            "ancient_guardian": "ancient_guardian.png",
+            "orc_warrior": "orc_warrior.png",
+            "ancient_dragon": "ancient_dragon.png",
+            "fire_drake": "fire_drake.png",
+            "crystal_elemental": "crystal_elemental.png",
+            "giant_scorpion": "giant_scorpion.png",
+            "swamp_troll": "swamp_troll.png",
             "tree": "tree.png",
             "rock": "rock.png",
             "menu_background": "menu_background.png",  # Added menu background
@@ -85,7 +107,16 @@ class AssetLoader:
             "coin": "coin.png",
             "gold_ring": "gold_ring.png",
             "magic_scroll": "magic_scroll.png",
-            "crystal_gem": "crystal_gem.png"
+            "crystal_gem": "crystal_gem.png",
+            # Chest sprites
+            "wooden_chest_closed": "wooden_chest_closed.png",
+            "wooden_chest_open": "wooden_chest_open.png",
+            "iron_chest_closed": "iron_chest_closed.png",
+            "iron_chest_open": "iron_chest_open.png",
+            "gold_chest_closed": "gold_chest_closed.png",
+            "gold_chest_open": "gold_chest_open.png",
+            "magical_chest_closed": "magical_chest_closed.png",
+            "magical_chest_open": "magical_chest_open.png"
         }
         
         for name, filename in image_files.items():
@@ -130,6 +161,28 @@ class AssetLoader:
             "npc_shopkeeper": (255, 215, 0),
             "elder_npc": (128, 0, 128),  # Purple for elder
             "village_guard_sprite": (70, 130, 180),  # Steel blue for guard
+            # New NPCs
+            "guard_captain": (70, 130, 180),  # Steel blue
+            "master_smith": (139, 69, 19),  # Brown
+            "innkeeper": (160, 82, 45),  # Saddle brown
+            "high_priest": (255, 255, 255),  # White
+            "mine_foreman": (105, 105, 105),  # Gray
+            "harbor_master": (0, 100, 150),  # Navy blue
+            "caravan_master": (210, 180, 140),  # Tan
+            "forest_ranger": (34, 139, 34),  # Forest green
+            "master_herbalist": (50, 205, 50),  # Lime green
+            "mysterious_wizard": (75, 0, 130),  # Indigo
+            "old_hermit": (160, 160, 160),  # Gray
+            # New Enemies
+            "bandit_scout": (101, 67, 33),  # Brown
+            "forest_sprite": (50, 205, 50),  # Lime green
+            "ancient_guardian": (245, 245, 220),  # Beige
+            "orc_warrior": (139, 69, 19),  # Brown
+            "ancient_dragon": (128, 0, 128),  # Purple
+            "fire_drake": (255, 69, 0),  # Red-orange
+            "crystal_elemental": (173, 216, 230),  # Light blue
+            "giant_scorpion": (160, 82, 45),  # Saddle brown
+            "swamp_troll": (85, 107, 47),  # Dark olive green
             "tree": (34, 139, 34),
             "rock": (128, 128, 128),
             # Item colors
@@ -163,7 +216,16 @@ class AssetLoader:
             "coin": (255, 215, 0),  # Gold for coin
             "gold_ring": (255, 215, 0),  # Gold
             "magic_scroll": (245, 245, 220),  # Beige
-            "crystal_gem": (0, 191, 255)  # Crystal blue
+            "crystal_gem": (0, 191, 255),  # Crystal blue
+            # Chest colors
+            "wooden_chest_closed": (139, 69, 19),  # Brown
+            "wooden_chest_open": (139, 69, 19),  # Brown
+            "iron_chest_closed": (105, 105, 105),  # Dim gray
+            "iron_chest_open": (105, 105, 105),  # Dim gray
+            "gold_chest_closed": (255, 215, 0),  # Gold
+            "gold_chest_open": (255, 215, 0),  # Gold
+            "magical_chest_closed": (138, 43, 226),  # Blue violet
+            "magical_chest_open": (138, 43, 226)  # Blue violet
         }
         
         color = colors.get(name, (255, 255, 255))

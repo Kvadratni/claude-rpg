@@ -70,7 +70,7 @@ class Game:
     def new_game(self):
         """Start a new game"""
         # Create player at the village center (story starting point)
-        self.player = Player(60, 82, self.asset_loader, self.game_log)
+        self.player = Player(100, 102, self.asset_loader, self.game_log)  # Updated to new village center
         
         # Create the first level
         self.current_level = Level("village", self.player, self.asset_loader)

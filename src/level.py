@@ -36,8 +36,8 @@ class Level:
         self.name = level_name
         self.player = player
         self.asset_loader = asset_loader
-        self.width = 120  # Much bigger map
-        self.height = 120
+        self.width = 200  # Even bigger map for more exploration
+        self.height = 200
         
         # Isometric renderer
         self.iso_renderer = IsometricRenderer(64, 32)
@@ -73,7 +73,7 @@ class Level:
         self.create_tile_sprites()
     
     def generate_level(self):
-        """Generate a well-designed static level layout"""
+        """Generate a massive, well-designed world with multiple regions and content"""
         tiles = []
         
         # Initialize with grass
@@ -89,85 +89,391 @@ class Level:
                 if x == 0 or x == self.width - 1 or y == 0 or y == self.height - 1:
                     tiles[y][x] = self.TILE_WALL
         
-        # VILLAGE AREA (Center-South)
-        village_center_x, village_center_y = 60, 80
+        # CENTRAL VILLAGE AREA (Center of map) - Main hub
+        village_center_x, village_center_y = 100, 100
         
-        # Village square with stone paths
-        for x in range(50, 71):
-            for y in range(75, 86):
+        # Large village square with stone paths
+        for x in range(85, 116):
+            for y in range(85, 116):
                 tiles[y][x] = self.TILE_STONE
         
-        # Village buildings
-        self.create_building(tiles, 45, 70, 12, 8)   # Shopkeeper's store
-        self.create_building(tiles, 65, 70, 12, 8)   # Elder's house
-        self.create_building(tiles, 52, 88, 16, 10)  # Village hall
+        # Village buildings - Much larger and more varied
+        self.create_building(tiles, 70, 80, 15, 10)   # Large shopkeeper's store
+        self.create_building(tiles, 115, 80, 15, 10)  # Elder's house
+        self.create_building(tiles, 85, 120, 20, 12)  # Village hall
+        self.create_building(tiles, 70, 105, 12, 8)   # Blacksmith
+        self.create_building(tiles, 115, 105, 12, 8)  # Inn/Tavern
+        self.create_building(tiles, 92, 65, 16, 10)   # Temple/Church
+        self.create_building(tiles, 60, 92, 10, 10)   # Guard house
+        self.create_building(tiles, 130, 92, 10, 10)  # Storage house
         
-        # Village paths
-        for x in range(30, 91):  # Main east-west road
-            tiles[82][x] = self.TILE_STONE
-            tiles[83][x] = self.TILE_STONE
+        # Test corner mappings - create 4 small test buildings to see corner orientations
+        self.create_test_corner_building(tiles, 50, 50, 0)  # Test mapping 1 (TL->TL, TR->TR, etc.)
+        self.create_test_corner_building(tiles, 55, 50, 1)  # Test mapping 2 (TL->TR, TR->TL, etc.)
+        self.create_test_corner_building(tiles, 60, 50, 2)  # Test mapping 3 (TL->BL, TR->BR, etc.)
+        self.create_test_corner_building(tiles, 65, 50, 3)  # Test mapping 4 (TL->BR, TR->BL, etc.)
         
-        for y in range(60, 95):  # Main north-south road
-            tiles[y][60] = self.TILE_STONE
-            tiles[y][61] = self.TILE_STONE
+        # Major roads connecting all regions
+        # Main east-west highway
+        for x in range(10, 190):
+            tiles[100][x] = self.TILE_STONE
+            tiles[101][x] = self.TILE_STONE
         
-        # FOREST AREA (North-West) - Goblin territory
-        forest_center_x, forest_center_y = 30, 30
-        for y in range(15, 45):
-            for x in range(15, 45):
-                if random.random() < 0.4:  # 40% dirt patches in forest
-                    tiles[y][x] = self.TILE_DIRT
+        # Main north-south highway  
+        for y in range(10, 190):
+            tiles[y][100] = self.TILE_STONE
+            tiles[y][101] = self.TILE_STONE
         
-        # Forest clearing for combat
-        for y in range(25, 35):
-            for x in range(25, 35):
-                tiles[y][x] = self.TILE_DIRT
+        # NORTHERN WILDERNESS (Multiple forest areas)
+        # Dark Forest (North-West) - Goblin territory
+        self.create_forest_region(tiles, 30, 30, 40, 40, density=0.5, dirt_patches=0.4)
         
-        # MOUNTAIN PASS (North-East) - Orc Chief lair
-        mountain_x, mountain_y = 90, 20
+        # Enchanted Grove (North-Center) - Magical creatures
+        self.create_forest_region(tiles, 80, 25, 40, 30, density=0.3, dirt_patches=0.2)
         
-        # Rocky mountain path
-        for y in range(15, 35):
-            for x in range(80, 100):
-                if (x + y) % 3 == 0:  # Create rocky pattern
-                    tiles[y][x] = self.TILE_STONE
-                elif (x + y) % 4 == 0:
-                    tiles[y][x] = self.TILE_DIRT
+        # Ancient Woods (North-East) - Old ruins
+        self.create_forest_region(tiles, 140, 30, 50, 40, density=0.6, dirt_patches=0.3)
         
-        # Orc Chief arena
-        for y in range(18, 28):
-            for x in range(85, 95):
-                tiles[y][x] = self.TILE_STONE
+        # MOUNTAIN REGIONS (Multiple mountain areas)
+        # Orc Stronghold (Far North-East)
+        self.create_mountain_region(tiles, 160, 15, 35, 35)
         
-        # LAKE AREA (South-East) - Peaceful area
-        lake_center_x, lake_center_y = 85, 85
-        self.create_lake(tiles, lake_center_x, lake_center_y, 12)
+        # Dragon's Peak (North-West corner)
+        self.create_mountain_region(tiles, 15, 15, 30, 30)
         
-        # Lake shore paths
-        for x in range(75, 95):
-            tiles[95][x] = self.TILE_DIRT
-        for y in range(75, 95):
-            tiles[y][95] = self.TILE_DIRT
+        # Crystal Caves (East side)
+        self.create_mountain_region(tiles, 170, 80, 25, 40)
         
-        # CONNECTING PATHS
-        # Village to Forest
-        self.create_dirt_path(tiles, 45, 75, 30, 40)
+        # WATER FEATURES (Multiple lakes and rivers)
+        # Great Lake (South-East)
+        self.create_lake(tiles, 150, 150, 20)
         
-        # Village to Mountain
-        self.create_dirt_path(tiles, 70, 75, 85, 30)
+        # Twin Lakes (South-West)
+        self.create_lake(tiles, 40, 140, 12)
+        self.create_lake(tiles, 60, 155, 10)
         
-        # Village to Lake
-        self.create_dirt_path(tiles, 70, 85, 85, 85)
+        # Mountain Lake (North)
+        self.create_lake(tiles, 100, 40, 8)
+        
+        # River system connecting lakes
+        self.create_river(tiles, 100, 40, 150, 150)  # From mountain lake to great lake
+        self.create_river(tiles, 40, 140, 60, 155)   # Connecting twin lakes
+        
+        # DESERT REGION (South-West corner)
+        self.create_desert_region(tiles, 15, 140, 60, 45)
+        
+        # SWAMP REGION (West side)
+        self.create_swamp_region(tiles, 15, 80, 40, 50)
+        
+        # ADDITIONAL SETTLEMENTS
+        # Mining Town (Near mountains)
+        self.create_small_town(tiles, 160, 60, "mining")
+        
+        # Fishing Village (By great lake)
+        self.create_small_town(tiles, 130, 170, "fishing")
+        
+        # Desert Outpost (In desert)
+        self.create_small_town(tiles, 35, 165, "desert")
+        
+        # Forest Hamlet (In enchanted grove)
+        self.create_small_town(tiles, 100, 35, "forest")
+        
+        # ROADS AND PATHS - Connect all major areas
+        # Roads to northern settlements
+        self.create_stone_path(tiles, 100, 85, 100, 35)  # To forest hamlet
+        self.create_stone_path(tiles, 115, 85, 160, 60)  # To mining town
+        
+        # Roads to southern settlements  
+        self.create_stone_path(tiles, 85, 115, 35, 165)  # To desert outpost
+        self.create_stone_path(tiles, 115, 115, 130, 170) # To fishing village
+        
+        # Dirt paths to wilderness areas
+        self.create_dirt_path(tiles, 85, 85, 30, 30)     # To dark forest
+        self.create_dirt_path(tiles, 115, 85, 140, 30)   # To ancient woods
+        self.create_dirt_path(tiles, 85, 115, 15, 80)    # To swamp
+        self.create_dirt_path(tiles, 115, 100, 170, 80)  # To crystal caves
+        
+        # SPECIAL LOCATIONS
+        # Ancient Ruins (scattered throughout)
+        self.create_ruins(tiles, 50, 60, 8, 6)   # Ruins near village
+        self.create_ruins(tiles, 160, 120, 12, 8) # Ruins in east
+        self.create_ruins(tiles, 25, 170, 10, 6)  # Desert ruins
+        
+        # Mysterious Circles (stone circles)
+        self.create_stone_circle(tiles, 70, 50)
+        self.create_stone_circle(tiles, 130, 130)
+        self.create_stone_circle(tiles, 180, 40)
         
         # Ensure player starting area is clear (village center)
-        start_x, start_y = 60, 82
-        for dy in range(-2, 3):
-            for dx in range(-2, 3):
+        start_x, start_y = 100, 102
+        for dy in range(-3, 4):
+            for dx in range(-3, 4):
                 if 0 <= start_x + dx < self.width and 0 <= start_y + dy < self.height:
                     if tiles[start_y + dy][start_x + dx] == self.TILE_WALL:
                         tiles[start_y + dy][start_x + dx] = self.TILE_STONE
         
         return tiles
+    
+    def create_forest_region(self, tiles, start_x, start_y, width, height, density=0.4, dirt_patches=0.3):
+        """Create a forest region with varying density"""
+        for y in range(start_y, min(start_y + height, self.height - 1)):
+            for x in range(start_x, min(start_x + width, self.width - 1)):
+                if random.random() < dirt_patches:
+                    tiles[y][x] = self.TILE_DIRT
+        
+        # Create clearings within forest
+        num_clearings = random.randint(2, 4)
+        for _ in range(num_clearings):
+            clear_x = start_x + random.randint(5, width - 10)
+            clear_y = start_y + random.randint(5, height - 10)
+            clear_size = random.randint(3, 8)
+            
+            for dy in range(-clear_size//2, clear_size//2):
+                for dx in range(-clear_size//2, clear_size//2):
+                    if (0 <= clear_x + dx < self.width and 0 <= clear_y + dy < self.height):
+                        if dx*dx + dy*dy <= (clear_size//2)**2:  # Circular clearing
+                            tiles[clear_y + dy][clear_x + dx] = self.TILE_DIRT
+    
+    def create_mountain_region(self, tiles, start_x, start_y, width, height):
+        """Create a rocky mountain region"""
+        for y in range(start_y, min(start_y + height, self.height - 1)):
+            for x in range(start_x, min(start_x + width, self.width - 1)):
+                # Create rocky pattern
+                if (x + y) % 3 == 0:
+                    tiles[y][x] = self.TILE_STONE
+                elif (x + y) % 5 == 0:
+                    tiles[y][x] = self.TILE_DIRT
+        
+        # Add some flat areas for building/combat
+        num_plateaus = random.randint(1, 3)
+        for _ in range(num_plateaus):
+            plat_x = start_x + random.randint(5, width - 15)
+            plat_y = start_y + random.randint(5, height - 15)
+            plat_size = random.randint(8, 15)
+            
+            for dy in range(plat_size):
+                for dx in range(plat_size):
+                    if (0 <= plat_x + dx < self.width and 0 <= plat_y + dy < self.height):
+                        tiles[plat_y + dy][plat_x + dx] = self.TILE_STONE
+    
+    def create_desert_region(self, tiles, start_x, start_y, width, height):
+        """Create a desert region with sand (dirt) and occasional stone"""
+        for y in range(start_y, min(start_y + height, self.height - 1)):
+            for x in range(start_x, min(start_x + width, self.width - 1)):
+                if random.random() < 0.8:  # 80% dirt (sand)
+                    tiles[y][x] = self.TILE_DIRT
+                elif random.random() < 0.3:  # Some stone outcroppings
+                    tiles[y][x] = self.TILE_STONE
+        
+        # Create oasis
+        oasis_x = start_x + width // 2
+        oasis_y = start_y + height // 2
+        self.create_lake(tiles, oasis_x, oasis_y, 4)
+        
+        # Surround oasis with grass
+        for dy in range(-6, 7):
+            for dx in range(-6, 7):
+                if (0 <= oasis_x + dx < self.width and 0 <= oasis_y + dy < self.height):
+                    if dx*dx + dy*dy <= 36:  # Circle around oasis
+                        if tiles[oasis_y + dy][oasis_x + dx] != self.TILE_WATER:
+                            tiles[oasis_y + dy][oasis_x + dx] = self.TILE_GRASS
+    
+    def create_swamp_region(self, tiles, start_x, start_y, width, height):
+        """Create a swamp region with water patches and dirt"""
+        for y in range(start_y, min(start_y + height, self.height - 1)):
+            for x in range(start_x, min(start_x + width, self.width - 1)):
+                rand = random.random()
+                if rand < 0.3:  # 30% water
+                    tiles[y][x] = self.TILE_WATER
+                elif rand < 0.7:  # 40% dirt (muddy ground)
+                    tiles[y][x] = self.TILE_DIRT
+                # Rest stays grass
+    
+    def create_small_town(self, tiles, center_x, center_y, town_type):
+        """Create a small settlement based on type"""
+        # Small town square
+        for x in range(center_x - 5, center_x + 6):
+            for y in range(center_y - 5, center_y + 6):
+                if 0 <= x < self.width and 0 <= y < self.height:
+                    tiles[y][x] = self.TILE_STONE
+        
+        if town_type == "mining":
+            # Mining town buildings
+            self.create_building(tiles, center_x - 10, center_y - 8, 12, 8)  # Mine office
+            self.create_building(tiles, center_x + 2, center_y - 8, 10, 6)   # Miners' quarters
+            self.create_building(tiles, center_x - 8, center_y + 3, 8, 6)    # Supply store
+        elif town_type == "fishing":
+            # Fishing village buildings
+            self.create_building(tiles, center_x - 8, center_y - 6, 10, 6)   # Fish market
+            self.create_building(tiles, center_x + 4, center_y - 6, 8, 6)    # Fisherman's hut
+            self.create_building(tiles, center_x - 6, center_y + 4, 12, 6)   # Boat house
+        elif town_type == "desert":
+            # Desert outpost buildings
+            self.create_building(tiles, center_x - 6, center_y - 4, 8, 6)    # Trading post
+            self.create_building(tiles, center_x + 4, center_y - 4, 6, 6)    # Water storage
+            self.create_building(tiles, center_x - 2, center_y + 4, 10, 6)   # Caravan rest
+        elif town_type == "forest":
+            # Forest hamlet buildings
+            self.create_building(tiles, center_x - 6, center_y - 6, 8, 6)    # Ranger station
+            self.create_building(tiles, center_x + 4, center_y - 6, 6, 6)    # Herbalist hut
+            self.create_building(tiles, center_x - 4, center_y + 4, 10, 6)   # Hunter's lodge
+    
+    def create_ruins(self, tiles, start_x, start_y, width, height):
+        """Create ancient ruins with broken walls"""
+        for y in range(start_y, start_y + height):
+            for x in range(start_x, start_x + width):
+                if 0 <= x < self.width and 0 <= y < self.height:
+                    # Outer walls (partially broken)
+                    if (x == start_x or x == start_x + width - 1 or 
+                        y == start_y or y == start_y + height - 1):
+                        if random.random() < 0.7:  # 70% chance for wall piece
+                            tiles[y][x] = self.TILE_WALL
+                    # Interior floor
+                    elif random.random() < 0.6:  # 60% chance for stone floor
+                        tiles[y][x] = self.TILE_STONE
+                    elif random.random() < 0.3:  # Some dirt patches
+                        tiles[y][x] = self.TILE_DIRT
+    
+    def create_stone_circle(self, tiles, center_x, center_y):
+        """Create a mysterious stone circle"""
+        radius = 4
+        for angle in range(0, 360, 45):  # 8 stones
+            x = center_x + int(radius * math.cos(math.radians(angle)))
+            y = center_y + int(radius * math.sin(math.radians(angle)))
+            if 0 <= x < self.width and 0 <= y < self.height:
+                tiles[y][x] = self.TILE_STONE
+        
+        # Center stone
+        if 0 <= center_x < self.width and 0 <= center_y < self.height:
+            tiles[center_y][center_x] = self.TILE_STONE
+    
+    def create_river(self, tiles, start_x, start_y, end_x, end_y):
+        """Create a winding river between two points"""
+        current_x, current_y = start_x, start_y
+        
+        while abs(current_x - end_x) > 1 or abs(current_y - end_y) > 1:
+            # Create river tile
+            if 0 <= current_x < self.width and 0 <= current_y < self.height:
+                tiles[current_y][current_x] = self.TILE_WATER
+                # Add banks
+                for dx in [-1, 0, 1]:
+                    for dy in [-1, 0, 1]:
+                        bank_x, bank_y = current_x + dx, current_y + dy
+                        if (0 <= bank_x < self.width and 0 <= bank_y < self.height and
+                            tiles[bank_y][bank_x] == self.TILE_GRASS):
+                            if random.random() < 0.3:  # 30% chance for dirt bank
+                                tiles[bank_y][bank_x] = self.TILE_DIRT
+            
+            # Move toward target with some randomness for winding
+            if current_x < end_x:
+                current_x += 1
+            elif current_x > end_x:
+                current_x -= 1
+            
+            if current_y < end_y:
+                current_y += 1
+            elif current_y > end_y:
+                current_y -= 1
+            
+            # Add some random winding
+            if random.random() < 0.3:
+                current_x += random.choice([-1, 1])
+            if random.random() < 0.3:
+                current_y += random.choice([-1, 1])
+            
+            # Keep in bounds
+            current_x = max(1, min(self.width - 2, current_x))
+            current_y = max(1, min(self.height - 2, current_y))
+    
+    def create_stone_path(self, tiles, start_x, start_y, end_x, end_y):
+        """Create a stone road between two points"""
+        current_x, current_y = start_x, start_y
+        
+        while abs(current_x - end_x) > 1 or abs(current_y - end_y) > 1:
+            # Create 2-wide stone path
+            for dx in [0, 1]:
+                for dy in [0, 1]:
+                    path_x, path_y = current_x + dx, current_y + dy
+                    if 0 <= path_x < self.width and 0 <= path_y < self.height:
+                        tiles[path_y][path_x] = self.TILE_STONE
+            
+            # Move toward target
+            if current_x < end_x:
+                current_x += 1
+            elif current_x > end_x:
+                current_x -= 1
+            
+            if current_y < end_y:
+                current_y += 1
+            elif current_y > end_y:
+                current_y -= 1
+    
+    def create_test_corner_building(self, tiles, start_x, start_y, corner_test_type):
+        """Create a small test building to test corner orientations"""
+        width, height = 4, 4
+        
+        # Interior
+        for y in range(start_y + 1, start_y + height - 1):
+            for x in range(start_x + 1, start_x + width - 1):
+                tiles[y][x] = self.TILE_BRICK
+        
+        # Walls
+        for y in range(start_y, start_y + height):
+            for x in range(start_x, start_x + width):
+                if (x > start_x and x < start_x + width - 1 and 
+                    y > start_y and y < start_y + height - 1):
+                    continue
+                
+                is_top = (y == start_y)
+                is_bottom = (y == start_y + height - 1)
+                is_left = (x == start_x)
+                is_right = (x == start_x + width - 1)
+                
+                # Test different corner mappings
+                if corner_test_type == 0:  # Test mapping 1
+                    if is_top and is_left:
+                        tiles[y][x] = self.TILE_WALL_CORNER_TL
+                    elif is_top and is_right:
+                        tiles[y][x] = self.TILE_WALL_CORNER_TR
+                    elif is_bottom and is_left:
+                        tiles[y][x] = self.TILE_WALL_CORNER_BL
+                    elif is_bottom and is_right:
+                        tiles[y][x] = self.TILE_WALL_CORNER_BR
+                    else:
+                        tiles[y][x] = self.TILE_WALL
+                elif corner_test_type == 1:  # Test mapping 2
+                    if is_top and is_left:
+                        tiles[y][x] = self.TILE_WALL_CORNER_TR
+                    elif is_top and is_right:
+                        tiles[y][x] = self.TILE_WALL_CORNER_TL
+                    elif is_bottom and is_left:
+                        tiles[y][x] = self.TILE_WALL_CORNER_BR
+                    elif is_bottom and is_right:
+                        tiles[y][x] = self.TILE_WALL_CORNER_BL
+                    else:
+                        tiles[y][x] = self.TILE_WALL
+                elif corner_test_type == 2:  # Test mapping 3
+                    if is_top and is_left:
+                        tiles[y][x] = self.TILE_WALL_CORNER_BL
+                    elif is_top and is_right:
+                        tiles[y][x] = self.TILE_WALL_CORNER_BR
+                    elif is_bottom and is_left:
+                        tiles[y][x] = self.TILE_WALL_CORNER_TL
+                    elif is_bottom and is_right:
+                        tiles[y][x] = self.TILE_WALL_CORNER_TR
+                    else:
+                        tiles[y][x] = self.TILE_WALL
+                elif corner_test_type == 3:  # Test mapping 4
+                    if is_top and is_left:
+                        tiles[y][x] = self.TILE_WALL_CORNER_BR
+                    elif is_top and is_right:
+                        tiles[y][x] = self.TILE_WALL_CORNER_BL
+                    elif is_bottom and is_left:
+                        tiles[y][x] = self.TILE_WALL_CORNER_TR
+                    elif is_bottom and is_right:
+                        tiles[y][x] = self.TILE_WALL_CORNER_TL
+                    else:
+                        tiles[y][x] = self.TILE_WALL
     
     def create_building(self, tiles, start_x, start_y, width, height):
         """Create a building structure with varied wall types and windows"""
@@ -176,7 +482,7 @@ class Level:
             for x in range(start_x + 1, start_x + width - 1):
                 tiles[y][x] = self.TILE_BRICK  # Interior brick floor
         
-        # Building walls with proper corners and variations
+        # Building walls - use simple, consistent approach
         for y in range(start_y, start_y + height):
             for x in range(start_x, start_x + width):
                 # Skip interior
@@ -184,38 +490,37 @@ class Level:
                     y > start_y and y < start_y + height - 1):
                     continue
                 
-                # Determine wall type based on position
-                is_top = (y == start_y)
-                is_bottom = (y == start_y + height - 1)
-                is_left = (x == start_x)
-                is_right = (x == start_x + width - 1)
-                
-                # Corners - Fix the remaining flipped corners
-                if is_top and is_left:
-                    tiles[y][x] = self.TILE_WALL_CORNER_BR  # Keep this swap (TL -> BR)
-                elif is_top and is_right:
-                    tiles[y][x] = self.TILE_WALL_CORNER_BL  # Fix: TR should use BL corner
-                elif is_bottom and is_left:
-                    tiles[y][x] = self.TILE_WALL_CORNER_TR  # Fix: BL should use TR corner  
-                elif is_bottom and is_right:
-                    tiles[y][x] = self.TILE_WALL_CORNER_TL  # Keep this swap (BR -> TL)
-                # Horizontal walls (top and bottom)
-                elif is_top or is_bottom:
-                    # Add some windows to horizontal walls (not too many)
-                    if random.random() < 0.3 and width > 6:  # 30% chance for windows on longer walls
-                        tiles[y][x] = self.TILE_WALL_WINDOW_HORIZONTAL
-                    else:
-                        tiles[y][x] = self.TILE_WALL_HORIZONTAL
-                # Vertical walls (left and right)
-                elif is_left or is_right:
-                    # Add some windows to vertical walls
-                    if random.random() < 0.25 and height > 6:  # 25% chance for windows on taller walls
-                        tiles[y][x] = self.TILE_WALL_WINDOW_VERTICAL
-                    else:
-                        tiles[y][x] = self.TILE_WALL_VERTICAL
-                else:
-                    # Fallback to regular wall
-                    tiles[y][x] = self.TILE_WALL
+                # Use regular walls for all positions - no complex corner logic
+                tiles[y][x] = self.TILE_WALL
+        
+        # Add some variety with horizontal and vertical walls
+        # Top and bottom walls
+        for x in range(start_x + 1, start_x + width - 1):
+            # Top wall
+            if random.random() < 0.2:  # 20% chance for windows
+                tiles[start_y][x] = self.TILE_WALL_WINDOW_HORIZONTAL
+            else:
+                tiles[start_y][x] = self.TILE_WALL_HORIZONTAL
+            
+            # Bottom wall (will be overridden by doors)
+            if random.random() < 0.2:  # 20% chance for windows
+                tiles[start_y + height - 1][x] = self.TILE_WALL_WINDOW_HORIZONTAL
+            else:
+                tiles[start_y + height - 1][x] = self.TILE_WALL_HORIZONTAL
+        
+        # Left and right walls
+        for y in range(start_y + 1, start_y + height - 1):
+            # Left wall
+            if random.random() < 0.15:  # 15% chance for windows
+                tiles[y][start_x] = self.TILE_WALL_WINDOW_VERTICAL
+            else:
+                tiles[y][start_x] = self.TILE_WALL_VERTICAL
+            
+            # Right wall
+            if random.random() < 0.15:  # 15% chance for windows
+                tiles[y][start_x + width - 1] = self.TILE_WALL_WINDOW_VERTICAL
+            else:
+                tiles[y][start_x + width - 1] = self.TILE_WALL_VERTICAL
         
         # Add double doors (2 tiles wide) - replace bottom wall sections
         door_center_x = start_x + width // 2
@@ -335,8 +640,11 @@ class Level:
         else:
             self.tile_sprites[self.TILE_WATER] = self.iso_renderer.create_diamond_tile((50, 100, 200))
         
-        # Load base wall image
-        wall_image = self.asset_loader.get_image("wall_tile")
+        # Load base wall image - try improved isometric version first
+        wall_image = self.asset_loader.get_image("wall_tile_isometric")
+        if not wall_image:
+            wall_image = self.asset_loader.get_image("wall_tile")
+        
         if wall_image:
             # Scale wall to be taller and more prominent
             wall_height = self.tile_height + 32  # Make walls taller
@@ -351,20 +659,28 @@ class Level:
             self.load_window_wall_sprites()
             
         else:
-            # Fallback to generated sprites
-            base_wall = self.iso_renderer.create_cube_tile((200, 200, 200), (150, 150, 150), (100, 100, 100))
+            # Fallback to generated sprites with improved isometric cube rendering
+            base_wall = self.iso_renderer.create_cube_tile((220, 220, 220), (180, 180, 180), (140, 140, 140))
             self.tile_sprites[self.TILE_WALL] = base_wall
             
-            # Create simple variations for fallback
-            self.tile_sprites[self.TILE_WALL_CORNER_TL] = base_wall
-            self.tile_sprites[self.TILE_WALL_CORNER_TR] = base_wall
-            self.tile_sprites[self.TILE_WALL_CORNER_BL] = base_wall
-            self.tile_sprites[self.TILE_WALL_CORNER_BR] = base_wall
-            self.tile_sprites[self.TILE_WALL_HORIZONTAL] = base_wall
-            self.tile_sprites[self.TILE_WALL_VERTICAL] = base_wall
-            self.tile_sprites[self.TILE_WALL_WINDOW] = base_wall
-            self.tile_sprites[self.TILE_WALL_WINDOW_HORIZONTAL] = base_wall
-            self.tile_sprites[self.TILE_WALL_WINDOW_VERTICAL] = base_wall
+            # Create variations for different wall types with different colors
+            # Corner walls - slightly darker for distinction
+            corner_wall = self.iso_renderer.create_cube_tile((200, 200, 200), (160, 160, 160), (120, 120, 120))
+            self.tile_sprites[self.TILE_WALL_CORNER_TL] = corner_wall
+            self.tile_sprites[self.TILE_WALL_CORNER_TR] = corner_wall
+            self.tile_sprites[self.TILE_WALL_CORNER_BL] = corner_wall
+            self.tile_sprites[self.TILE_WALL_CORNER_BR] = corner_wall
+            
+            # Directional walls - slightly different tint
+            horizontal_wall = self.iso_renderer.create_cube_tile((210, 210, 210), (170, 170, 170), (130, 130, 130))
+            self.tile_sprites[self.TILE_WALL_HORIZONTAL] = horizontal_wall
+            self.tile_sprites[self.TILE_WALL_VERTICAL] = horizontal_wall
+            
+            # Window walls - lighter color to suggest windows
+            window_wall = self.iso_renderer.create_cube_tile((230, 230, 250), (190, 190, 210), (150, 150, 170))
+            self.tile_sprites[self.TILE_WALL_WINDOW] = window_wall
+            self.tile_sprites[self.TILE_WALL_WINDOW_HORIZONTAL] = window_wall
+            self.tile_sprites[self.TILE_WALL_WINDOW_VERTICAL] = window_wall
         
         dirt_image = self.asset_loader.get_image("dirt_tile")
         if dirt_image:
@@ -382,32 +698,22 @@ class Level:
             # Fallback to a reddish-brown color for brick
             self.tile_sprites[self.TILE_BRICK] = self.iso_renderer.create_diamond_tile((150, 80, 60))
         
-        # Door - create enhanced door with better visibility
-        door_image = self.asset_loader.get_image("door_tile")
+        # Door - try improved isometric version first
+        door_image = self.asset_loader.get_image("door_tile_isometric")
+        if not door_image:
+            door_image = self.asset_loader.get_image("door_tile")
+        
         if door_image:
             # Scale door to be taller and more prominent
             door_height = self.tile_height + 24  # Make doors taller than normal tiles
             scaled_door = pygame.transform.scale(door_image, (self.tile_width, door_height))
             
-            # Create enhanced door sprite with shadow and highlight
-            enhanced_door = pygame.Surface((self.tile_width + 4, door_height + 4), pygame.SRCALPHA)
-            
-            # Add shadow (dark outline)
-            shadow_door = scaled_door.copy()
-            shadow_door.fill((0, 0, 0, 100), special_flags=pygame.BLEND_RGBA_MULT)
-            enhanced_door.blit(shadow_door, (2, 2))
-            
-            # Add main door
-            enhanced_door.blit(scaled_door, (0, 0))
-            
-            # Add highlight for better visibility
-            highlight = pygame.Surface((self.tile_width, door_height), pygame.SRCALPHA)
-            highlight.fill((255, 255, 200, 30))  # Subtle yellow highlight
-            enhanced_door.blit(highlight, (0, 0), special_flags=pygame.BLEND_ALPHA_SDL2)
-            
-            self.tile_sprites[self.TILE_DOOR] = enhanced_door
+            # Use the scaled door directly - no need for complex enhancement that might cause issues
+            self.tile_sprites[self.TILE_DOOR] = scaled_door
         else:
-            self.tile_sprites[self.TILE_DOOR] = self.iso_renderer.create_cube_tile((150, 100, 50), (120, 80, 40), (100, 60, 30))
+            # Create enhanced door sprite with proper isometric proportions
+            door_sprite = self.create_enhanced_door_sprite()
+            self.tile_sprites[self.TILE_DOOR] = door_sprite
     
     def create_wall_corner_sprites(self, base_wall_sprite):
         """Create corner wall variations from base wall sprite"""
@@ -457,6 +763,53 @@ class Level:
                         (wall_width // 2, 3 * wall_height // 4), 2)
         self.tile_sprites[self.TILE_WALL_VERTICAL] = v_wall
     
+    def create_enhanced_door_sprite(self):
+        """Create an enhanced door sprite that renders properly"""
+        # Create a door sprite that looks like a proper isometric door
+        door_width = self.tile_width
+        door_height = self.tile_height + 32
+        
+        surface = pygame.Surface((door_width, door_height), pygame.SRCALPHA)
+        
+        # Door colors
+        door_color = (139, 69, 19)      # Brown door
+        frame_color = (100, 50, 10)     # Darker brown frame
+        handle_color = (255, 215, 0)    # Gold handle
+        
+        # Calculate door rectangle dimensions
+        door_rect_width = door_width // 2
+        door_rect_height = door_height - self.tile_height // 2
+        door_x = (door_width - door_rect_width) // 2
+        door_y = self.tile_height // 4
+        
+        # Draw door frame (slightly larger rectangle)
+        frame_rect = pygame.Rect(door_x - 2, door_y - 2, door_rect_width + 4, door_rect_height + 4)
+        pygame.draw.rect(surface, frame_color, frame_rect)
+        
+        # Draw main door
+        door_rect = pygame.Rect(door_x, door_y, door_rect_width, door_rect_height)
+        pygame.draw.rect(surface, door_color, door_rect)
+        
+        # Add door handle
+        handle_x = door_x + door_rect_width - 6
+        handle_y = door_y + door_rect_height // 2
+        pygame.draw.circle(surface, handle_color, (handle_x, handle_y), 2)
+        
+        # Add door panels for detail
+        panel_margin = 3
+        panel_width = door_rect_width - panel_margin * 2
+        panel_height = (door_rect_height - panel_margin * 3) // 2
+        
+        # Top panel outline
+        top_panel_rect = pygame.Rect(door_x + panel_margin, door_y + panel_margin, panel_width, panel_height)
+        pygame.draw.rect(surface, frame_color, top_panel_rect, 1)
+        
+        # Bottom panel outline
+        bottom_panel_rect = pygame.Rect(door_x + panel_margin, door_y + panel_margin * 2 + panel_height, panel_width, panel_height)
+        pygame.draw.rect(surface, frame_color, bottom_panel_rect, 1)
+        
+        return surface
+    
     def create_wall_window_sprite(self, base_wall_sprite):
         """Create window wall variation"""
         window_wall = base_wall_sprite.copy()
@@ -491,8 +844,8 @@ class Level:
         """Load dedicated window wall assets"""
         wall_height = self.tile_height + 32  # Match other wall heights
         
-        # Load horizontal window wall
-        h_window_image = self.asset_loader.get_image("wall_window_horizontal")
+        # Load horizontal window wall - note the typo in the asset filename
+        h_window_image = self.asset_loader.get_image("wall_window_horizonal")  # Asset has typo
         if h_window_image:
             scaled_h_window = pygame.transform.scale(h_window_image, (self.tile_width + 8, wall_height))
             self.tile_sprites[self.TILE_WALL_WINDOW_HORIZONTAL] = scaled_h_window
@@ -500,7 +853,11 @@ class Level:
             self.tile_sprites[self.TILE_WALL_WINDOW] = scaled_h_window
         else:
             # Fallback to programmatically created window wall
-            self.create_wall_window_sprite(self.tile_sprites[self.TILE_WALL])
+            if self.TILE_WALL in self.tile_sprites:
+                self.create_wall_window_sprite(self.tile_sprites[self.TILE_WALL])
+                # Ensure horizontal window wall has a sprite
+                if self.TILE_WALL_WINDOW in self.tile_sprites:
+                    self.tile_sprites[self.TILE_WALL_WINDOW_HORIZONTAL] = self.tile_sprites[self.TILE_WALL_WINDOW]
         
         # Load vertical window wall
         v_window_image = self.asset_loader.get_image("wall_window_vertical")
@@ -509,28 +866,38 @@ class Level:
             self.tile_sprites[self.TILE_WALL_WINDOW_VERTICAL] = scaled_v_window
         else:
             # Fallback to horizontal window wall or programmatic creation
-            if hasattr(self, 'tile_sprites') and self.TILE_WALL_WINDOW_HORIZONTAL in self.tile_sprites:
+            if self.TILE_WALL_WINDOW_HORIZONTAL in self.tile_sprites:
                 self.tile_sprites[self.TILE_WALL_WINDOW_VERTICAL] = self.tile_sprites[self.TILE_WALL_WINDOW_HORIZONTAL]
+            elif self.TILE_WALL_WINDOW in self.tile_sprites:
+                self.tile_sprites[self.TILE_WALL_WINDOW_VERTICAL] = self.tile_sprites[self.TILE_WALL_WINDOW]
             else:
-                self.create_wall_window_sprite(self.tile_sprites[self.TILE_WALL])
+                # Last resort - use regular wall
+                if self.TILE_WALL in self.tile_sprites:
+                    self.tile_sprites[self.TILE_WALL_WINDOW_VERTICAL] = self.tile_sprites[self.TILE_WALL]
     
     def load_corner_wall_sprites(self):
         """Load dedicated corner wall assets"""
         wall_height = self.tile_height + 32  # Match other wall heights
         
-        # Load all corner wall assets
+        # Try improved isometric assets first, then fall back to original assets
         corner_assets = {
-            self.TILE_WALL_CORNER_TL: "wall_corner_tl",
-            self.TILE_WALL_CORNER_TR: "wall_corner_tr", 
-            self.TILE_WALL_CORNER_BL: "wall_corner_bl",
-            self.TILE_WALL_CORNER_BR: "wall_corner_br"
+            self.TILE_WALL_CORNER_TL: ["wall_corner_tl_isometric", "wall_corner_tl"],
+            self.TILE_WALL_CORNER_TR: ["wall_corner_tr_isometric", "wall_corner_tr"], 
+            self.TILE_WALL_CORNER_BL: ["wall_corner_bl_isometric", "wall_corner_bl"],
+            self.TILE_WALL_CORNER_BR: ["wall_corner_br_isometric", "wall_corner_br"]
         }
         
         # Track if any corner assets fail to load
         failed_corners = []
         
-        for tile_type, asset_name in corner_assets.items():
-            corner_image = self.asset_loader.get_image(asset_name)
+        for tile_type, asset_names in corner_assets.items():
+            corner_image = None
+            # Try each asset name in order
+            for asset_name in asset_names:
+                corner_image = self.asset_loader.get_image(asset_name)
+                if corner_image:
+                    break
+            
             if corner_image:
                 scaled_corner = pygame.transform.scale(corner_image, (self.tile_width + 8, wall_height))
                 self.tile_sprites[tile_type] = scaled_corner
@@ -546,8 +913,12 @@ class Level:
         """Load dedicated horizontal and vertical wall assets"""
         wall_height = self.tile_height + 32  # Match other wall heights
         
+        # Try improved isometric assets first, then fall back to original assets
         # Load horizontal wall
-        h_wall_image = self.asset_loader.get_image("wall_horizontal")
+        h_wall_image = self.asset_loader.get_image("wall_horizontal_isometric")
+        if not h_wall_image:
+            h_wall_image = self.asset_loader.get_image("wall_horizontal")
+        
         if h_wall_image:
             scaled_h_wall = pygame.transform.scale(h_wall_image, (self.tile_width + 8, wall_height))
             self.tile_sprites[self.TILE_WALL_HORIZONTAL] = scaled_h_wall
@@ -557,7 +928,10 @@ class Level:
             self.create_wall_directional_sprites(self.tile_sprites[self.TILE_WALL])
         
         # Load vertical wall
-        v_wall_image = self.asset_loader.get_image("wall_vertical")
+        v_wall_image = self.asset_loader.get_image("wall_vertical_isometric")
+        if not v_wall_image:
+            v_wall_image = self.asset_loader.get_image("wall_vertical")
+        
         if v_wall_image:
             scaled_v_wall = pygame.transform.scale(v_wall_image, (self.tile_width + 8, wall_height))
             self.tile_sprites[self.TILE_WALL_VERTICAL] = scaled_v_wall
@@ -585,128 +959,399 @@ class Level:
         self.spawn_chests()
     
     def spawn_story_enemies(self):
-        """Spawn enemies in specific story locations"""
-        # Goblins in the forest (North-West)
-        goblin_positions = [
-            (25, 25), (30, 28), (35, 30), (28, 35), (32, 32),
-            (20, 30), (35, 25), (25, 35), (30, 20), (40, 35)
+        """Spawn enemies in specific story locations across the expanded world"""
+        # Dark Forest Goblins (North-West)
+        dark_forest_positions = [
+            (35, 35), (40, 38), (45, 40), (38, 45), (42, 42),
+            (30, 40), (45, 35), (35, 45), (40, 30), (50, 45),
+            (32, 50), (48, 32), (55, 38), (38, 55), (42, 48)
         ]
         
-        for x, y in goblin_positions:
+        for x, y in dark_forest_positions:
             if self.is_valid_story_position(x, y):
-                goblin = Enemy(x, y, "Goblin", health=40, damage=8, experience=25, asset_loader=self.asset_loader)
+                goblin = Enemy(x, y, "Forest Goblin", health=45, damage=9, experience=30, asset_loader=self.asset_loader)
                 self.enemies.append(goblin)
         
-        # Orc Chief in mountain lair (North-East) - Boss fight
-        orc_chief_x, orc_chief_y = 90, 23
-        if self.is_valid_story_position(orc_chief_x, orc_chief_y):
-            orc_chief = Enemy(orc_chief_x, orc_chief_y, "Orc Chief", 
-                            health=300, damage=25, experience=200, 
-                            is_boss=True, asset_loader=self.asset_loader)
-            self.enemies.append(orc_chief)
+        # Enchanted Grove - Magical creatures
+        grove_positions = [
+            (85, 30), (90, 35), (95, 32), (88, 40), (92, 45),
+            (100, 30), (105, 35), (110, 32), (95, 45), (102, 40)
+        ]
         
-        # A few roaming enemies near village for early game
-        village_enemy_positions = [(40, 65), (75, 65), (45, 95)]
-        for x, y in village_enemy_positions:
+        for x, y in grove_positions:
             if self.is_valid_story_position(x, y):
-                goblin = Enemy(x, y, "Goblin Scout", health=30, damage=6, experience=15, asset_loader=self.asset_loader)
-                self.enemies.append(goblin)
+                sprite_enemy = Enemy(x, y, "Forest Sprite", health=35, damage=12, experience=40, asset_loader=self.asset_loader)
+                self.enemies.append(sprite_enemy)
+        
+        # Ancient Woods - Undead guardians
+        ancient_positions = [
+            (145, 35), (150, 40), (155, 35), (148, 50), (152, 45),
+            (160, 40), (165, 45), (170, 38), (155, 55), (162, 50),
+            (175, 42), (168, 35), (158, 60), (172, 55), (165, 32)
+        ]
+        
+        for x, y in ancient_positions:
+            if self.is_valid_story_position(x, y):
+                skeleton = Enemy(x, y, "Ancient Guardian", health=60, damage=15, experience=50, asset_loader=self.asset_loader)
+                self.enemies.append(skeleton)
+        
+        # Orc Stronghold (Far North-East) - Multiple bosses and minions
+        stronghold_positions = [
+            (165, 25), (170, 30), (175, 25), (168, 35), (172, 32),
+            (180, 28), (175, 35), (185, 30), (178, 40), (182, 35)
+        ]
+        
+        for i, (x, y) in enumerate(stronghold_positions):
+            if self.is_valid_story_position(x, y):
+                if i == 0:  # First one is the boss
+                    orc_chief = Enemy(x, y, "Orc Warlord", 
+                                    health=400, damage=30, experience=300, 
+                                    is_boss=True, asset_loader=self.asset_loader)
+                    self.enemies.append(orc_chief)
+                else:
+                    orc = Enemy(x, y, "Orc Warrior", health=80, damage=18, experience=60, asset_loader=self.asset_loader)
+                    self.enemies.append(orc)
+        
+        # Dragon's Peak - Dragon and minions
+        dragon_positions = [
+            (25, 25), (30, 28), (35, 25), (28, 32), (32, 30)
+        ]
+        
+        for i, (x, y) in enumerate(dragon_positions):
+            if self.is_valid_story_position(x, y):
+                if i == 0:  # Dragon boss
+                    dragon = Enemy(x, y, "Ancient Dragon", 
+                                 health=800, damage=50, experience=500, 
+                                 is_boss=True, asset_loader=self.asset_loader)
+                    self.enemies.append(dragon)
+                else:
+                    drake = Enemy(x, y, "Fire Drake", health=120, damage=25, experience=80, asset_loader=self.asset_loader)
+                    self.enemies.append(drake)
+        
+        # Crystal Caves - Crystal elementals
+        crystal_positions = [
+            (175, 85), (180, 90), (185, 85), (178, 95), (182, 100),
+            (175, 105), (180, 110), (185, 105), (188, 95), (192, 88)
+        ]
+        
+        for x, y in crystal_positions:
+            if self.is_valid_story_position(x, y):
+                elemental = Enemy(x, y, "Crystal Elemental", health=70, damage=20, experience=65, asset_loader=self.asset_loader)
+                self.enemies.append(elemental)
+        
+        # Desert enemies
+        desert_positions = [
+            (25, 150), (35, 155), (45, 160), (30, 165), (40, 170),
+            (50, 155), (55, 165), (60, 150), (65, 160), (70, 155)
+        ]
+        
+        for x, y in desert_positions:
+            if self.is_valid_story_position(x, y):
+                scorpion = Enemy(x, y, "Giant Scorpion", health=55, damage=16, experience=45, asset_loader=self.asset_loader)
+                self.enemies.append(scorpion)
+        
+        # Swamp enemies
+        swamp_positions = [
+            (25, 90), (30, 95), (35, 100), (40, 105), (45, 110),
+            (25, 115), (30, 120), (35, 125), (40, 115), (45, 120)
+        ]
+        
+        for x, y in swamp_positions:
+            if self.is_valid_story_position(x, y):
+                troll = Enemy(x, y, "Swamp Troll", health=90, damage=22, experience=70, asset_loader=self.asset_loader)
+                self.enemies.append(troll)
+        
+        # Village area patrol enemies (easier for new players)
+        village_patrol_positions = [
+            (70, 70), (130, 70), (70, 130), (130, 130),
+            (60, 100), (140, 100), (100, 60), (100, 140)
+        ]
+        
+        for x, y in village_patrol_positions:
+            if self.is_valid_story_position(x, y):
+                bandit = Enemy(x, y, "Bandit Scout", health=35, damage=8, experience=20, asset_loader=self.asset_loader)
+                self.enemies.append(bandit)
     
     def spawn_story_npcs(self):
-        """Spawn NPCs in village locations"""
-        # Shopkeeper in the shop building
-        shopkeeper_x, shopkeeper_y = 51, 74  # Inside shop building
-        shopkeeper = NPC(shopkeeper_x, shopkeeper_y, "Shopkeeper", 
+        """Spawn NPCs across the expanded world"""
+        # MAIN VILLAGE NPCs
+        # Shopkeeper in the large store
+        shopkeeper_x, shopkeeper_y = 77, 85  # Inside large shop building
+        shopkeeper = NPC(shopkeeper_x, shopkeeper_y, "Master Merchant", 
                         dialog=[
-                            "Welcome to my shop!",
-                            "I have the finest goods in the village!",
-                            "Stay safe out there, traveler.",
-                            "The goblins have been more active lately..."
+                            "Welcome to the finest shop in all the lands!",
+                            "I have goods from every corner of the realm!",
+                            "The roads are dangerous, but profitable for traders.",
+                            "I hear the ancient ruins hold great treasures..."
                         ], 
                         asset_loader=self.asset_loader, has_shop=True)
         self.npcs.append(shopkeeper)
         
-        # Village Elder in his house - Quest giver
-        elder_x, elder_y = 71, 74  # Inside elder's house
+        # Village Elder in his house
+        elder_x, elder_y = 122, 85  # Inside elder's house
         elder = NPC(elder_x, elder_y, "Village Elder", 
                    dialog=[
-                       "Welcome, brave traveler!",
-                       "Our village faces a terrible threat.",
-                       "Goblins from the northern forest raid our supplies.",
-                       "Their leader, an Orc Chief, commands them from the mountains.",
-                       "Please, help us defeat this menace!",
-                       "The fate of our village rests in your hands."
+                       "Welcome, brave adventurer!",
+                       "Our peaceful village sits at the crossroads of many realms.",
+                       "To the north lie ancient forests filled with danger.",
+                       "The mountains hold both treasure and terror.",
+                       "The desert sands conceal forgotten secrets.",
+                       "May your journey bring you wisdom and fortune!"
                    ], 
                    asset_loader=self.asset_loader)
         self.npcs.append(elder)
         
-        # Village Guard - Tutorial NPC
-        guard_x, guard_y = 60, 78  # In village square
-        guard = NPC(guard_x, guard_y, "Village Guard", 
+        # Blacksmith
+        blacksmith_x, blacksmith_y = 76, 109  # Inside blacksmith
+        blacksmith = NPC(blacksmith_x, blacksmith_y, "Master Smith", 
+                        dialog=[
+                            "The forge burns hot today!",
+                            "I craft the finest weapons and armor.",
+                            "Bring me rare metals and I'll make you legendary gear!",
+                            "The crystal caves have materials I need..."
+                        ], 
+                        asset_loader=self.asset_loader, has_shop=True)
+        self.npcs.append(blacksmith)
+        
+        # Innkeeper
+        innkeeper_x, innkeeper_y = 121, 109  # Inside inn
+        innkeeper = NPC(innkeeper_x, innkeeper_y, "Innkeeper", 
+                       dialog=[
+                           "Welcome to the Crossroads Inn!",
+                           "Travelers from all lands rest here.",
+                           "I've heard tales of dragons in the northern peaks.",
+                           "The swamp folk speak of ancient magic.",
+                           "Rest well, the roads are perilous."
+                       ], 
+                       asset_loader=self.asset_loader)
+        self.npcs.append(innkeeper)
+        
+        # Temple Priest
+        priest_x, priest_y = 100, 70  # Inside temple
+        priest = NPC(priest_x, priest_y, "High Priest", 
+                    dialog=[
+                        "The light guides all who seek it.",
+                        "Ancient evils stir in the forgotten places.",
+                        "The stone circles hold power beyond understanding.",
+                        "May the divine protect you on your journey."
+                    ], 
+                    asset_loader=self.asset_loader)
+        self.npcs.append(priest)
+        
+        # Village Guard Captain
+        guard_x, guard_y = 65, 97  # In guard house
+        guard = NPC(guard_x, guard_y, "Guard Captain", 
                    dialog=[
-                       "Greetings, newcomer!",
-                       "Click to move, space to attack.",
-                       "Visit the shopkeeper for supplies.",
-                       "Be careful in the northern forest!",
-                       "The goblins there are dangerous."
+                       "I keep watch over our village.",
+                       "Bandits have been spotted on the roads.",
+                       "The northern forests grow more dangerous each day.",
+                       "If you're heading out, be well armed!",
+                       "Report any suspicious activity to me."
                    ], 
                    asset_loader=self.asset_loader)
         self.npcs.append(guard)
+        
+        # MINING TOWN NPCs
+        # Mine Foreman
+        foreman_x, foreman_y = 155, 57  # In mine office
+        foreman = NPC(foreman_x, foreman_y, "Mine Foreman", 
+                     dialog=[
+                         "The mines run deep into the mountain.",
+                         "We've found strange crystals in the lower tunnels.",
+                         "Some miners speak of hearing voices in the dark.",
+                         "The work is hard but the pay is good."
+                     ], 
+                     asset_loader=self.asset_loader, has_shop=True)
+        self.npcs.append(foreman)
+        
+        # FISHING VILLAGE NPCs
+        # Harbor Master
+        harbor_x, harbor_y = 125, 167  # In fish market
+        harbor = NPC(harbor_x, harbor_y, "Harbor Master", 
+                    dialog=[
+                        "The great lake provides for our village.",
+                        "Strange lights have been seen beneath the waters.",
+                        "The fish have been acting oddly lately.",
+                        "Ancient ruins lie submerged in the deep parts."
+                    ], 
+                    asset_loader=self.asset_loader, has_shop=True)
+        self.npcs.append(harbor)
+        
+        # DESERT OUTPOST NPCs
+        # Caravan Leader
+        caravan_x, caravan_y = 32, 162  # In trading post
+        caravan = NPC(caravan_x, caravan_y, "Caravan Master", 
+                     dialog=[
+                         "The desert trade routes are treacherous.",
+                         "Sandstorms hide ancient ruins from view.",
+                         "The oasis is sacred to the desert dwellers.",
+                         "Scorpions grow large in these parts."
+                     ], 
+                     asset_loader=self.asset_loader, has_shop=True)
+        self.npcs.append(caravan)
+        
+        # FOREST HAMLET NPCs
+        # Ranger
+        ranger_x, ranger_y = 97, 32  # In ranger station
+        ranger = NPC(ranger_x, ranger_y, "Forest Ranger", 
+                    dialog=[
+                        "The ancient woods hold many secrets.",
+                        "Spirits of the old world still walk these paths.",
+                        "The stone circles are gathering points for magic.",
+                        "Beware the guardians of the ruins."
+                    ], 
+                    asset_loader=self.asset_loader)
+        self.npcs.append(ranger)
+        
+        # Herbalist
+        herbalist_x, herbalist_y = 107, 32  # In herbalist hut
+        herbalist = NPC(herbalist_x, herbalist_y, "Master Herbalist", 
+                       dialog=[
+                           "The forest provides all manner of healing herbs.",
+                           "Magical plants grow near the stone circles.",
+                           "The swamp has rare ingredients, but it's dangerous.",
+                           "I can brew potions from the right materials."
+                       ], 
+                       asset_loader=self.asset_loader, has_shop=True)
+        self.npcs.append(herbalist)
+        
+        # MYSTERIOUS WANDERERS (scattered around the world)
+        # Mysterious Wizard near stone circle
+        wizard_x, wizard_y = 70, 52
+        wizard = NPC(wizard_x, wizard_y, "Mysterious Wizard", 
+                    dialog=[
+                        "The ancient magics still flow through these stones...",
+                        "Power calls to power, young one.",
+                        "The circles are older than any kingdom.",
+                        "Seek the truth in the forgotten places."
+                    ], 
+                    asset_loader=self.asset_loader)
+        self.npcs.append(wizard)
+        
+        # Hermit near ruins
+        hermit_x, hermit_y = 52, 62
+        hermit = NPC(hermit_x, hermit_y, "Old Hermit", 
+                    dialog=[
+                        "I've lived here since before the village grew large.",
+                        "These ruins... they're older than you think.",
+                        "Sometimes I hear whispers from the stones.",
+                        "The past has a way of returning."
+                    ], 
+                    asset_loader=self.asset_loader)
+        self.npcs.append(hermit)
     
     def spawn_story_objects(self):
-        """Spawn environmental objects in story-appropriate locations"""
-        # Dense forest in goblin territory
-        forest_tree_positions = []
-        for y in range(15, 45):
-            for x in range(15, 45):
-                if random.random() < 0.3 and self.is_valid_tree_terrain(x, y):
-                    # Avoid the combat clearing
-                    if not (25 <= x <= 35 and 25 <= y <= 35):
-                        forest_tree_positions.append((x, y))
+        """Spawn environmental objects across the expanded world"""
+        # Dense forests in multiple regions
+        # Dark Forest (North-West)
+        dark_forest_trees = []
+        for y in range(25, 65):
+            for x in range(25, 65):
+                if random.random() < 0.4 and self.is_valid_tree_terrain(x, y):
+                    # Avoid clearings and paths
+                    if not (35 <= x <= 45 and 35 <= y <= 45):  # Main clearing
+                        dark_forest_trees.append((x, y))
         
-        for x, y in forest_tree_positions:
+        for x, y in dark_forest_trees:
             tree = Entity(x, y, "Tree", entity_type="object", blocks_movement=True, asset_loader=self.asset_loader)
             self.objects.append(tree)
         
-        # Scattered trees around village and paths
-        village_tree_positions = [
-            (35, 70), (80, 70), (35, 90), (80, 90),
-            (50, 60), (70, 60), (50, 100), (70, 100),
-            (25, 82), (95, 82), (60, 55), (60, 105)
+        # Enchanted Grove (North-Center)
+        grove_trees = []
+        for y in range(20, 50):
+            for x in range(75, 115):
+                if random.random() < 0.3 and self.is_valid_tree_terrain(x, y):
+                    grove_trees.append((x, y))
+        
+        for x, y in grove_trees:
+            tree = Entity(x, y, "Tree", entity_type="object", blocks_movement=True, asset_loader=self.asset_loader)
+            self.objects.append(tree)
+        
+        # Ancient Woods (North-East)
+        ancient_trees = []
+        for y in range(25, 65):
+            for x in range(135, 185):
+                if random.random() < 0.5 and self.is_valid_tree_terrain(x, y):
+                    ancient_trees.append((x, y))
+        
+        for x, y in ancient_trees:
+            tree = Entity(x, y, "Tree", entity_type="object", blocks_movement=True, asset_loader=self.asset_loader)
+            self.objects.append(tree)
+        
+        # Scattered trees around settlements
+        settlement_tree_positions = [
+            # Around main village
+            (55, 75), (145, 75), (55, 125), (145, 125),
+            (75, 55), (125, 55), (75, 145), (125, 145),
+            # Around other settlements
+            (140, 45), (180, 75), (45, 125), (75, 175),
+            (25, 45), (175, 125), (125, 25), (175, 175)
         ]
         
-        for x, y in village_tree_positions:
+        for x, y in settlement_tree_positions:
             if self.is_valid_tree_terrain(x, y) and self.is_valid_story_position(x, y):
                 tree = Entity(x, y, "Tree", entity_type="object", blocks_movement=True, asset_loader=self.asset_loader)
                 self.objects.append(tree)
         
-        # Rocks in mountain area
-        mountain_rock_positions = [
-            (82, 18), (88, 16), (95, 20), (85, 25), (92, 28),
-            (80, 22), (97, 25), (83, 30), (90, 32), (86, 19)
+        # Rocks in mountain regions
+        # Dragon's Peak rocks
+        dragon_peak_rocks = [
+            (20, 20), (25, 18), (30, 22), (35, 19), (40, 25),
+            (18, 30), (22, 35), (28, 38), (35, 40), (42, 35)
         ]
         
-        for x, y in mountain_rock_positions:
+        for x, y in dragon_peak_rocks:
             if self.is_valid_story_position(x, y):
                 rock = Entity(x, y, "Rock", entity_type="object", blocks_movement=True, asset_loader=self.asset_loader)
                 self.objects.append(rock)
         
-        # Decorative rocks around lake
-        lake_rock_positions = [(78, 88), (92, 78), (88, 92), (82, 82)]
-        for x, y in lake_rock_positions:
+        # Orc Stronghold rocks
+        stronghold_rocks = [
+            (162, 18), (168, 16), (175, 20), (185, 25), (192, 28),
+            (160, 25), (170, 30), (180, 35), (190, 32), (185, 18)
+        ]
+        
+        for x, y in stronghold_rocks:
             if self.is_valid_story_position(x, y):
                 rock = Entity(x, y, "Rock", entity_type="object", blocks_movement=True, asset_loader=self.asset_loader)
                 self.objects.append(rock)
+        
+        # Crystal Caves rocks
+        crystal_rocks = [
+            (172, 82), (178, 88), (185, 92), (192, 85), (188, 95),
+            (175, 100), (182, 105), (190, 110), (185, 115), (178, 118)
+        ]
+        
+        for x, y in crystal_rocks:
+            if self.is_valid_story_position(x, y):
+                rock = Entity(x, y, "Rock", entity_type="object", blocks_movement=True, asset_loader=self.asset_loader)
+                self.objects.append(rock)
+        
+        # Decorative rocks around all lakes
+        lake_positions = [(150, 150), (40, 140), (60, 155), (100, 40)]
+        for lake_x, lake_y in lake_positions:
+            for i in range(8):  # 8 rocks around each lake
+                angle = i * 45  # Every 45 degrees
+                distance = random.randint(25, 35)
+                rock_x = lake_x + int(distance * math.cos(math.radians(angle)))
+                rock_y = lake_y + int(distance * math.sin(math.radians(angle)))
+                
+                if self.is_valid_story_position(rock_x, rock_y):
+                    rock = Entity(rock_x, rock_y, "Rock", entity_type="object", blocks_movement=True, asset_loader=self.asset_loader)
+                    self.objects.append(rock)
     
     def spawn_chests(self):
-        """Spawn treasure chests in strategic locations"""
-        # Wooden chests - common, scattered around
+        """Spawn treasure chests across the expanded world"""
+        # Wooden chests - common, scattered in safe-ish areas
         wooden_chest_positions = [
-            (35, 35),   # Forest area
-            (25, 85),   # Near village outskirts
-            (85, 95),   # Lake area
-            (45, 50),   # Between village and forest
-            (75, 55),   # North of village
+            # Near main village
+            (75, 65), (125, 65), (75, 135), (125, 135),
+            # Near settlements
+            (140, 50), (110, 45), (45, 175), (175, 175),
+            # In forests (clearings)
+            (45, 45), (95, 35), (155, 45),
+            # Near ruins
+            (55, 65), (165, 125), (30, 175)
         ]
         
         for x, y in wooden_chest_positions:
@@ -714,11 +1359,16 @@ class Level:
                 chest = Chest(x, y, "wooden", self.asset_loader)
                 self.chests.append(chest)
         
-        # Iron chests - better loot, fewer locations
+        # Iron chests - better loot, in more dangerous areas
         iron_chest_positions = [
-            (30, 25),   # Deep in forest
-            (95, 85),   # Far lake shore
-            (40, 40),   # Forest clearing
+            # Deep in forests
+            (35, 55), (105, 25), (165, 55),
+            # Mountain areas
+            (25, 35), (175, 35), (185, 95),
+            # Desert and swamp edges
+            (55, 145), (35, 105),
+            # Near lakes
+            (125, 175), (65, 145), (115, 45)
         ]
         
         for x, y in iron_chest_positions:
@@ -726,9 +1376,17 @@ class Level:
                 chest = Chest(x, y, "iron", self.asset_loader)
                 self.chests.append(chest)
         
-        # Gold chest - high-value loot, hidden location
+        # Gold chests - high-value loot, hidden/dangerous locations
         gold_chest_positions = [
-            (90, 25),   # Mountain area (near orc chief)
+            # Boss areas
+            (175, 25),  # Near Orc Stronghold
+            (30, 25),   # Near Dragon's Peak
+            (185, 85),  # In Crystal Caves
+            # Deep wilderness
+            (45, 165),  # Deep desert
+            (35, 115),  # Deep swamp
+            # Ancient ruins
+            (165, 120), (25, 170)
         ]
         
         for x, y in gold_chest_positions:
@@ -736,9 +1394,15 @@ class Level:
                 chest = Chest(x, y, "gold", self.asset_loader)
                 self.chests.append(chest)
         
-        # Magical chest - rare, powerful items
+        # Magical chests - rare, powerful items in special locations
         magical_chest_positions = [
-            (15, 15),   # Hidden corner of the map
+            # Stone circles
+            (70, 50), (130, 130), (180, 40),
+            # Hidden corners
+            (15, 15), (185, 185), (15, 185), (185, 15),
+            # Boss lairs (after defeating bosses)
+            (25, 25),   # Dragon's treasure
+            (175, 25),  # Orc warlord's hoard
         ]
         
         for x, y in magical_chest_positions:
@@ -757,7 +1421,7 @@ class Level:
             return False
         
         # Don't place entities too close to player starting position
-        start_x, start_y = 60, 82
+        start_x, start_y = 100, 102  # Updated to match new village center
         if abs(x - start_x) < 3 and abs(y - start_y) < 3:
             return False
         
@@ -1524,7 +2188,7 @@ class Level:
             item.update(self)
     
     def render(self, screen):
-        """Render the level"""
+        """Render the level with improved isometric building rendering"""
         screen_width = screen.get_width()
         screen_height = screen.get_height()
         
@@ -1553,62 +2217,11 @@ class Level:
         start_y = max(0, center_y - visible_height)  # Remove // 2 to get full range
         end_y = min(self.height, center_y + visible_height)
         
-        # Render tiles to game surface
+        # Render tiles in proper isometric order (back to front)
+        # This ensures proper depth sorting for buildings
         for y in range(start_y, end_y):
             for x in range(start_x, end_x):
-                tile_type = self.tiles[y][x]
-                height = self.heightmap[y][x]
-                
-                # Calculate screen position
-                screen_x, screen_y = self.iso_renderer.world_to_screen(x, y, self.camera_x, self.camera_y)
-                
-                # Adjust for height
-                screen_y -= height * 16
-                
-                # Special handling for doors - render stone underneath first for better contrast
-                if tile_type == self.TILE_DOOR:
-                    # Render stone base first (better than dirt for door contrast)
-                    stone_sprite = self.tile_sprites[self.TILE_STONE]
-                    game_surface.blit(stone_sprite, (screen_x - self.tile_width // 2, screen_y - self.tile_height // 2))
-                    
-                    # Add subtle glow effect around door for better visibility
-                    glow_radius = 3
-                    glow_color = (255, 255, 150, 50)  # Soft yellow glow
-                    glow_surface = pygame.Surface((self.tile_width + glow_radius * 2, self.tile_height + glow_radius * 2), pygame.SRCALPHA)
-                    pygame.draw.ellipse(glow_surface, glow_color, glow_surface.get_rect())
-                    game_surface.blit(glow_surface, (screen_x - self.tile_width // 2 - glow_radius, screen_y - self.tile_height // 2 - glow_radius), special_flags=pygame.BLEND_ALPHA_SDL2)
-                    
-                    # Then render door on top with slight offset for better positioning
-                    door_sprite = self.tile_sprites[self.TILE_DOOR]
-                    door_rect = door_sprite.get_rect()
-                    door_rect.centerx = screen_x
-                    door_rect.bottom = screen_y + self.tile_height // 2 + 8  # Slightly lower positioning
-                    game_surface.blit(door_sprite, door_rect)
-                elif tile_type in [self.TILE_WALL, self.TILE_WALL_CORNER_TL, self.TILE_WALL_CORNER_TR, 
-                                   self.TILE_WALL_CORNER_BL, self.TILE_WALL_CORNER_BR, 
-                                   self.TILE_WALL_HORIZONTAL, self.TILE_WALL_VERTICAL, self.TILE_WALL_WINDOW,
-                                   self.TILE_WALL_WINDOW_HORIZONTAL, self.TILE_WALL_WINDOW_VERTICAL]:
-                    # Render all wall types with better positioning and subtle shadow
-                    # Add shadow first with improved positioning
-                    shadow_offset = 2
-                    wall_sprite = self.tile_sprites[tile_type]
-                    shadow_sprite = wall_sprite.copy()
-                    shadow_sprite.fill((0, 0, 0, 80), special_flags=pygame.BLEND_RGBA_MULT)
-                    shadow_rect = shadow_sprite.get_rect()
-                    shadow_rect.centerx = screen_x + shadow_offset
-                    shadow_rect.bottom = screen_y + 8 + shadow_offset  # Match wall positioning
-                    game_surface.blit(shadow_sprite, shadow_rect)
-                    
-                    # Then render wall with improved positioning
-                    wall_rect = wall_sprite.get_rect()
-                    wall_rect.centerx = screen_x
-                    # Better wall positioning - align bottom of wall with tile center
-                    wall_rect.bottom = screen_y + 8  # Reduced offset for better alignment
-                    game_surface.blit(wall_sprite, wall_rect)
-                else:
-                    # Normal tile rendering
-                    sprite = self.tile_sprites[tile_type]
-                    game_surface.blit(sprite, (screen_x - self.tile_width // 2, screen_y - self.tile_height // 2))
+                self.render_tile_at_position(game_surface, x, y)
         
         # Collect all entities for depth sorting
         all_entities = []
@@ -1645,6 +2258,84 @@ class Level:
         # Render dialogue window on top of everything
         if self.player.current_dialogue and self.player.current_dialogue.show:
             self.player.current_dialogue.render(screen)
+    
+    def render_tile_at_position(self, surface, x, y):
+        """Render a single tile with proper isometric positioning"""
+        tile_type = self.tiles[y][x]
+        height = self.heightmap[y][x]
+        
+        # Calculate screen position using proper isometric conversion
+        screen_x, screen_y = self.iso_renderer.world_to_screen(x, y, self.camera_x, self.camera_y)
+        
+        # Adjust for height
+        screen_y -= height * 16
+        
+        # Render base floor tile first for all wall types
+        if self.is_wall_tile(tile_type):
+            # Render appropriate floor tile underneath walls
+            if tile_type == self.TILE_DOOR:
+                floor_sprite = self.tile_sprites[self.TILE_STONE]  # Stone under doors
+            else:
+                floor_sprite = self.tile_sprites[self.TILE_BRICK]  # Brick under walls (interior)
+            
+            # Render floor tile centered on the isometric position
+            floor_rect = floor_sprite.get_rect()
+            floor_rect.center = (screen_x, screen_y)
+            surface.blit(floor_sprite, floor_rect)
+        
+        # Now render the main tile
+        if tile_type == self.TILE_DOOR:
+            self.render_door_tile(surface, screen_x, screen_y, tile_type)
+        elif self.is_wall_tile(tile_type):
+            self.render_wall_tile(surface, screen_x, screen_y, tile_type)
+        else:
+            # Normal floor tile rendering
+            sprite = self.tile_sprites[tile_type]
+            sprite_rect = sprite.get_rect()
+            sprite_rect.center = (screen_x, screen_y)
+            surface.blit(sprite, sprite_rect)
+    
+    def is_wall_tile(self, tile_type):
+        """Check if a tile type is any kind of wall"""
+        wall_types = [
+            self.TILE_WALL, self.TILE_WALL_CORNER_TL, self.TILE_WALL_CORNER_TR,
+            self.TILE_WALL_CORNER_BL, self.TILE_WALL_CORNER_BR,
+            self.TILE_WALL_HORIZONTAL, self.TILE_WALL_VERTICAL, self.TILE_WALL_WINDOW,
+            self.TILE_WALL_WINDOW_HORIZONTAL, self.TILE_WALL_WINDOW_VERTICAL
+        ]
+        return tile_type in wall_types
+    
+    def render_door_tile(self, surface, screen_x, screen_y, tile_type):
+        """Render door with proper isometric positioning"""
+        door_sprite = self.tile_sprites[tile_type]
+        
+        # Simple door rendering without complex effects that might cause issues
+        door_rect = door_sprite.get_rect()
+        door_rect.centerx = screen_x
+        door_rect.bottom = screen_y + self.tile_height // 4  # Align door bottom with tile base
+        surface.blit(door_sprite, door_rect)
+    
+    def render_wall_tile(self, surface, screen_x, screen_y, tile_type):
+        """Render wall with proper isometric positioning and depth"""
+        wall_sprite = self.tile_sprites[tile_type]
+        
+        # Add subtle shadow for depth
+        shadow_offset = 3
+        shadow_sprite = wall_sprite.copy()
+        shadow_sprite.fill((0, 0, 0, 100), special_flags=pygame.BLEND_RGBA_MULT)
+        
+        shadow_rect = shadow_sprite.get_rect()
+        shadow_rect.centerx = screen_x + shadow_offset
+        shadow_rect.bottom = screen_y + self.tile_height // 4 + shadow_offset
+        surface.blit(shadow_sprite, shadow_rect)
+        
+        # Render main wall sprite
+        wall_rect = wall_sprite.get_rect()
+        wall_rect.centerx = screen_x
+        # Position wall so its base aligns with the tile center
+        # This creates proper isometric building appearance
+        wall_rect.bottom = screen_y + self.tile_height // 4
+        surface.blit(wall_sprite, wall_rect)
     
     def render_ui(self, screen):
         """Render enhanced game UI"""

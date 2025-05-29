@@ -16,18 +16,17 @@ class IsometricRenderer:
     
     def cart_to_iso(self, cart_x, cart_y):
         """Convert Cartesian coordinates to isometric screen coordinates"""
-        # Flip X coordinate to fix mirroring
-        flipped_x = -cart_x
-        iso_x = (flipped_x - cart_y) * self.half_tile_width
-        iso_y = (flipped_x + cart_y) * self.half_tile_height
+        # Use proper isometric conversion as described in the articles
+        # This creates the diamond-shaped grid with correct 2:1 ratio
+        iso_x = (cart_x - cart_y) * self.half_tile_width
+        iso_y = (cart_x + cart_y) * self.half_tile_height
         return iso_x, iso_y
     
     def iso_to_cart(self, iso_x, iso_y):
         """Convert isometric screen coordinates to Cartesian coordinates"""
-        flipped_x = (iso_x / self.half_tile_width + iso_y / self.half_tile_height) / 2
+        # Updated to match the corrected cart_to_iso conversion
+        cart_x = (iso_x / self.half_tile_width + iso_y / self.half_tile_height) / 2
         cart_y = (iso_y / self.half_tile_height - iso_x / self.half_tile_width) / 2
-        # Flip X coordinate back
-        cart_x = -flipped_x
         return cart_x, cart_y
     
     def world_to_screen(self, world_x, world_y, camera_x=0, camera_y=0):
@@ -69,15 +68,17 @@ class IsometricRenderer:
         return surface
     
     def create_cube_tile(self, top_color, left_color, right_color, size=None):
-        """Create a 3D cube-like tile sprite"""
+        """Create a 3D cube-like tile sprite with proper isometric proportions"""
         if size is None:
             width, height = self.tile_width, self.tile_height
         else:
             width, height = size, size // 2
             
-        surface = pygame.Surface((width, height + height // 2), pygame.SRCALPHA)
+        # Create taller surface for wall sprites
+        wall_height = height * 2  # Make walls twice as tall
+        surface = pygame.Surface((width, wall_height), pygame.SRCALPHA)
         
-        # Top face (diamond)
+        # Top face (diamond) - positioned at the top of the wall
         top_points = [
             (width // 2, 0),
             (width, height // 2),
@@ -86,25 +87,25 @@ class IsometricRenderer:
         ]
         pygame.draw.polygon(surface, top_color, top_points)
         
-        # Left face
+        # Left face - extends down from the diamond
         left_points = [
             (0, height // 2),
             (width // 2, height),
-            (width // 2, height + height // 2),
-            (0, height)
+            (width // 2, wall_height),
+            (0, wall_height - height // 2)
         ]
         pygame.draw.polygon(surface, left_color, left_points)
         
-        # Right face
+        # Right face - extends down from the diamond
         right_points = [
             (width // 2, height),
             (width, height // 2),
-            (width, height),
-            (width // 2, height + height // 2)
+            (width, wall_height - height // 2),
+            (width // 2, wall_height)
         ]
         pygame.draw.polygon(surface, right_color, right_points)
         
-        # Add borders
+        # Add borders for better definition
         pygame.draw.polygon(surface, (0, 0, 0), top_points, 2)
         pygame.draw.polygon(surface, (0, 0, 0), left_points, 2)
         pygame.draw.polygon(surface, (0, 0, 0), right_points, 2)

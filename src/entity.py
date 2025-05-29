@@ -118,55 +118,105 @@ class NPC(Entity):
         self.create_npc_sprite()
     
     def create_npc_sprite(self):
-        """Create NPC sprite"""
+        """Create NPC sprite with support for all new NPC types"""
         size = 48  # Increased from 32 to 48
         
         # Try to use loaded sprite first
         if self.asset_loader:
-            if "Shopkeeper" in self.name:
-                npc_image = self.asset_loader.get_image("npc_shopkeeper")
+            # Map NPC names to sprite assets
+            sprite_mappings = {
+                "Master Merchant": "npc_shopkeeper",
+                "Shopkeeper": "npc_shopkeeper", 
+                "Village Elder": "elder_npc",
+                "Elder": "elder_npc",
+                "Guard Captain": "guard_captain",
+                "Guard": "village_guard_sprite",
+                "Master Smith": "master_smith",
+                "Blacksmith": "master_smith",
+                "Innkeeper": "innkeeper",
+                "High Priest": "high_priest",
+                "Mine Foreman": "mine_foreman",
+                "Harbor Master": "harbor_master",
+                "Caravan Master": "caravan_master",
+                "Forest Ranger": "forest_ranger",
+                "Master Herbalist": "master_herbalist",
+                "Mysterious Wizard": "mysterious_wizard",
+                "Old Hermit": "old_hermit"
+            }
+            
+            sprite_name = sprite_mappings.get(self.name)
+            if sprite_name:
+                npc_image = self.asset_loader.get_image(sprite_name)
                 if npc_image:
+                    # Create base sprite
                     self.sprite = pygame.transform.scale(npc_image, (size, size))
-                    return
-            elif "Elder" in self.name:
-                elder_image = self.asset_loader.get_image("elder_npc")
-                if elder_image:
-                    self.sprite = pygame.transform.scale(elder_image, (size, size))
-                    return
-            elif "Guard" in self.name:
-                guard_image = self.asset_loader.get_image("village_guard_sprite")
-                if guard_image:
-                    self.sprite = pygame.transform.scale(guard_image, (size, size))
+                    # Create direction sprites - mirror for left movement
+                    self.direction_sprites = [
+                        self.sprite,  # Down (0)
+                        pygame.transform.flip(self.sprite, True, False),  # Left (1) - mirrored
+                        self.sprite,  # Up (2)
+                        self.sprite   # Right (3) - original (facing right)
+                    ]
                     return
         
-        # Fallback to generated sprite
+        # Fallback to generated sprite with unique colors for each NPC type
         self.sprite = pygame.Surface((size, size), pygame.SRCALPHA)
         
-        # Different colors for different NPCs
-        if "Shopkeeper" in self.name:
-            color = (255, 215, 0)  # Gold
-        elif "Elder" in self.name:
-            color = (128, 0, 128)  # Purple
-        elif "Guard" in self.name:
-            color = (70, 130, 180)  # Steel blue
-        else:
-            color = (0, 191, 255)  # Deep sky blue
+        # Different colors and features for different NPCs
+        npc_styles = {
+            "Master Merchant": {"color": (255, 215, 0), "feature": "hat", "feature_color": (139, 69, 19)},  # Gold with brown hat
+            "Shopkeeper": {"color": (255, 215, 0), "feature": "hat", "feature_color": (139, 69, 19)},
+            "Village Elder": {"color": (128, 0, 128), "feature": "beard", "feature_color": (255, 255, 255)},  # Purple with white beard
+            "Elder": {"color": (128, 0, 128), "feature": "beard", "feature_color": (255, 255, 255)},
+            "Guard Captain": {"color": (70, 130, 180), "feature": "helmet", "feature_color": (105, 105, 105)},  # Steel blue with gray helmet
+            "Guard": {"color": (70, 130, 180), "feature": "helmet", "feature_color": (105, 105, 105)},
+            "Master Smith": {"color": (139, 69, 19), "feature": "apron", "feature_color": (101, 67, 33)},  # Brown with dark brown apron
+            "Blacksmith": {"color": (139, 69, 19), "feature": "apron", "feature_color": (101, 67, 33)},
+            "Innkeeper": {"color": (160, 82, 45), "feature": "apron", "feature_color": (255, 255, 255)},  # Saddle brown with white apron
+            "High Priest": {"color": (255, 255, 255), "feature": "hood", "feature_color": (200, 200, 200)},  # White with light gray hood
+            "Mine Foreman": {"color": (105, 105, 105), "feature": "helmet", "feature_color": (255, 215, 0)},  # Gray with gold helmet
+            "Harbor Master": {"color": (0, 100, 150), "feature": "hat", "feature_color": (0, 50, 100)},  # Navy blue with dark blue hat
+            "Caravan Master": {"color": (210, 180, 140), "feature": "turban", "feature_color": (255, 215, 0)},  # Tan with gold turban
+            "Forest Ranger": {"color": (34, 139, 34), "feature": "hat", "feature_color": (0, 100, 0)},  # Forest green with dark green hat
+            "Master Herbalist": {"color": (50, 205, 50), "feature": "hood", "feature_color": (34, 139, 34)},  # Lime green with forest green hood
+            "Mysterious Wizard": {"color": (75, 0, 130), "feature": "hat", "feature_color": (25, 25, 112)},  # Indigo with midnight blue hat
+            "Old Hermit": {"color": (160, 160, 160), "feature": "beard", "feature_color": (220, 220, 220)},  # Gray with light gray beard
+        }
         
-        # Draw NPC
+        # Get style for this NPC, default to generic style
+        style = npc_styles.get(self.name, {"color": (0, 191, 255), "feature": "none", "feature_color": (255, 255, 255)})
+        
+        # Draw NPC base
         center = (size // 2, size // 2)
-        pygame.draw.circle(self.sprite, color, center, size // 3)
+        pygame.draw.circle(self.sprite, style["color"], center, size // 3)
         pygame.draw.circle(self.sprite, (255, 255, 255), center, size // 4)
         pygame.draw.circle(self.sprite, (0, 0, 0), center, size // 3, 3)  # Thicker border
         
-        # Add a hat or distinguishing feature
-        if "Shopkeeper" in self.name:
-            pygame.draw.rect(self.sprite, (139, 69, 19), (size//2 - 12, 3, 24, 12))  # Larger hat
-        elif "Elder" in self.name:
-            pygame.draw.circle(self.sprite, (255, 255, 255), (size//2, 12), 9)  # Larger beard
-        elif "Guard" in self.name:
-            # Draw a simple helmet/armor
-            pygame.draw.rect(self.sprite, (105, 105, 105), (size//2 - 10, 5, 20, 8))  # Helmet
+        # Add distinguishing features
+        feature = style["feature"]
+        feature_color = style["feature_color"]
+        
+        if feature == "hat":
+            pygame.draw.rect(self.sprite, feature_color, (size//2 - 12, 3, 24, 12))  # Hat
+        elif feature == "beard":
+            pygame.draw.circle(self.sprite, feature_color, (size//2, size//2 + 8), 9)  # Beard
+        elif feature == "helmet":
+            pygame.draw.rect(self.sprite, feature_color, (size//2 - 10, 5, 20, 8))  # Helmet
             pygame.draw.rect(self.sprite, (169, 169, 169), (size//2 - 8, 8, 16, 4))   # Helmet detail
+        elif feature == "apron":
+            pygame.draw.rect(self.sprite, feature_color, (size//2 - 8, size//2 + 5, 16, 12))  # Apron
+        elif feature == "hood":
+            pygame.draw.ellipse(self.sprite, feature_color, (size//2 - 14, 2, 28, 20))  # Hood
+        elif feature == "turban":
+            pygame.draw.ellipse(self.sprite, feature_color, (size//2 - 12, 2, 24, 16))  # Turban
+        
+        # Create direction sprites for generated sprites - mirror for left movement
+        self.direction_sprites = [
+            self.sprite,  # Down (0)
+            pygame.transform.flip(self.sprite, True, False),  # Left (1) - mirrored
+            self.sprite,  # Up (2)
+            self.sprite   # Right (3) - original
+        ]
     
     def interact(self, player):
         """Interact with the NPC"""
@@ -265,55 +315,97 @@ class Enemy(Entity):
         self.state = "idle"  # idle, chasing, attacking, fleeing
         self.target = None
         self.path = []
+        self.direction = 3  # 0=down, 1=left, 2=up, 3=right (start facing right)
         
         # Create enemy sprite
         self.create_enemy_sprite()
     
     def create_enemy_sprite(self):
-        """Create enemy sprite"""
+        """Create enemy sprite with support for all new enemy types"""
         size = 60 if self.is_boss else 48  # Increased sizes - boss 60, regular 48
         
         # Try to use loaded sprite first
         if self.asset_loader:
-            if self.is_boss and "Orc" in self.name:
-                orc_image = self.asset_loader.get_image("orc_boss_sprite")
-                if orc_image:
-                    self.sprite = pygame.transform.scale(orc_image, (size, size))
-                    return
-            elif "Goblin" in self.name:
-                goblin_image = self.asset_loader.get_image("goblin_sprite")
-                if goblin_image:
-                    self.sprite = pygame.transform.scale(goblin_image, (size, size))
+            # Map enemy names to sprite assets
+            sprite_mappings = {
+                # Existing enemies
+                "Orc Warlord": "orc_boss_sprite",
+                "Orc Boss": "orc_boss_sprite",
+                "Goblin": "goblin_sprite",
+                "Forest Goblin": "goblin_sprite",
+                "Bandit Scout": "bandit_scout",
+                # New enemies
+                "Forest Sprite": "forest_sprite",
+                "Ancient Guardian": "ancient_guardian",
+                "Orc Warrior": "orc_warrior", 
+                "Ancient Dragon": "ancient_dragon",
+                "Fire Drake": "fire_drake",
+                "Crystal Elemental": "crystal_elemental",
+                "Giant Scorpion": "giant_scorpion",
+                "Swamp Troll": "swamp_troll"
+            }
+            
+            sprite_name = sprite_mappings.get(self.name)
+            if sprite_name:
+                enemy_image = self.asset_loader.get_image(sprite_name)
+                if enemy_image:
+                    # Create base sprite
+                    self.sprite = pygame.transform.scale(enemy_image, (size, size))
+                    # Create direction sprites - mirror for right movement
+                    self.direction_sprites = [
+                        self.sprite,  # Down (0)
+                        self.sprite,  # Left (1) - original (facing left)
+                        self.sprite,  # Up (2)
+                        pygame.transform.flip(self.sprite, True, False)   # Right (3) - mirrored
+                    ]
                     return
         
-        # Fallback to generated sprite
+        # Fallback to generated sprite with unique styles for each enemy type
         self.sprite = pygame.Surface((size, size), pygame.SRCALPHA)
         
-        # Different colors for different enemies
-        if self.is_boss:
-            color = (139, 0, 0)  # Dark red
-            eye_color = (255, 0, 0)  # Red eyes
-        elif "Goblin" in self.name:
-            color = (0, 100, 0)  # Dark green
-            eye_color = (255, 255, 0)  # Yellow eyes
-        else:
-            color = (139, 69, 19)  # Brown
-            eye_color = (255, 0, 0)  # Red eyes
+        # Different colors and features for different enemies
+        enemy_styles = {
+            # Existing enemies
+            "Orc Warlord": {"color": (139, 0, 0), "eye_color": (255, 0, 0), "feature": "crown"},  # Dark red with crown
+            "Orc Boss": {"color": (139, 0, 0), "eye_color": (255, 0, 0), "feature": "crown"},
+            "Goblin": {"color": (0, 100, 0), "eye_color": (255, 255, 0), "feature": "ears"},  # Dark green with yellow eyes
+            "Forest Goblin": {"color": (34, 139, 34), "eye_color": (255, 255, 0), "feature": "ears"},  # Forest green
+            "Bandit Scout": {"color": (101, 67, 33), "eye_color": (255, 0, 0), "feature": "mask"},  # Brown with mask
+            # New enemies
+            "Forest Sprite": {"color": (50, 205, 50), "eye_color": (255, 255, 255), "feature": "glow"},  # Lime green with glow
+            "Ancient Guardian": {"color": (245, 245, 220), "eye_color": (255, 0, 0), "feature": "bones"},  # Beige skeleton with red eyes
+            "Orc Warrior": {"color": (139, 69, 19), "eye_color": (255, 165, 0), "feature": "tusks"},  # Brown with orange eyes
+            "Ancient Dragon": {"color": (128, 0, 128), "eye_color": (255, 215, 0), "feature": "scales"},  # Purple with gold eyes
+            "Fire Drake": {"color": (255, 69, 0), "eye_color": (255, 255, 0), "feature": "flames"},  # Red-orange with yellow eyes
+            "Crystal Elemental": {"color": (173, 216, 230), "eye_color": (0, 191, 255), "feature": "crystals"},  # Light blue with blue eyes
+            "Giant Scorpion": {"color": (160, 82, 45), "eye_color": (255, 0, 0), "feature": "claws"},  # Saddle brown with red eyes
+            "Swamp Troll": {"color": (85, 107, 47), "eye_color": (255, 255, 0), "feature": "moss"}  # Dark olive green with yellow eyes
+        }
+        
+        # Get style for this enemy, default to generic style
+        style = enemy_styles.get(self.name, {
+            "color": (139, 69, 19) if not self.is_boss else (139, 0, 0), 
+            "eye_color": (255, 0, 0), 
+            "feature": "none"
+        })
         
         # Draw enemy body
         center = (size // 2, size // 2)
-        pygame.draw.circle(self.sprite, color, center, size // 3)
+        pygame.draw.circle(self.sprite, style["color"], center, size // 3)
         
         # Draw eyes
-        eye_size = 5 if not self.is_boss else 6  # Larger eyes
-        pygame.draw.circle(self.sprite, eye_color, (center[0] - 9, center[1] - 6), eye_size)
-        pygame.draw.circle(self.sprite, eye_color, (center[0] + 9, center[1] - 6), eye_size)
+        eye_size = 6 if self.is_boss else 5
+        pygame.draw.circle(self.sprite, style["eye_color"], (center[0] - 9, center[1] - 6), eye_size)
+        pygame.draw.circle(self.sprite, style["eye_color"], (center[0] + 9, center[1] - 6), eye_size)
         
         # Draw border
         pygame.draw.circle(self.sprite, (0, 0, 0), center, size // 3, 3)  # Thicker border
         
-        # Boss gets a crown
-        if self.is_boss:
+        # Add special features based on enemy type
+        feature = style["feature"]
+        
+        if feature == "crown":
+            # Boss crown
             crown_points = [
                 (center[0] - 15, center[1] - size//3),
                 (center[0] - 8, center[1] - size//3 - 12),
@@ -322,6 +414,68 @@ class Enemy(Entity):
                 (center[0] + 15, center[1] - size//3)
             ]
             pygame.draw.polygon(self.sprite, (255, 215, 0), crown_points)
+        elif feature == "ears":
+            # Goblin ears
+            pygame.draw.ellipse(self.sprite, style["color"], (center[0] - 20, center[1] - 10, 8, 15))  # Left ear
+            pygame.draw.ellipse(self.sprite, style["color"], (center[0] + 12, center[1] - 10, 8, 15))  # Right ear
+        elif feature == "mask":
+            # Bandit mask
+            pygame.draw.ellipse(self.sprite, (0, 0, 0), (center[0] - 12, center[1] - 8, 24, 10))
+        elif feature == "glow":
+            # Forest sprite glow effect
+            glow_surface = pygame.Surface((size + 10, size + 10), pygame.SRCALPHA)
+            pygame.draw.circle(glow_surface, (50, 255, 50, 100), (size//2 + 5, size//2 + 5), size//2 + 5)
+            self.sprite.blit(glow_surface, (-5, -5), special_flags=pygame.BLEND_ALPHA_SDL2)
+        elif feature == "bones":
+            # Skeleton bones
+            pygame.draw.line(self.sprite, (255, 255, 255), (center[0] - 8, center[1] + 5), (center[0] + 8, center[1] + 5), 2)
+            pygame.draw.line(self.sprite, (255, 255, 255), (center[0], center[1] - 5), (center[0], center[1] + 10), 2)
+        elif feature == "tusks":
+            # Orc tusks
+            pygame.draw.polygon(self.sprite, (255, 255, 255), [(center[0] - 6, center[1] + 2), (center[0] - 4, center[1] + 8), (center[0] - 2, center[1] + 2)])
+            pygame.draw.polygon(self.sprite, (255, 255, 255), [(center[0] + 2, center[1] + 2), (center[0] + 4, center[1] + 8), (center[0] + 6, center[1] + 2)])
+        elif feature == "scales":
+            # Dragon scales
+            for i in range(3):
+                for j in range(3):
+                    scale_x = center[0] - 6 + i * 6
+                    scale_y = center[1] - 6 + j * 6
+                    pygame.draw.circle(self.sprite, (148, 0, 211), (scale_x, scale_y), 2)
+        elif feature == "flames":
+            # Fire drake flames
+            flame_points = [
+                (center[0] - 8, center[1] + 8), (center[0] - 4, center[1] + 12), 
+                (center[0], center[1] + 8), (center[0] + 4, center[1] + 12), 
+                (center[0] + 8, center[1] + 8)
+            ]
+            pygame.draw.polygon(self.sprite, (255, 140, 0), flame_points)
+        elif feature == "crystals":
+            # Crystal formations
+            crystal_points = [
+                (center[0] - 8, center[1] - 8), (center[0] - 6, center[1] - 12), (center[0] - 4, center[1] - 8),
+                (center[0] + 4, center[1] - 8), (center[0] + 6, center[1] - 12), (center[0] + 8, center[1] - 8)
+            ]
+            for i in range(0, len(crystal_points), 3):
+                if i + 2 < len(crystal_points):
+                    pygame.draw.polygon(self.sprite, (135, 206, 235), crystal_points[i:i+3])
+        elif feature == "claws":
+            # Scorpion claws
+            pygame.draw.ellipse(self.sprite, (139, 69, 19), (center[0] - 18, center[1] - 2, 12, 8))  # Left claw
+            pygame.draw.ellipse(self.sprite, (139, 69, 19), (center[0] + 6, center[1] - 2, 12, 8))   # Right claw
+        elif feature == "moss":
+            # Swamp troll moss
+            for _ in range(5):
+                moss_x = center[0] + random.randint(-10, 10)
+                moss_y = center[1] + random.randint(-10, 10)
+                pygame.draw.circle(self.sprite, (124, 252, 0), (moss_x, moss_y), 2)
+        
+        # Create direction sprites for generated sprites - mirror for left movement
+        self.direction_sprites = [
+            self.sprite,  # Down (0)
+            pygame.transform.flip(self.sprite, True, False),  # Left (1) - mirrored
+            self.sprite,  # Up (2)
+            self.sprite   # Right (3) - original
+        ]
     
     def update(self, level, player):
         """Update enemy AI"""
@@ -370,6 +524,12 @@ class Enemy(Entity):
                         if new_distance >= self.attack_range:
                             self.x = new_x
                             self.y = new_y
+                            
+                            # Update direction based on movement
+                            if abs(dx) > abs(dy):
+                                self.direction = 3 if dx > 0 else 1  # Right or Left
+                            else:
+                                self.direction = 0 if dy > 0 else 2  # Down or Up
         else:
             self.state = "idle"
             # Random movement when idle
@@ -383,6 +543,12 @@ class Enemy(Entity):
                 if not level.check_collision(new_x, new_y, self.size, exclude_entity=self):
                     self.x = new_x
                     self.y = new_y
+                    
+                    # Update direction based on idle movement
+                    if abs(move_x) > abs(move_y):
+                        self.direction = 3 if move_x > 0 else 1  # Right or Left
+                    else:
+                        self.direction = 0 if move_y > 0 else 2  # Down or Up
     
     def attack_player(self, player):
         """Attack the player"""
@@ -436,8 +602,21 @@ class Enemy(Entity):
         return self.health <= 0
     
     def render(self, screen, iso_renderer, camera_x, camera_y):
-        """Render the enemy"""
-        super().render(screen, iso_renderer, camera_x, camera_y)
+        """Render the enemy with direction-based sprite"""
+        # Use direction-based sprite if available
+        if hasattr(self, 'direction_sprites') and self.direction_sprites:
+            current_sprite = self.direction_sprites[self.direction]
+        else:
+            current_sprite = self.sprite
+            
+        if current_sprite:
+            screen_x, screen_y = iso_renderer.world_to_screen(self.x, self.y, camera_x, camera_y)
+            
+            # Regular entities
+            sprite_rect = current_sprite.get_rect()
+            sprite_rect.center = (screen_x, screen_y - 16)
+            
+            screen.blit(current_sprite, sprite_rect)
         
         # Render health bar
         screen_x, screen_y = iso_renderer.world_to_screen(self.x, self.y, camera_x, camera_y)

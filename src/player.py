@@ -74,9 +74,15 @@ class Player:
         if self.asset_loader:
             player_image = self.asset_loader.get_image("player_sprite")
             if player_image:
-                # Use the same sprite for all directions - no rotation
+                # Create base sprite
                 self.sprite = pygame.transform.scale(player_image, (size, size))
-                self.direction_sprites = [self.sprite] * 4  # Same sprite for all directions
+                # Create direction sprites - mirror for right movement
+                self.direction_sprites = [
+                    self.sprite,  # Down (0)
+                    self.sprite,  # Left (1) - original (facing left)
+                    self.sprite,  # Up (2)
+                    pygame.transform.flip(self.sprite, True, False)   # Right (3) - mirrored
+                ]
                 return
         
         # Fallback to generated sprite
@@ -95,8 +101,13 @@ class Player:
         # Draw border
         pygame.draw.circle(self.sprite, (0, 0, 0), center, size // 3, 3)  # Thicker border
         
-        # Use the same sprite for all directions - no rotation
-        self.direction_sprites = [self.sprite] * 4
+        # Create direction sprites - mirror for right movement
+        self.direction_sprites = [
+            self.sprite,  # Down (0)
+            self.sprite,  # Left (1) - original (facing left)
+            self.sprite,  # Up (2)
+            pygame.transform.flip(self.sprite, True, False)   # Right (3) - mirrored
+        ]
     
     def handle_input(self, keys, level=None):
         """Handle player input"""
