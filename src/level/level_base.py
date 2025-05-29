@@ -8,9 +8,9 @@ import random
 import math
 
 try:
-    from ..isometric import IsometricRenderer, sort_by_depth
+    from ..core.isometric import IsometricRenderer, sort_by_depth
     from ..entity import Entity, NPC, Enemy, Item
-    from ..game_log import GameLog
+    from ..core.game_log import GameLog
     from ..door_pathfinder import DoorPathfinder
     from ..door_renderer import DoorRenderer
     from ..wall_renderer import WallRenderer
@@ -18,14 +18,14 @@ try:
     from ..spawning import SpawningMixin
 except ImportError:
     # Fallback for direct execution
-    from isometric import IsometricRenderer, sort_by_depth
-    from entity import Entity, NPC, Enemy, Item
-    from game_log import GameLog
-    from door_pathfinder import DoorPathfinder
-    from door_renderer import DoorRenderer
-    from wall_renderer import WallRenderer
-    from template_level import integrate_template_generation
-    from spawning import SpawningMixin
+    from src.core.isometric import IsometricRenderer, sort_by_depth
+    from src.entity import Entity, NPC, Enemy, Item
+    from src.core.game_log import GameLog
+    from src.door_pathfinder import DoorPathfinder
+    from src.door_renderer import DoorRenderer
+    from src.wall_renderer import WallRenderer
+    from src.template_level import integrate_template_generation
+    from src.spawning import SpawningMixin
 
 
 class LevelBase(SpawningMixin):

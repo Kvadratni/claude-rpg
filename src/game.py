@@ -8,9 +8,9 @@ from .menu import MainMenu
 from .level import Level
 from .player import Player
 from .save_system import SaveSystem
-from .assets import AssetLoader
+from .core.assets import AssetLoader
 from .settings import Settings
-from .game_log import GameLog
+from .core.game_log import GameLog
 
 class Game:
     """Main game class that controls the game flow"""

@@ -4,9 +4,9 @@ Level rendering functionality
 
 import pygame
 try:
-    from ..isometric import sort_by_depth
+    from ..core.isometric import sort_by_depth
 except ImportError:
-    from isometric import sort_by_depth
+    from src.core.isometric import sort_by_depth
 
 
 class LevelRendererMixin:
