@@ -190,15 +190,15 @@ class Level:
                 is_left = (x == start_x)
                 is_right = (x == start_x + width - 1)
                 
-                # Corners - Swap TL with BR for isometric perspective
+                # Corners - Fix the remaining flipped corners
                 if is_top and is_left:
-                    tiles[y][x] = self.TILE_WALL_CORNER_BR  # Swap TL with BR
+                    tiles[y][x] = self.TILE_WALL_CORNER_BR  # Keep this swap (TL -> BR)
                 elif is_top and is_right:
-                    tiles[y][x] = self.TILE_WALL_CORNER_TR  # Keep TR as TR
+                    tiles[y][x] = self.TILE_WALL_CORNER_BL  # Fix: TR should use BL corner
                 elif is_bottom and is_left:
-                    tiles[y][x] = self.TILE_WALL_CORNER_BL  # Keep BL as BL  
+                    tiles[y][x] = self.TILE_WALL_CORNER_TR  # Fix: BL should use TR corner  
                 elif is_bottom and is_right:
-                    tiles[y][x] = self.TILE_WALL_CORNER_TL  # Swap BR with TL
+                    tiles[y][x] = self.TILE_WALL_CORNER_TL  # Keep this swap (BR -> TL)
                 # Horizontal walls (top and bottom)
                 elif is_top or is_bottom:
                     # Add some windows to horizontal walls (not too many)
