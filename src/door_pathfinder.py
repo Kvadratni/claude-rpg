@@ -326,15 +326,15 @@ class DoorPathfinder:
         vertical_walls = 0
         
         # Check north and south
-        if (door_y > 0 and self.level.is_wall_tile(self.level.tiles[door_y - 1][door_x])):
+        if (door_y > 0 and self.level.wall_renderer.is_wall_tile(self.level.tiles[door_y - 1][door_x])):
             horizontal_walls += 1
-        if (door_y < self.level.height - 1 and self.level.is_wall_tile(self.level.tiles[door_y + 1][door_x])):
+        if (door_y < self.level.height - 1 and self.level.wall_renderer.is_wall_tile(self.level.tiles[door_y + 1][door_x])):
             horizontal_walls += 1
         
         # Check east and west
-        if (door_x > 0 and self.level.is_wall_tile(self.level.tiles[door_y][door_x - 1])):
+        if (door_x > 0 and self.level.wall_renderer.is_wall_tile(self.level.tiles[door_y][door_x - 1])):
             vertical_walls += 1
-        if (door_x < self.level.width - 1 and self.level.is_wall_tile(self.level.tiles[door_y][door_x + 1])):
+        if (door_x < self.level.width - 1 and self.level.wall_renderer.is_wall_tile(self.level.tiles[door_y][door_x + 1])):
             vertical_walls += 1
         
         # If more walls on horizontal sides, door is horizontal

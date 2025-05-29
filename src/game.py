@@ -4,7 +4,7 @@ Game class - Main game controller
 
 import pygame
 import sys
-from .menu import MainMenu
+from .ui.menu import MainMenu, PauseMenu, GameOverMenu
 from .level import Level
 from .player import Player
 from .save_system import SaveSystem
@@ -73,7 +73,7 @@ class Game:
         self.player = Player(100, 102, self.asset_loader, self.game_log)  # Updated to new village center
         
         # Create the first level
-        self.current_level = Level("village", self.player, self.asset_loader)
+        self.current_level = Level("village", self.player, self.asset_loader, self)
         
         # Initialize quest system
         from .quest_system import QuestManager
@@ -149,7 +149,7 @@ class Game:
                 elif event.type == pygame.KEYDOWN:
                     if event.key == pygame.K_ESCAPE:
                         self.state = Game.STATE_PAUSED
-                        self.menu.show_pause_menu()
+                        self.menu = PauseMenu(self)
                         # Pause music when entering pause menu
                         audio = getattr(self.asset_loader, 'audio_manager', None)
                         if audio:
@@ -186,6 +186,31 @@ class Game:
             # Enter fullscreen
             self.screen = pygame.display.set_mode((0, 0), pygame.FULLSCREEN)
             print("Entered fullscreen")
+    
+    def apply_settings(self):
+        """Apply current settings to the game"""
+        # Update window size and fullscreen mode
+        new_width = self.settings.get("window_width")
+        new_height = self.settings.get("window_height")
+        fullscreen = self.settings.get("fullscreen")
+        
+        # Update stored dimensions
+        self.width = new_width
+        self.height = new_height
+        
+        # Apply display settings
+        flags = pygame.RESIZABLE
+        if fullscreen:
+            flags |= pygame.FULLSCREEN
+            self.screen = pygame.display.set_mode((0, 0), flags)
+        else:
+            self.screen = pygame.display.set_mode((new_width, new_height), flags)
+        
+        # Apply audio settings
+        if hasattr(self.asset_loader, 'audio_manager'):
+            self.settings.apply_audio_settings(self.asset_loader.audio_manager)
+        
+        print(f"Settings applied: {new_width}x{new_height}, Fullscreen: {fullscreen}")
     
     def update(self):
         """Update game logic"""
@@ -227,7 +252,7 @@ class Game:
         self.game_log.add_message("You have been defeated!", "combat")
         self.game_log.add_message("Game Over", "system")
         self.state = Game.STATE_GAME_OVER
-        self.menu.show_game_over_menu()
+        self.menu = GameOverMenu(self)
     
     def render(self):
         """Render the game"""

@@ -8,7 +8,7 @@ import math
 import os
 from typing import Dict, List, Tuple, Set, Optional
 from .map_template import MapTemplate
-from .entity import Entity, NPC, Enemy, Item, Chest
+from .entities import Entity, NPC, Enemy, Item, Chest
 
 class TemplateBasedLevel:
     """

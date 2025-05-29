@@ -7,7 +7,7 @@ import pygame
 import random
 import math
 from typing import Dict, List, Tuple, Optional
-from .entity import Entity, NPC, Enemy, Item, Chest
+from ..entities import Entity, NPC, Enemy, Item, Chest
 
 class ProceduralGenerator:
     """

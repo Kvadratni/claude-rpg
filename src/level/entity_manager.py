@@ -4,9 +4,9 @@ Entity update and management logic
 
 import random
 try:
-    from ..entity import Item
+    from ..entities import Item
 except ImportError:
-    from entity import Item
+    from ..entities import Item
 
 
 class EntityManagerMixin:
@@ -43,7 +43,7 @@ class EntityManagerMixin:
         
         # Update NPCs
         for npc in self.npcs:
-            npc.update(self)
+            npc.update((self.player.x, self.player.y), self)
         
         # Update items
         for item in self.items:

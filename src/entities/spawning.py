@@ -8,10 +8,10 @@ that were extracted from level.py to improve code organization.
 import random
 import math
 try:
-    from .entity import Enemy, NPC, Item, Entity, Chest
+    from . import Enemy, NPC, Item, Entity, Chest
 except ImportError:
     # Fallback for direct execution
-    from entity import Enemy, NPC, Item, Entity, Chest
+    from . import Enemy, NPC, Item, Entity, Chest
 
 
 class SpawningMixin:

@@ -3,9 +3,9 @@ Level data management and serialization
 """
 
 try:
-    from ..entity import Entity, NPC, Enemy, Item, Chest
+    from ..entities import Entity, NPC, Enemy, Item, Chest
 except ImportError:
-    from entity import Entity, NPC, Enemy, Item, Chest
+    from ..entities import Entity, NPC, Enemy, Item, Chest
 
 
 class LevelDataMixin:

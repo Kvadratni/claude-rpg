@@ -4,7 +4,7 @@ Shop system for the RPG
 
 import pygame
 import random
-from .entity import Item
+from ..entities import Item
 
 class Shop:
     """Shop system for buying and selling items"""

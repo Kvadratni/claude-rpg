@@ -9,23 +9,23 @@ import math
 
 try:
     from ..core.isometric import IsometricRenderer, sort_by_depth
-    from ..entity import Entity, NPC, Enemy, Item
+    from ..entities import Entity, NPC, Enemy, Item
     from ..core.game_log import GameLog
     from ..door_pathfinder import DoorPathfinder
     from ..door_renderer import DoorRenderer
     from ..wall_renderer import WallRenderer
     from ..template_level import integrate_template_generation
-    from ..spawning import SpawningMixin
+    from ..entities.spawning import SpawningMixin
 except ImportError:
     # Fallback for direct execution
     from src.core.isometric import IsometricRenderer, sort_by_depth
-    from src.entity import Entity, NPC, Enemy, Item
+    from ..entities import Entity, NPC, Enemy, Item
     from src.core.game_log import GameLog
     from src.door_pathfinder import DoorPathfinder
     from src.door_renderer import DoorRenderer
     from src.wall_renderer import WallRenderer
     from src.template_level import integrate_template_generation
-    from src.spawning import SpawningMixin
+    from src.entities.spawning import SpawningMixin
 
 
 class LevelBase(SpawningMixin):
@@ -51,11 +51,12 @@ class LevelBase(SpawningMixin):
     TILE_WALL_WINDOW_HORIZONTAL = 14  # Horizontal wall with window
     TILE_WALL_WINDOW_VERTICAL = 15    # Vertical wall with window
     
-    def __init__(self, level_name, player, asset_loader):
+    def __init__(self, level_name, player, asset_loader, game=None):
         """Initialize the base level"""
         self.name = level_name
         self.player = player
         self.asset_loader = asset_loader
+        self.game = game
         self.width = 200  # Default size, may be overridden by template
         self.height = 200
         
