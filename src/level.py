@@ -67,11 +67,11 @@ class Level:
             if success:
                 print("Template-based generation successful!")
             else:
-                print("Template generation failed, falling back to procedural generation")
-                self.generate_fallback_level()
+                print("Template generation failed, no fallback available")
+                raise RuntimeError("Template generation failed and no fallback is available")
         else:
-            print("No template found, using procedural generation")
-            self.generate_fallback_level()
+            print("No template found, template is required")
+            raise RuntimeError("Template file not found and no fallback is available")
         
         # Generate heightmap and walkable grid if not already done
         if not hasattr(self, 'heightmap') or self.heightmap is None:
@@ -86,360 +86,27 @@ class Level:
         # Create tile sprites
         self.create_tile_sprites()
     
-    def generate_fallback_level(self):
-        """Generate level using original procedural method as fallback"""
-        print("Generating level using procedural fallback...")
-        
-        # Initialize entity lists
-        self.npcs = []
-        self.enemies = []
-        self.items = []
-        self.objects = []  # Static objects like trees, rocks, etc.
-        self.chests = []   # Treasure chests
-        
-        # Generate level using original method
-        self.tiles = self.generate_level()
-        self.heightmap = self.generate_heightmap()
-        self.walkable = self.generate_walkable_grid()
-        
-        # Spawn entities using original method
-        self.spawn_entities()
+
     
-    def generate_level(self):
-        """Generate a massive, well-designed world with multiple regions and content"""
-        tiles = []
-        
-        # Initialize with grass
-        for y in range(self.height):
-            row = []
-            for x in range(self.width):
-                row.append(self.TILE_GRASS)
-            tiles.append(row)
-        
-        # Create border walls
-        for y in range(self.height):
-            for x in range(self.width):
-                if x == 0 or x == self.width - 1 or y == 0 or y == self.height - 1:
-                    tiles[y][x] = self.TILE_WALL
-        
-        # CENTRAL VILLAGE AREA (Center of map) - Main hub
-        village_center_x, village_center_y = 100, 100
-        
-        # Large village square with stone paths
-        for x in range(85, 116):
-            for y in range(85, 116):
-                tiles[y][x] = self.TILE_STONE
-        
-        # Village buildings - Much larger and more varied
-        self.create_building(tiles, 70, 80, 15, 10)   # Large shopkeeper's store
-        self.create_building(tiles, 115, 80, 15, 10)  # Elder's house
-        self.create_building(tiles, 85, 120, 20, 12)  # Village hall
-        self.create_building(tiles, 70, 105, 12, 8)   # Blacksmith
-        self.create_building(tiles, 115, 105, 12, 8)  # Inn/Tavern
-        self.create_building(tiles, 92, 65, 16, 10)   # Temple/Church
-        self.create_building(tiles, 60, 92, 10, 10)   # Guard house
-        self.create_building(tiles, 130, 92, 10, 10)  # Storage house
-        
-        # Test corner mappings - create 4 small test buildings to see corner orientations
-        self.create_test_corner_building(tiles, 50, 50, 0)  # Test mapping 1 (TL->TL, TR->TR, etc.)
-        self.create_test_corner_building(tiles, 55, 50, 1)  # Test mapping 2 (TL->TR, TR->TL, etc.)
-        self.create_test_corner_building(tiles, 60, 50, 2)  # Test mapping 3 (TL->BL, TR->BR, etc.)
-        self.create_test_corner_building(tiles, 65, 50, 3)  # Test mapping 4 (TL->BR, TR->BL, etc.)
-        
-        # Major roads connecting all regions
-        # Main east-west highway
-        for x in range(10, 190):
-            tiles[100][x] = self.TILE_STONE
-            tiles[101][x] = self.TILE_STONE
-        
-        # Main north-south highway  
-        for y in range(10, 190):
-            tiles[y][100] = self.TILE_STONE
-            tiles[y][101] = self.TILE_STONE
-        
-        # NORTHERN WILDERNESS (Multiple forest areas)
-        # Dark Forest (North-West) - Goblin territory
-        self.create_forest_region(tiles, 30, 30, 40, 40, density=0.5, dirt_patches=0.4)
-        
-        # Enchanted Grove (North-Center) - Magical creatures
-        self.create_forest_region(tiles, 80, 25, 40, 30, density=0.3, dirt_patches=0.2)
-        
-        # Ancient Woods (North-East) - Old ruins
-        self.create_forest_region(tiles, 140, 30, 50, 40, density=0.6, dirt_patches=0.3)
-        
-        # MOUNTAIN REGIONS (Multiple mountain areas)
-        # Orc Stronghold (Far North-East)
-        self.create_mountain_region(tiles, 160, 15, 35, 35)
-        
-        # Dragon's Peak (North-West corner)
-        self.create_mountain_region(tiles, 15, 15, 30, 30)
-        
-        # Crystal Caves (East side)
-        self.create_mountain_region(tiles, 170, 80, 25, 40)
-        
-        # WATER FEATURES (Multiple lakes and rivers)
-        # Great Lake (South-East)
-        self.create_lake(tiles, 150, 150, 20)
-        
-        # Twin Lakes (South-West)
-        self.create_lake(tiles, 40, 140, 12)
-        self.create_lake(tiles, 60, 155, 10)
-        
-        # Mountain Lake (North)
-        self.create_lake(tiles, 100, 40, 8)
-        
-        # River system connecting lakes
-        self.create_river(tiles, 100, 40, 150, 150)  # From mountain lake to great lake
-        self.create_river(tiles, 40, 140, 60, 155)   # Connecting twin lakes
-        
-        # DESERT REGION (South-West corner)
-        self.create_desert_region(tiles, 15, 140, 60, 45)
-        
-        # SWAMP REGION (West side)
-        self.create_swamp_region(tiles, 15, 80, 40, 50)
-        
-        # ADDITIONAL SETTLEMENTS
-        # Mining Town (Near mountains)
-        self.create_small_town(tiles, 160, 60, "mining")
-        
-        # Fishing Village (By great lake)
-        self.create_small_town(tiles, 130, 170, "fishing")
-        
-        # Desert Outpost (In desert)
-        self.create_small_town(tiles, 35, 165, "desert")
-        
-        # Forest Hamlet (In enchanted grove)
-        self.create_small_town(tiles, 100, 35, "forest")
-        
-        # ROADS AND PATHS - Connect all major areas
-        # Roads to northern settlements
-        self.create_stone_path(tiles, 100, 85, 100, 35)  # To forest hamlet
-        self.create_stone_path(tiles, 115, 85, 160, 60)  # To mining town
-        
-        # Roads to southern settlements  
-        self.create_stone_path(tiles, 85, 115, 35, 165)  # To desert outpost
-        self.create_stone_path(tiles, 115, 115, 130, 170) # To fishing village
-        
-        # Dirt paths to wilderness areas
-        self.create_dirt_path(tiles, 85, 85, 30, 30)     # To dark forest
-        self.create_dirt_path(tiles, 115, 85, 140, 30)   # To ancient woods
-        self.create_dirt_path(tiles, 85, 115, 15, 80)    # To swamp
-        self.create_dirt_path(tiles, 115, 100, 170, 80)  # To crystal caves
-        
-        # SPECIAL LOCATIONS
-        # Ancient Ruins (scattered throughout)
-        self.create_ruins(tiles, 50, 60, 8, 6)   # Ruins near village
-        self.create_ruins(tiles, 160, 120, 12, 8) # Ruins in east
-        self.create_ruins(tiles, 25, 170, 10, 6)  # Desert ruins
-        
-        # Mysterious Circles (stone circles)
-        self.create_stone_circle(tiles, 70, 50)
-        self.create_stone_circle(tiles, 130, 130)
-        self.create_stone_circle(tiles, 180, 40)
-        
-        # Ensure player starting area is clear (village center)
-        start_x, start_y = 100, 102
-        for dy in range(-3, 4):
-            for dx in range(-3, 4):
-                if 0 <= start_x + dx < self.width and 0 <= start_y + dy < self.height:
-                    if tiles[start_y + dy][start_x + dx] == self.TILE_WALL:
-                        tiles[start_y + dy][start_x + dx] = self.TILE_STONE
-        
-        return tiles
+
     
-    def create_forest_region(self, tiles, start_x, start_y, width, height, density=0.4, dirt_patches=0.3):
-        """Create a forest region with varying density"""
-        for y in range(start_y, min(start_y + height, self.height - 1)):
-            for x in range(start_x, min(start_x + width, self.width - 1)):
-                if random.random() < dirt_patches:
-                    tiles[y][x] = self.TILE_DIRT
-        
-        # Create clearings within forest
-        num_clearings = random.randint(2, 4)
-        for _ in range(num_clearings):
-            clear_x = start_x + random.randint(5, width - 10)
-            clear_y = start_y + random.randint(5, height - 10)
-            clear_size = random.randint(3, 8)
-            
-            for dy in range(-clear_size//2, clear_size//2):
-                for dx in range(-clear_size//2, clear_size//2):
-                    if (0 <= clear_x + dx < self.width and 0 <= clear_y + dy < self.height):
-                        if dx*dx + dy*dy <= (clear_size//2)**2:  # Circular clearing
-                            tiles[clear_y + dy][clear_x + dx] = self.TILE_DIRT
+
     
-    def create_mountain_region(self, tiles, start_x, start_y, width, height):
-        """Create a rocky mountain region"""
-        for y in range(start_y, min(start_y + height, self.height - 1)):
-            for x in range(start_x, min(start_x + width, self.width - 1)):
-                # Create rocky pattern
-                if (x + y) % 3 == 0:
-                    tiles[y][x] = self.TILE_STONE
-                elif (x + y) % 5 == 0:
-                    tiles[y][x] = self.TILE_DIRT
-        
-        # Add some flat areas for building/combat
-        num_plateaus = random.randint(1, 3)
-        for _ in range(num_plateaus):
-            plat_x = start_x + random.randint(5, width - 15)
-            plat_y = start_y + random.randint(5, height - 15)
-            plat_size = random.randint(8, 15)
-            
-            for dy in range(plat_size):
-                for dx in range(plat_size):
-                    if (0 <= plat_x + dx < self.width and 0 <= plat_y + dy < self.height):
-                        tiles[plat_y + dy][plat_x + dx] = self.TILE_STONE
+
     
-    def create_desert_region(self, tiles, start_x, start_y, width, height):
-        """Create a desert region with sand (dirt) and occasional stone"""
-        for y in range(start_y, min(start_y + height, self.height - 1)):
-            for x in range(start_x, min(start_x + width, self.width - 1)):
-                if random.random() < 0.8:  # 80% dirt (sand)
-                    tiles[y][x] = self.TILE_DIRT
-                elif random.random() < 0.3:  # Some stone outcroppings
-                    tiles[y][x] = self.TILE_STONE
-        
-        # Create oasis
-        oasis_x = start_x + width // 2
-        oasis_y = start_y + height // 2
-        self.create_lake(tiles, oasis_x, oasis_y, 4)
-        
-        # Surround oasis with grass
-        for dy in range(-6, 7):
-            for dx in range(-6, 7):
-                if (0 <= oasis_x + dx < self.width and 0 <= oasis_y + dy < self.height):
-                    if dx*dx + dy*dy <= 36:  # Circle around oasis
-                        if tiles[oasis_y + dy][oasis_x + dx] != self.TILE_WATER:
-                            tiles[oasis_y + dy][oasis_x + dx] = self.TILE_GRASS
+
     
-    def create_swamp_region(self, tiles, start_x, start_y, width, height):
-        """Create a swamp region with water patches and dirt"""
-        for y in range(start_y, min(start_y + height, self.height - 1)):
-            for x in range(start_x, min(start_x + width, self.width - 1)):
-                rand = random.random()
-                if rand < 0.3:  # 30% water
-                    tiles[y][x] = self.TILE_WATER
-                elif rand < 0.7:  # 40% dirt (muddy ground)
-                    tiles[y][x] = self.TILE_DIRT
-                # Rest stays grass
+
     
-    def create_small_town(self, tiles, center_x, center_y, town_type):
-        """Create a small settlement based on type"""
-        # Small town square
-        for x in range(center_x - 5, center_x + 6):
-            for y in range(center_y - 5, center_y + 6):
-                if 0 <= x < self.width and 0 <= y < self.height:
-                    tiles[y][x] = self.TILE_STONE
-        
-        if town_type == "mining":
-            # Mining town buildings
-            self.create_building(tiles, center_x - 10, center_y - 8, 12, 8)  # Mine office
-            self.create_building(tiles, center_x + 2, center_y - 8, 10, 6)   # Miners' quarters
-            self.create_building(tiles, center_x - 8, center_y + 3, 8, 6)    # Supply store
-        elif town_type == "fishing":
-            # Fishing village buildings
-            self.create_building(tiles, center_x - 8, center_y - 6, 10, 6)   # Fish market
-            self.create_building(tiles, center_x + 4, center_y - 6, 8, 6)    # Fisherman's hut
-            self.create_building(tiles, center_x - 6, center_y + 4, 12, 6)   # Boat house
-        elif town_type == "desert":
-            # Desert outpost buildings
-            self.create_building(tiles, center_x - 6, center_y - 4, 8, 6)    # Trading post
-            self.create_building(tiles, center_x + 4, center_y - 4, 6, 6)    # Water storage
-            self.create_building(tiles, center_x - 2, center_y + 4, 10, 6)   # Caravan rest
-        elif town_type == "forest":
-            # Forest hamlet buildings
-            self.create_building(tiles, center_x - 6, center_y - 6, 8, 6)    # Ranger station
-            self.create_building(tiles, center_x + 4, center_y - 6, 6, 6)    # Herbalist hut
-            self.create_building(tiles, center_x - 4, center_y + 4, 10, 6)   # Hunter's lodge
+
     
-    def create_ruins(self, tiles, start_x, start_y, width, height):
-        """Create ancient ruins with broken walls"""
-        for y in range(start_y, start_y + height):
-            for x in range(start_x, start_x + width):
-                if 0 <= x < self.width and 0 <= y < self.height:
-                    # Outer walls (partially broken)
-                    if (x == start_x or x == start_x + width - 1 or 
-                        y == start_y or y == start_y + height - 1):
-                        if random.random() < 0.7:  # 70% chance for wall piece
-                            tiles[y][x] = self.TILE_WALL
-                    # Interior floor
-                    elif random.random() < 0.6:  # 60% chance for stone floor
-                        tiles[y][x] = self.TILE_STONE
-                    elif random.random() < 0.3:  # Some dirt patches
-                        tiles[y][x] = self.TILE_DIRT
+
     
-    def create_stone_circle(self, tiles, center_x, center_y):
-        """Create a mysterious stone circle"""
-        radius = 4
-        for angle in range(0, 360, 45):  # 8 stones
-            x = center_x + int(radius * math.cos(math.radians(angle)))
-            y = center_y + int(radius * math.sin(math.radians(angle)))
-            if 0 <= x < self.width and 0 <= y < self.height:
-                tiles[y][x] = self.TILE_STONE
-        
-        # Center stone
-        if 0 <= center_x < self.width and 0 <= center_y < self.height:
-            tiles[center_y][center_x] = self.TILE_STONE
+
     
-    def create_river(self, tiles, start_x, start_y, end_x, end_y):
-        """Create a winding river between two points"""
-        current_x, current_y = start_x, start_y
-        
-        while abs(current_x - end_x) > 1 or abs(current_y - end_y) > 1:
-            # Create river tile
-            if 0 <= current_x < self.width and 0 <= current_y < self.height:
-                tiles[current_y][current_x] = self.TILE_WATER
-                # Add banks
-                for dx in [-1, 0, 1]:
-                    for dy in [-1, 0, 1]:
-                        bank_x, bank_y = current_x + dx, current_y + dy
-                        if (0 <= bank_x < self.width and 0 <= bank_y < self.height and
-                            tiles[bank_y][bank_x] == self.TILE_GRASS):
-                            if random.random() < 0.3:  # 30% chance for dirt bank
-                                tiles[bank_y][bank_x] = self.TILE_DIRT
-            
-            # Move toward target with some randomness for winding
-            if current_x < end_x:
-                current_x += 1
-            elif current_x > end_x:
-                current_x -= 1
-            
-            if current_y < end_y:
-                current_y += 1
-            elif current_y > end_y:
-                current_y -= 1
-            
-            # Add some random winding
-            if random.random() < 0.3:
-                current_x += random.choice([-1, 1])
-            if random.random() < 0.3:
-                current_y += random.choice([-1, 1])
-            
-            # Keep in bounds
-            current_x = max(1, min(self.width - 2, current_x))
-            current_y = max(1, min(self.height - 2, current_y))
+
     
-    def create_stone_path(self, tiles, start_x, start_y, end_x, end_y):
-        """Create a stone road between two points"""
-        current_x, current_y = start_x, start_y
-        
-        while abs(current_x - end_x) > 1 or abs(current_y - end_y) > 1:
-            # Create 2-wide stone path
-            for dx in [0, 1]:
-                for dy in [0, 1]:
-                    path_x, path_y = current_x + dx, current_y + dy
-                    if 0 <= path_x < self.width and 0 <= path_y < self.height:
-                        tiles[path_y][path_x] = self.TILE_STONE
-            
-            # Move toward target
-            if current_x < end_x:
-                current_x += 1
-            elif current_x > end_x:
-                current_x -= 1
-            
-            if current_y < end_y:
-                current_y += 1
-            elif current_y > end_y:
-                current_y -= 1
+
     
     def create_test_corner_building(self, tiles, start_x, start_y, corner_test_type):
         """Create a small test building to test corner orientations"""
