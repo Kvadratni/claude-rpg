@@ -5,7 +5,7 @@ Player class for the RPG
 import pygame
 import math
 import random
-from .inventory import Inventory
+from .ui.inventory import Inventory
 
 class Player:
     """Player character class"""
@@ -743,7 +743,7 @@ class Player:
             if self.game_log:
                 self.game_log.add_message(f"Equipped {item.name}", "item")
     
-    def render(self, screen, iso_renderer, camera_x, camera_y):
+    def render(self, screen, camera_x, camera_y, iso_renderer):
         """Render the player"""
         # Calculate screen position
         screen_x, screen_y = iso_renderer.world_to_screen(self.x, self.y, camera_x, camera_y)
@@ -886,7 +886,7 @@ class Player:
     @classmethod
     def from_save_data(cls, data, asset_loader=None, game_log=None):
         """Create player from save data"""
-        from .entity import Item
+        from .entities import Item
         
         player = cls(data["x"], data["y"], asset_loader, game_log)
         player.level = data["level"]

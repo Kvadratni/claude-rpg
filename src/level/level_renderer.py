@@ -62,7 +62,7 @@ class LevelRendererMixin:
         
         # Render entities to game surface
         for entity in sorted_entities:
-            entity.render(game_surface, self.iso_renderer, self.camera_x, self.camera_y)
+            entity.render(game_surface, self.camera_x, self.camera_y, self.iso_renderer)
         
         # Debug: Render pathfinding visualization if player has a path
         if hasattr(self.player, 'path') and self.player.path and len(self.player.path) > 1:
@@ -74,7 +74,7 @@ class LevelRendererMixin:
         # Render XP bar at the top
         self.render_xp_bar(screen)
         
-        # Render UI on top
+        # Render bottom UI panel (equipment, inventory button, game log)
         self.render_ui(screen)
         
         # Render shops on top of everything

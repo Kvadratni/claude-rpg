@@ -12,6 +12,7 @@ from .level_events import EventHandlingMixin
 from .entity_manager import EntityManagerMixin
 from .level_data import LevelDataMixin
 from .level_renderer import LevelRendererMixin
+from ..ui.hud import HUD
 from .ui_renderer import UIRendererMixin
 
 
@@ -34,11 +35,14 @@ class Level(
     while providing a cleaner, more maintainable internal structure.
     """
     
-    def __init__(self, level_name, player, asset_loader):
+    def __init__(self, level_name, player, asset_loader, game=None):
         """Initialize the level with all functionality"""
         # Initialize the base class
-        super().__init__(level_name, player, asset_loader)
+        super().__init__(level_name, player, asset_loader, game)
         
+        
+        # Initialize HUD
+        self.hud = HUD(self.game)
         # Create tile sprites after initialization
         self.create_tile_sprites()
     
