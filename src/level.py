@@ -2,17 +2,28 @@
 Level system for the RPG
 """
 
+import os
 import pygame
 import random
-import math
 import heapq
-import os
-from .isometric import IsometricRenderer, sort_by_depth
-from .wall_renderer import WallRenderer
-from .entity import Entity, NPC, Enemy, Item, Chest
-from .template_level import integrate_template_generation
-from .door_renderer import DoorRenderer
-from .door_pathfinder import DoorPathfinder
+import math
+try:
+    from .isometric import IsometricRenderer, sort_by_depth
+    from .entity import Entity, NPC, Enemy, Item
+    from .game_log import GameLog
+    from .door_pathfinder import DoorPathfinder
+    from .door_renderer import DoorRenderer
+    from .wall_renderer import WallRenderer
+    from .template_level import integrate_template_generation
+except ImportError:
+    # Fallback for direct execution
+    from isometric import IsometricRenderer, sort_by_depth
+    from entity import Entity, NPC, Enemy, Item
+    from game_log import GameLog
+    from door_pathfinder import DoorPathfinder
+    from door_renderer import DoorRenderer
+    from wall_renderer import WallRenderer
+    from template_level import integrate_template_generation
 
 class Level:
     """Game level class"""
@@ -449,57 +460,6 @@ class Level:
             # Create enhanced door sprite with proper isometric proportions
             door_sprite = self.door_renderer.create_enhanced_door_sprite(self.tile_width, self.tile_height)
             self.tile_sprites[self.TILE_DOOR] = door_sprite
-    
-    
-    
-    def create_enhanced_door_sprite(self):
-        """Create an enhanced door sprite that renders properly"""
-        # Create a door sprite that looks like a proper isometric door
-        door_width = self.tile_width
-        door_height = self.tile_height + 32
-        
-        surface = pygame.Surface((door_width, door_height), pygame.SRCALPHA)
-        
-        # Door colors
-        door_color = (139, 69, 19)      # Brown door
-        frame_color = (100, 50, 10)     # Darker brown frame
-        handle_color = (255, 215, 0)    # Gold handle
-        
-        # Calculate door rectangle dimensions
-        door_rect_width = door_width // 2
-        door_rect_height = door_height - self.tile_height // 2
-        door_x = (door_width - door_rect_width) // 2
-        door_y = self.tile_height // 4
-        
-        # Draw door frame (slightly larger rectangle)
-        frame_rect = pygame.Rect(door_x - 2, door_y - 2, door_rect_width + 4, door_rect_height + 4)
-        pygame.draw.rect(surface, frame_color, frame_rect)
-        
-        # Draw main door
-        door_rect = pygame.Rect(door_x, door_y, door_rect_width, door_rect_height)
-        pygame.draw.rect(surface, door_color, door_rect)
-        
-        # Add door handle
-        handle_x = door_x + door_rect_width - 6
-        handle_y = door_y + door_rect_height // 2
-        pygame.draw.circle(surface, handle_color, (handle_x, handle_y), 2)
-        
-        # Add door panels for detail
-        panel_margin = 3
-        panel_width = door_rect_width - panel_margin * 2
-        panel_height = (door_rect_height - panel_margin * 3) // 2
-        
-        # Top panel outline
-        top_panel_rect = pygame.Rect(door_x + panel_margin, door_y + panel_margin, panel_width, panel_height)
-        pygame.draw.rect(surface, frame_color, top_panel_rect, 1)
-        
-        # Bottom panel outline
-        bottom_panel_rect = pygame.Rect(door_x + panel_margin, door_y + panel_margin * 2 + panel_height, panel_width, panel_height)
-        pygame.draw.rect(surface, frame_color, bottom_panel_rect, 1)
-        
-        return surface
-    
-    
     
     
     
@@ -1081,7 +1041,7 @@ class Level:
         # Enhanced door area detection
         tile_x = int(x)
         tile_y = int(y)
-        door_context = self.analyze_door_context(tile_x, tile_y, x, y)
+        door_context = self.door_pathfinder.analyze_door_context(tile_x, tile_y, x, y)
         
         # For door areas, use much more lenient collision
         if door_context['is_door_area']:
@@ -1176,18 +1136,6 @@ class Level:
         
         return False
     
-    def analyze_door_context(self, tile_x, tile_y, world_x, world_y):
-        """Analyze the door context around a position for better collision handling"""
-        return self.door_pathfinder.analyze_door_context(tile_x, tile_y, world_x, world_y)
-    
-    def enhance_door_pathfinding(self, path, entity_size):
-        """Add special handling for door navigation with improved doorway handling"""
-        return self.door_pathfinder.enhance_door_pathfinding(path, entity_size)
-    
-    def get_door_orientation(self, door_x, door_y):
-        """Determine if door is horizontal or vertical based on surrounding walls"""
-        return self.door_pathfinder.get_door_orientation(door_x, door_y)
-    
     def render_path_debug(self, surface, path):
         """Render debug visualization of the current path"""
         if len(path) < 2:
@@ -1245,7 +1193,7 @@ class Level:
         smoothed_path = self.apply_corner_smoothing(coarse_path, entity_size)
         
         # Phase 3: Add door navigation waypoints
-        enhanced_path = self.enhance_door_pathfinding(smoothed_path, entity_size)
+        enhanced_path = self.door_pathfinder.enhance_door_pathfinding(smoothed_path, entity_size)
         
         # Phase 4: Validate path with entity simulation
         validated_path = self.validate_path_with_entity_simulation(enhanced_path, entity_size)
@@ -1585,72 +1533,6 @@ class Level:
         
         return curve_points if curve_points else [p1]
     
-    def generate_improved_door_waypoints(self, current, next_point, entity_size):
-        """Generate improved intermediate waypoints for door navigation"""
-        waypoints = []
-        
-        # Check if path crosses a door or door area
-        doors_info = self.find_doors_with_context(current, next_point)
-        
-        for door_info in doors_info:
-            door_pos = door_info['position']
-            door_orientation = door_info['orientation']
-            approach_side = door_info['approach_side']
-            
-            # Create more precise approach and exit points
-            approach_point = self.calculate_precise_door_approach(door_pos, door_orientation, approach_side, entity_size)
-            exit_point = self.calculate_precise_door_exit(door_pos, door_orientation, approach_side, entity_size)
-            
-            # Add alignment waypoint before door if needed
-            if self.needs_door_alignment(current, door_pos, door_orientation):
-                align_point = self.calculate_door_alignment_point(door_pos, door_orientation, current, entity_size)
-                waypoints.append(align_point)
-            
-            # Add the main door navigation waypoints
-            waypoints.extend([approach_point, door_pos, exit_point])
-        
-        return waypoints
-    
-    def find_doors_with_context(self, start, end):
-        """Find doors between points with additional context information"""
-        doors_info = []
-        
-        # Sample points along the line between start and end
-        dx = end[0] - start[0]
-        dy = end[1] - start[1]
-        distance = math.sqrt(dx*dx + dy*dy)
-        
-        if distance == 0:
-            return doors_info
-        
-        steps = max(int(distance * 3), 3)  # More sampling for better detection
-        
-        for i in range(steps + 1):
-            t = i / steps
-            x = start[0] + dx * t
-            y = start[1] + dy * t
-            
-            tile_x, tile_y = int(x), int(y)
-            if (0 <= tile_x < self.width and 0 <= tile_y < self.height and
-                self.tiles[tile_y][tile_x] == self.TILE_DOOR):
-                
-                door_pos = (tile_x + 0.5, tile_y + 0.5)
-                
-                # Check if we already found this door
-                already_found = any(info['position'] == door_pos for info in doors_info)
-                if not already_found:
-                    orientation = self.get_door_orientation(tile_x, tile_y)
-                    approach_side = self.determine_approach_side(start, door_pos, orientation)
-                    
-                    doors_info.append({
-                        'position': door_pos,
-                        'orientation': orientation,
-                        'approach_side': approach_side,
-                        'tile_pos': (tile_x, tile_y)
-                    })
-        
-        return doors_info
-    
     def determine_approach_side(self, from_point, door_pos, orientation):
         """Determine which side we're approaching the door from"""
         dx = from_point[0] - door_pos[0]
@@ -1662,156 +1544,6 @@ class Level:
         else:
             # For vertical doors, check if approaching from east or west
             return "west" if dx < 0 else "east"
-    
-    def calculate_precise_door_approach(self, door_pos, orientation, approach_side, entity_size):
-        """Calculate precise approach point for door based on orientation and approach side"""
-        # Use larger clearance for approach to avoid getting stuck
-        clearance = max(0.7, entity_size + 0.3)
-        
-        if orientation == "horizontal":
-            if approach_side == "north":
-                return (door_pos[0], door_pos[1] - clearance)
-            else:  # south
-                return (door_pos[0], door_pos[1] + clearance)
-        else:  # vertical
-            if approach_side == "west":
-                return (door_pos[0] - clearance, door_pos[1])
-            else:  # east
-                return (door_pos[0] + clearance, door_pos[1])
-    
-    def calculate_precise_door_exit(self, door_pos, orientation, approach_side, entity_size):
-        """Calculate precise exit point from door"""
-        # Use larger clearance for exit to ensure we're fully through
-        clearance = max(0.8, entity_size + 0.4)
-        
-        if orientation == "horizontal":
-            if approach_side == "north":
-                return (door_pos[0], door_pos[1] + clearance)  # Exit to south
-            else:  # south
-                return (door_pos[0], door_pos[1] - clearance)  # Exit to north
-        else:  # vertical
-            if approach_side == "west":
-                return (door_pos[0] + clearance, door_pos[1])  # Exit to east
-            else:  # east
-                return (door_pos[0] - clearance, door_pos[1])  # Exit to west
-    
-    def needs_door_alignment(self, current_pos, door_pos, orientation):
-        """Check if we need an alignment waypoint before approaching the door"""
-        dx = abs(current_pos[0] - door_pos[0])
-        dy = abs(current_pos[1] - door_pos[1])
-        
-        # If we're not well-aligned with the door, we need an alignment point
-        if orientation == "horizontal":
-            return dx > 0.3  # Not aligned horizontally
-        else:
-            return dy > 0.3  # Not aligned vertically
-    
-    def calculate_door_alignment_point(self, door_pos, orientation, current_pos, entity_size):
-        """Calculate alignment point to approach door straight-on"""
-        clearance = max(1.0, entity_size + 0.6)  # Extra clearance for alignment
-        
-        if orientation == "horizontal":
-            # Align horizontally, maintain vertical distance
-            align_y = current_pos[1]
-            if align_y < door_pos[1]:
-                align_y = door_pos[1] - clearance
-            else:
-                align_y = door_pos[1] + clearance
-            return (door_pos[0], align_y)
-        else:  # vertical
-            # Align vertically, maintain horizontal distance
-            align_x = current_pos[0]
-            if align_x < door_pos[0]:
-                align_x = door_pos[0] - clearance
-            else:
-                align_x = door_pos[0] + clearance
-            return (align_x, door_pos[1])
-    
-    def generate_door_waypoints(self, current, next_point, entity_size):
-        """Generate intermediate waypoints for door navigation (legacy method)"""
-        waypoints = []
-        
-        # Check if path crosses a door
-        door_positions = self.find_doors_between_points(current, next_point)
-        
-        for door_pos in door_positions:
-            # Create approach waypoint (align with door)
-            approach_point = self.calculate_door_approach_point(door_pos, current, entity_size)
-            
-            # Create exit waypoint (clear of door)
-            exit_point = self.calculate_door_exit_point(door_pos, next_point, entity_size)
-            
-            waypoints.extend([approach_point, door_pos, exit_point])
-        
-        return waypoints
-    
-    def find_doors_between_points(self, start, end):
-        """Find door tiles between two points"""
-        doors = []
-        
-        # Sample points along the line between start and end
-        dx = end[0] - start[0]
-        dy = end[1] - start[1]
-        distance = math.sqrt(dx*dx + dy*dy)
-        
-        if distance == 0:
-            return doors
-        
-        steps = max(int(distance * 2), 2)
-        
-        for i in range(steps + 1):
-            t = i / steps
-            x = start[0] + dx * t
-            y = start[1] + dy * t
-            
-            tile_x, tile_y = int(x), int(y)
-            if (0 <= tile_x < self.width and 0 <= tile_y < self.height and
-                self.tiles[tile_y][tile_x] == self.TILE_DOOR):
-                door_pos = (tile_x + 0.5, tile_y + 0.5)
-                if door_pos not in doors:
-                    doors.append(door_pos)
-        
-        return doors
-    
-    def calculate_door_approach_point(self, door_pos, from_point, entity_size):
-        """Calculate optimal approach point for door"""
-        door_x, door_y = int(door_pos[0]), int(door_pos[1])
-        
-        # Find door orientation
-        door_orientation = self.get_door_orientation(door_x, door_y)
-        
-        if door_orientation == "horizontal":
-            # Approach from north or south
-            if from_point[1] < door_y:
-                return (door_pos[0], door_pos[1] - 0.6)  # Approach from north
-            else:
-                return (door_pos[0], door_pos[1] + 0.6)  # Approach from south
-        else:
-            # Approach from east or west
-            if from_point[0] < door_x:
-                return (door_pos[0] - 0.6, door_pos[1])  # Approach from west
-            else:
-                return (door_pos[0] + 0.6, door_pos[1])  # Approach from east
-    
-    def calculate_door_exit_point(self, door_pos, to_point, entity_size):
-        """Calculate optimal exit point from door"""
-        door_x, door_y = int(door_pos[0]), int(door_pos[1])
-        
-        # Find door orientation
-        door_orientation = self.get_door_orientation(door_x, door_y)
-        
-        if door_orientation == "horizontal":
-            # Exit to north or south
-            if to_point[1] < door_y:
-                return (door_pos[0], door_pos[1] - 0.6)  # Exit to north
-            else:
-                return (door_pos[0], door_pos[1] + 0.6)  # Exit to south
-        else:
-            # Exit to east or west
-            if to_point[0] < door_x:
-                return (door_pos[0] - 0.6, door_pos[1])  # Exit to west
-            else:
-                return (door_pos[0] + 0.6, door_pos[1])  # Exit to east
     
     def validate_path_with_entity_simulation(self, path, entity_size):
         """Simulate entity movement along path to detect issues"""
@@ -2465,18 +2197,12 @@ class Level:
         if self.wall_renderer.is_wall_tile(tile_type):
             self.wall_renderer.render_flat_wall(surface, screen_x, screen_y, tile_type, x, y)
         elif tile_type == self.TILE_DOOR:
-            self.render_door_tile(surface, screen_x, screen_y, tile_type)
+            self.door_renderer.render_door_tile(surface, screen_x, screen_y, tile_type, self, self.tile_width, self.tile_height)
     
     
     
     
     
-    
-    
-    
-    def render_door_tile(self, surface, screen_x, screen_y, tile_type):
-        """Render door exactly like walls but with door texture on all faces"""
-        self.door_renderer.render_door_tile(surface, screen_x, screen_y, tile_type, self, self.tile_width, self.tile_height)
     
     
     
