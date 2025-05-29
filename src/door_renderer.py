@@ -82,10 +82,10 @@ class DoorRenderer:
         world_y = int(world_y)
         
         # Check adjacent tiles to determine which faces to draw (same logic as walls)
-        north_wall = level.has_wall_or_door_at(world_x - 1, world_y)
-        south_wall = level.has_wall_or_door_at(world_x + 1, world_y)  
-        east_wall = level.has_wall_or_door_at(world_x, world_y + 1)
-        west_wall = level.has_wall_or_door_at(world_x, world_y - 1)
+        north_wall = level.wall_renderer.has_wall_or_door_at(world_x - 1, world_y)
+        south_wall = level.wall_renderer.has_wall_or_door_at(world_x + 1, world_y)  
+        east_wall = level.wall_renderer.has_wall_or_door_at(world_x, world_y + 1)
+        west_wall = level.wall_renderer.has_wall_or_door_at(world_x, world_y - 1)
         
         # Calculate isometric door face points (same as walls)
         
