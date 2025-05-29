@@ -32,17 +32,18 @@ class AssetLoader:
             "grass_tile": "grass_tile.png",
             "stone_tile": "stone_tile.png", 
             "water_tile": "water_tile.png",
-            "wall_tile": "wall_tile.png",
-            "wall_corner_tl": "wall_corner_tl.png",
-            "wall_corner_tr": "wall_corner_tr.png", 
-            "wall_corner_bl": "wall_corner_bl.png",
-            "wall_corner_br": "wall_corner_br.png",
-            "wall_horizontal": "wall_horizontal.png",
-            "wall_vertical": "wall_vertical.png",
-            "wall_window_horizontal": "wall_window_horizonal.png",  # Note: filename has typo "horizonal"
-            "wall_window_vertical": "wall_window_vertical.png",
+            "wall_tile": "wall_texture.png",
+            "wall_corner_tl": "wall_texture.png",
+            "wall_corner_tr": "wall_texture.png", 
+            "wall_corner_bl": "wall_texture.png",
+            "wall_corner_br": "wall_texture.png",
+            "wall_horizontal": "wall_texture.png",
+            "wall_vertical": "wall_texture.png",
+            "wall_window_horizontal": "wall_texture_window.png",
+            "wall_window_vertical": "wall_texture_window.png",
             "dirt_tile": "dirt_tile.png",  # Added dirt tile
-            "door_tile": "door_tile.png",  # Added door tile
+            "door_tile": "door.png",  # Fixed: use door.png instead of door_tile.png
+            "door": "door.png",  # Added door texture for front face
             "brick_tile": "brick_tile.png",  # Added brick tile for building interiors
             "player_sprite": "player_sprite.png",
             "goblin_sprite": "goblin_sprite.png",
@@ -154,6 +155,7 @@ class AssetLoader:
             "wall_window_vertical": (120, 120, 150),    # Slightly blue-tinted for window walls
             "dirt_tile": (139, 69, 19),  # Brown for dirt
             "door_tile": (139, 69, 19),  # Brown for door
+            "door": (139, 69, 19),  # Brown for door texture
             "brick_tile": (150, 80, 60),  # Reddish-brown for brick
             "player_sprite": (100, 150, 255),
             "goblin_sprite": (0, 100, 0),

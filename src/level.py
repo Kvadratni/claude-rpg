@@ -6,8 +6,10 @@ import pygame
 import random
 import math
 import heapq
+import os
 from .isometric import IsometricRenderer, sort_by_depth
 from .entity import Entity, NPC, Enemy, Item, Chest
+from .template_level import integrate_template_generation
 
 class Level:
     """Game level class"""
@@ -36,7 +38,7 @@ class Level:
         self.name = level_name
         self.player = player
         self.asset_loader = asset_loader
-        self.width = 200  # Even bigger map for more exploration
+        self.width = 200  # Default size, may be overridden by template
         self.height = 200
         
         # Isometric renderer
@@ -48,29 +50,54 @@ class Level:
         self.camera_x = 0
         self.camera_y = 0
         
-        # Generate level
-        self.tiles = self.generate_level()
-        self.heightmap = self.generate_heightmap()
+        # Template generator (will be set if template is used)
+        self.template_generator = None
         
-        # Generate pathfinding grid AFTER tiles are created
-        self.walkable = self.generate_walkable_grid()
+        # Try template-based generation first
+        template_path = "/Users/mnovich/Development/claude-rpg/assets/maps/main_world.png"
+        if os.path.exists(template_path):
+            print("Using template-based map generation...")
+            success = integrate_template_generation(self, template_path)
+            if success:
+                print("Template-based generation successful!")
+            else:
+                print("Template generation failed, falling back to procedural generation")
+                self.generate_fallback_level()
+        else:
+            print("No template found, using procedural generation")
+            self.generate_fallback_level()
         
-        # Entities
+        # Generate heightmap and walkable grid if not already done
+        if not hasattr(self, 'heightmap') or self.heightmap is None:
+            self.heightmap = self.generate_heightmap()
+        if not hasattr(self, 'walkable') or self.walkable is None:
+            self.walkable = self.generate_walkable_grid()
+        
+        # Combat state tracking
+        self.enemies_in_combat = set()  # Track which enemies are in combat
+        self.combat_music_timer = 0     # Timer for combat music fade out
+        
+        # Create tile sprites
+        self.create_tile_sprites()
+    
+    def generate_fallback_level(self):
+        """Generate level using original procedural method as fallback"""
+        print("Generating level using procedural fallback...")
+        
+        # Initialize entity lists
         self.npcs = []
         self.enemies = []
         self.items = []
         self.objects = []  # Static objects like trees, rocks, etc.
         self.chests = []   # Treasure chests
         
-        # Combat state tracking
-        self.enemies_in_combat = set()  # Track which enemies are in combat
-        self.combat_music_timer = 0     # Timer for combat music fade out
+        # Generate level using original method
+        self.tiles = self.generate_level()
+        self.heightmap = self.generate_heightmap()
+        self.walkable = self.generate_walkable_grid()
         
-        # Spawn entities
+        # Spawn entities using original method
         self.spawn_entities()
-        
-        # Create tile sprites
-        self.create_tile_sprites()
     
     def generate_level(self):
         """Generate a massive, well-designed world with multiple regions and content"""
@@ -595,23 +622,54 @@ class Level:
         return heightmap
     
     def generate_walkable_grid(self):
-        """Generate a grid of walkable tiles for pathfinding"""
+        """Generate enhanced walkable grid that includes object influence"""
         walkable = []
         
         for y in range(self.height):
             row = []
             for x in range(self.width):
-                # Check if tile is walkable
+                # Start with basic tile walkability
                 tile_type = self.tiles[y][x]
-                if tile_type in [self.TILE_GRASS, self.TILE_DIRT, self.TILE_STONE, self.TILE_DOOR, self.TILE_BRICK]:
-                    row.append(True)
+                tile_walkable = tile_type in [self.TILE_GRASS, self.TILE_DIRT, self.TILE_STONE, self.TILE_DOOR, self.TILE_BRICK]
+                
+                if not tile_walkable:
+                    row.append(0)  # Completely blocked
+                    continue
+                
+                # Calculate object influence
+                influence_score = self.calculate_object_influence(x, y)
+                
+                # Convert to walkability score (0 = blocked, 1 = free, 0.5 = restricted)
+                if influence_score > 0.8:
+                    row.append(0)  # Too close to objects
+                elif influence_score > 0.4:
+                    row.append(0.3)  # Restricted but passable
                 else:
-                    # All wall types are not walkable
-                    row.append(False)
+                    row.append(1)  # Fully walkable
+            
             walkable.append(row)
         
-        # Don't mirror the walkable grid
         return walkable
+    
+    def calculate_object_influence(self, x, y):
+        """Calculate how much objects influence this tile's walkability"""
+        center_x, center_y = x + 0.5, y + 0.5
+        max_influence = 0
+        
+        # Check all objects within influence range
+        for obj in self.objects:
+            if not obj.blocks_movement:
+                continue
+            
+            distance = math.sqrt((center_x - obj.x)**2 + (center_y - obj.y)**2)
+            
+            # Objects have influence within 1.5 tiles
+            if distance < 1.5:
+                # Closer objects have more influence
+                influence = max(0, 1.0 - (distance / 1.5))
+                max_influence = max(max_influence, influence)
+        
+        return max_influence
     
     def create_tile_sprites(self):
         """Create isometric tile sprites using loaded assets"""
@@ -1416,8 +1474,8 @@ class Level:
         if not (0 <= x < self.width and 0 <= y < self.height):
             return False
         
-        # Check if tile is walkable
-        if not self.walkable[y][x]:
+        # Check if tile is walkable (using numeric walkable grid)
+        if self.walkable[y][x] <= 0:
             return False
         
         # Don't place entities too close to player starting position
@@ -1492,8 +1550,8 @@ class Level:
         if not (0 <= x < self.width and 0 <= y < self.height):
             return False
         
-        # Check if tile is walkable
-        if not self.walkable[y][x]:
+        # Check if tile is walkable (using numeric walkable grid)
+        if self.walkable[y][x] <= 0:
             return False
         
         # Check if position is too close to player
@@ -1510,32 +1568,27 @@ class Level:
         return True
     
     def check_collision(self, x, y, size=0.4, exclude_entity=None):
-        """Check collision with level geometry and entities - improved precision with door handling"""
+        """Check collision with level geometry and entities - improved precision with enhanced door handling"""
         # Check if the position is within level bounds with proper margin
         margin = size + 0.1
         if x < margin or x >= self.width - margin or y < margin or y >= self.height - margin:
             return True
         
-        # Check if we're near a door - if so, use much more lenient collision
+        # Enhanced door area detection
         tile_x = int(x)
         tile_y = int(y)
-        is_near_door = False
+        door_context = self.analyze_door_context(tile_x, tile_y, x, y)
         
-        if 0 <= tile_x < self.width and 0 <= tile_y < self.height:
-            # Check current tile and adjacent tiles for doors
-            for dx in [-1, 0, 1]:
-                for dy in [-1, 0, 1]:
-                    check_x = tile_x + dx
-                    check_y = tile_y + dy
-                    if (0 <= check_x < self.width and 0 <= check_y < self.height):
-                        if self.tiles[check_y][check_x] == self.TILE_DOOR:
-                            is_near_door = True
-                            break
-                if is_near_door:
-                    break
+        # For door areas, use much more lenient collision
+        if door_context['is_door_area']:
+            effective_size = size * 0.4  # Very small collision box for doors
+            
+            # Special handling for multi-tile door areas
+            if door_context['is_double_door']:
+                effective_size = size * 0.3  # Even smaller for double doors
+        else:
+            effective_size = size * 0.7  # Normal collision
         
-        # For door areas, use much smaller collision box
-        effective_size = size * 0.5 if is_near_door else size * 0.7
         half_size = effective_size
         
         corners = [
@@ -1552,21 +1605,24 @@ class Level:
             
             # Ensure tile coordinates are within bounds
             if 0 <= corner_tile_x < self.width and 0 <= corner_tile_y < self.height:
-                if not self.walkable[corner_tile_y][corner_tile_x]:
-                    return True
+                if self.walkable[corner_tile_y][corner_tile_x] <= 0:
+                    # For door areas, be more forgiving about walkability
+                    if not door_context['is_door_area']:
+                        return True
         
         # Also check center point
         center_tile_x = int(x)
         center_tile_y = int(y)
         if 0 <= center_tile_x < self.width and 0 <= center_tile_y < self.height:
-            if not self.walkable[center_tile_y][center_tile_x]:
-                return True
+            if self.walkable[center_tile_y][center_tile_x] <= 0:
+                if not door_context['is_door_area']:
+                    return True
         
-        # Skip object collision checking near doors to allow easier passage
-        if is_near_door:
+        # Skip object collision checking in door areas to allow easier passage
+        if door_context['is_door_area']:
             return False
         
-        # Check collision with objects using circular collision (only when not near doors)
+        # Check collision with objects using circular collision (only when not in door areas)
         for obj in self.objects:
             if obj.blocks_movement and obj != exclude_entity:
                 dist_x = x - obj.x
@@ -1616,9 +1672,124 @@ class Level:
         
         return False
     
+    def analyze_door_context(self, tile_x, tile_y, world_x, world_y):
+        """Analyze the door context around a position for better collision handling"""
+        context = {
+            'is_door_area': False,
+            'is_double_door': False,
+            'door_orientation': None,
+            'distance_to_door': float('inf')
+        }
+        
+        # Check current tile and surrounding area for doors
+        check_radius = 2  # Check 2 tiles around
+        doors_found = []
+        
+        for dy in range(-check_radius, check_radius + 1):
+            for dx in range(-check_radius, check_radius + 1):
+                check_x = tile_x + dx
+                check_y = tile_y + dy
+                
+                if (0 <= check_x < self.width and 0 <= check_y < self.height):
+                    if self.tiles[check_y][check_x] == self.TILE_DOOR:
+                        door_distance = math.sqrt(dx*dx + dy*dy)
+                        doors_found.append({
+                            'pos': (check_x, check_y),
+                            'distance': door_distance,
+                            'world_pos': (check_x + 0.5, check_y + 0.5)
+                        })
+        
+        if doors_found:
+            # Find closest door
+            closest_door = min(doors_found, key=lambda d: d['distance'])
+            context['distance_to_door'] = closest_door['distance']
+            
+            # Consider it a door area if we're close enough
+            if closest_door['distance'] <= 1.5:
+                context['is_door_area'] = True
+                
+                # Check for double doors (adjacent door tiles)
+                door_x, door_y = closest_door['pos']
+                adjacent_doors = 0
+                
+                for dx, dy in [(-1, 0), (1, 0), (0, -1), (0, 1)]:
+                    adj_x, adj_y = door_x + dx, door_y + dy
+                    if (0 <= adj_x < self.width and 0 <= adj_y < self.height):
+                        if self.tiles[adj_y][adj_x] == self.TILE_DOOR:
+                            adjacent_doors += 1
+                
+                context['is_double_door'] = adjacent_doors > 0
+                context['door_orientation'] = self.get_door_orientation(door_x, door_y)
+        
+        return context
+    
+    def render_path_debug(self, surface, path):
+        """Render debug visualization of the current path"""
+        if len(path) < 2:
+            return
+        
+        # Draw path lines
+        for i in range(len(path) - 1):
+            start_world = path[i]
+            end_world = path[i + 1]
+            
+            # Convert world coordinates to screen coordinates
+            start_screen = self.iso_renderer.world_to_screen(start_world[0], start_world[1], self.camera_x, self.camera_y)
+            end_screen = self.iso_renderer.world_to_screen(end_world[0], end_world[1], self.camera_x, self.camera_y)
+            
+            # Draw line between waypoints
+            pygame.draw.line(surface, (255, 255, 0), start_screen, end_screen, 2)  # Yellow line
+        
+        # Draw waypoint circles
+        for i, waypoint in enumerate(path):
+            screen_pos = self.iso_renderer.world_to_screen(waypoint[0], waypoint[1], self.camera_x, self.camera_y)
+            
+            # Different colors for different waypoint types
+            if i == 0:
+                color = (0, 255, 0)  # Green for start
+            elif i == len(path) - 1:
+                color = (255, 0, 0)  # Red for end
+            else:
+                # Check if this waypoint is near a door
+                tile_x, tile_y = int(waypoint[0]), int(waypoint[1])
+                is_door_waypoint = False
+                
+                for dx in [-1, 0, 1]:
+                    for dy in [-1, 0, 1]:
+                        check_x, check_y = tile_x + dx, tile_y + dy
+                        if (0 <= check_x < self.width and 0 <= check_y < self.height):
+                            if self.tiles[check_y][check_x] == self.TILE_DOOR:
+                                is_door_waypoint = True
+                                break
+                    if is_door_waypoint:
+                        break
+                
+                color = (0, 255, 255) if is_door_waypoint else (255, 255, 255)  # Cyan for door waypoints, white for others
+            
+            pygame.draw.circle(surface, color, screen_pos, 4)
+            pygame.draw.circle(surface, (0, 0, 0), screen_pos, 4, 1)  # Black border
+    
     def find_path(self, start_x, start_y, end_x, end_y, entity_size=0.4):
-        """Find a path from start to end using A* algorithm with forced tile-center movement"""
-        # Convert to grid coordinates
+        """Find a path using multi-resolution pathfinding with corner smoothing"""
+        # Phase 1: Coarse pathfinding on tile grid
+        coarse_path = self.find_coarse_path(start_x, start_y, end_x, end_y, entity_size)
+        if not coarse_path:
+            return []
+        
+        # Phase 2: Apply corner detection and smoothing
+        smoothed_path = self.apply_corner_smoothing(coarse_path, entity_size)
+        
+        # Phase 3: Add door navigation waypoints
+        enhanced_path = self.enhance_door_pathfinding(smoothed_path, entity_size)
+        
+        # Phase 4: Validate path with entity simulation
+        validated_path = self.validate_path_with_entity_simulation(enhanced_path, entity_size)
+        
+        return validated_path
+    
+    def find_coarse_path(self, start_x, start_y, end_x, end_y, entity_size=0.4):
+        """Find a coarse path using A* algorithm with sub-tile precision"""
+        # Convert to grid coordinates but allow sub-tile positioning
         start_grid_x = int(start_x)
         start_grid_y = int(start_y)
         end_grid_x = int(end_x)
@@ -1631,16 +1802,16 @@ class Level:
             return []
         
         # If end position is not walkable, find nearest walkable position
-        if not self.walkable[end_grid_y][end_grid_x]:
+        if self.walkable[end_grid_y][end_grid_x] <= 0:
             end_grid_x, end_grid_y = self.find_nearest_walkable(end_grid_x, end_grid_y, entity_size)
             if end_grid_x is None:
                 return []  # No walkable position found
         
-        # For very short distances, just go direct to tile center
+        # For very short distances, create direct path with sub-tile precision
         if abs(start_grid_x - end_grid_x) <= 1 and abs(start_grid_y - end_grid_y) <= 1:
-            return [(end_grid_x + 0.5, end_grid_y + 0.5)]
+            return self.create_direct_sub_tile_path(start_x, start_y, end_x, end_y, entity_size)
         
-        # A* algorithm - simplified to only consider basic walkability
+        # A* algorithm with enhanced walkability scoring
         open_set = []
         heapq.heappush(open_set, (0, start_grid_x, start_grid_y))
         
@@ -1649,7 +1820,7 @@ class Level:
         f_score = {(start_grid_x, start_grid_y): self.heuristic(start_grid_x, start_grid_y, end_grid_x, end_grid_y)}
         
         visited = set()
-        max_iterations = 500  # Reduced iterations for faster pathfinding
+        max_iterations = 500
         iterations = 0
         
         while open_set and iterations < max_iterations:
@@ -1663,21 +1834,18 @@ class Level:
             
             # Check if we reached the goal
             if current_x == end_grid_x and current_y == end_grid_y:
-                # Reconstruct path using only tile centers
+                # Reconstruct path with sub-tile precision
                 path = []
                 while (current_x, current_y) in came_from:
-                    # Force all waypoints to tile centers
-                    path.append((current_x + 0.5, current_y + 0.5))
+                    # Use sub-tile positioning instead of forcing tile centers
+                    path.append(self.calculate_sub_tile_position(current_x, current_y, entity_size))
                     current_x, current_y = came_from[(current_x, current_y)]
                 path.reverse()
                 
-                # Final destination is also tile center
-                path.append((end_grid_x + 0.5, end_grid_y + 0.5))
+                # Add final destination with sub-tile precision
+                path.append(self.calculate_sub_tile_position(end_grid_x, end_grid_y, entity_size))
                 
-                # Smooth the path to reduce unnecessary waypoints
-                smoothed_path = self.smooth_path(path, entity_size)
-                
-                return smoothed_path
+                return path
             
             # Check all 8 neighbors
             neighbors = [
@@ -1699,17 +1867,24 @@ class Level:
                 if not (0 <= next_x < self.width and 0 <= next_y < self.height):
                     continue
                 
-                # Simple walkability check - only check tile type, ignore objects for pathfinding
-                if not self.walkable[next_y][next_x]:
-                    continue
+                # Enhanced walkability check with influence scoring
+                walkability = self.walkable[next_y][next_x]
+                if walkability <= 0:
+                    continue  # Completely blocked
                 
-                # Calculate movement cost
+                # Calculate movement cost with influence penalty
                 is_diagonal = abs(next_x - current_x) == 1 and abs(next_y - current_y) == 1
-                move_cost = 1.414 if is_diagonal else 1.0
+                base_cost = 1.414 if is_diagonal else 1.0
+                
+                # Apply walkability penalty for restricted areas
+                influence_penalty = (1.0 - walkability) * 2.0  # 0-2x penalty for restricted areas
+                move_cost = base_cost * (1.0 + influence_penalty)
                 
                 # Heavily favor doors to force pathfinding through them
                 if self.tiles[next_y][next_x] == self.TILE_DOOR:
                     move_cost *= 0.1  # 90% cost reduction for doors
+                elif walkability > 0.9:
+                    move_cost *= 0.8  # Prefer open areas
                 
                 tentative_g_score = g_score.get((current_x, current_y), float('inf')) + move_cost
                 
@@ -1722,6 +1897,99 @@ class Level:
         
         return []  # No path found
     
+    def calculate_sub_tile_position(self, grid_x, grid_y, entity_size):
+        """Calculate optimal sub-tile position for smoother movement"""
+        # Instead of forcing tile center, find the best position within the tile
+        base_x = grid_x + 0.5
+        base_y = grid_y + 0.5
+        
+        # Check if we can optimize position based on nearby obstacles
+        best_x, best_y = base_x, base_y
+        best_score = self.evaluate_position_quality(base_x, base_y, entity_size)
+        
+        # Try slight offsets to find better positions
+        offsets = [(-0.3, 0), (0.3, 0), (0, -0.3), (0, 0.3), (-0.2, -0.2), (0.2, 0.2), (-0.2, 0.2), (0.2, -0.2)]
+        
+        for dx, dy in offsets:
+            test_x = base_x + dx
+            test_y = base_y + dy
+            
+            # Ensure position is still within the tile and valid
+            if (grid_x <= test_x < grid_x + 1 and grid_y <= test_y < grid_y + 1 and
+                not self.check_collision(test_x, test_y, entity_size)):
+                
+                score = self.evaluate_position_quality(test_x, test_y, entity_size)
+                if score > best_score:
+                    best_x, best_y = test_x, test_y
+                    best_score = score
+        
+        return (best_x, best_y)
+    
+    def evaluate_position_quality(self, x, y, entity_size):
+        """Evaluate how good a position is for pathfinding (higher = better)"""
+        score = 1.0
+        
+        # Penalize positions close to obstacles
+        for obj in self.objects:
+            if obj.blocks_movement:
+                distance = math.sqrt((x - obj.x)**2 + (y - obj.y)**2)
+                if distance < 1.0:
+                    penalty = max(0, 1.0 - distance)
+                    score -= penalty * 0.5
+        
+        # Bonus for positions away from walls
+        tile_x, tile_y = int(x), int(y)
+        wall_bonus = 0
+        for dx in [-1, 0, 1]:
+            for dy in [-1, 0, 1]:
+                check_x, check_y = tile_x + dx, tile_y + dy
+                if (0 <= check_x < self.width and 0 <= check_y < self.height):
+                    if self.walkable[check_y][check_x] > 0.5:
+                        wall_bonus += 0.1
+        
+        score += wall_bonus
+        return max(0, score)
+    
+    def create_direct_sub_tile_path(self, start_x, start_y, end_x, end_y, entity_size):
+        """Create a direct path with sub-tile precision for short distances"""
+        # Check if direct path is clear
+        if self.has_line_of_sight((start_x, start_y), (end_x, end_y), entity_size):
+            return [(end_x, end_y)]
+        
+        # If not clear, create intermediate waypoint
+        mid_x = (start_x + end_x) / 2
+        mid_y = (start_y + end_y) / 2
+        
+        # Find best intermediate position
+        best_mid = self.find_best_intermediate_position(start_x, start_y, end_x, end_y, entity_size)
+        if best_mid:
+            return [best_mid, (end_x, end_y)]
+        
+        # Fallback to tile center
+        return [(int(end_x) + 0.5, int(end_y) + 0.5)]
+    
+    def find_best_intermediate_position(self, start_x, start_y, end_x, end_y, entity_size):
+        """Find the best intermediate position for a short path"""
+        # Try positions around the midpoint
+        mid_x = (start_x + end_x) / 2
+        mid_y = (start_y + end_y) / 2
+        
+        candidates = [
+            (mid_x, mid_y),
+            (mid_x + 0.3, mid_y),
+            (mid_x - 0.3, mid_y),
+            (mid_x, mid_y + 0.3),
+            (mid_x, mid_y - 0.3)
+        ]
+        
+        for pos in candidates:
+            if (not self.check_collision(pos[0], pos[1], entity_size) and
+                self.has_line_of_sight((start_x, start_y), pos, entity_size) and
+                self.has_line_of_sight(pos, (end_x, end_y), entity_size)):
+                return pos
+        
+        return None
+    
     def heuristic(self, x1, y1, x2, y2):
         """Heuristic function for A* (Manhattan distance with diagonal movement)"""
         dx = abs(x1 - x2)
@@ -1729,36 +1997,515 @@ class Level:
         # Use diagonal distance heuristic
         return max(dx, dy) + (1.414 - 1) * min(dx, dy)
     
-    def smooth_path(self, path, entity_size=0.4):
-        """Smooth path by removing unnecessary waypoints using line-of-sight checks"""
-        if len(path) <= 2:
+    def apply_corner_smoothing(self, path, entity_size):
+        """Apply intelligent corner smoothing to the path"""
+        if len(path) < 3:
             return path
         
-        smoothed = [path[0]]  # Always keep the start point
-        current_index = 0
+        corners = self.detect_corners_in_path(path)
+        if not corners:
+            return path
         
-        while current_index < len(path) - 1:
-            # Try to find the farthest point we can reach directly
-            farthest_reachable = current_index + 1
+        smoothed_path = path.copy()
+        
+        # Process corners from end to start to maintain indices
+        for corner in reversed(corners):
+            smoothed_segment = self.create_smooth_corner(
+                smoothed_path, 
+                corner['index'], 
+                corner['severity'],
+                entity_size
+            )
             
-            for i in range(current_index + 2, len(path)):
-                if self.has_line_of_sight(path[current_index], path[i], entity_size):
-                    farthest_reachable = i
-                else:
-                    break  # Can't reach further, stop checking
+            # Replace sharp corner with smooth curve
+            start_idx = max(0, corner['index'] - 1)
+            end_idx = min(len(smoothed_path), corner['index'] + 2)
+            smoothed_path[start_idx:end_idx] = smoothed_segment
+        
+        return smoothed_path
+    
+    def detect_corners_in_path(self, path):
+        """Detect corners that need smoothing"""
+        corners = []
+        
+        for i in range(1, len(path) - 1):
+            prev_point = path[i - 1]
+            current_point = path[i]
+            next_point = path[i + 1]
             
-            # Add the farthest reachable point
-            if farthest_reachable < len(path):
-                smoothed.append(path[farthest_reachable])
-                current_index = farthest_reachable
+            # Calculate angle between segments
+            angle = self.calculate_turn_angle(prev_point, current_point, next_point)
+            
+            # If angle is sharp (> 45 degrees), mark as corner
+            if abs(angle) > 45:
+                corner_info = {
+                    'index': i,
+                    'angle': angle,
+                    'position': current_point,
+                    'severity': min(abs(angle) / 90.0, 1.0)  # 0-1 scale
+                }
+                corners.append(corner_info)
+        
+        return corners
+    
+    def calculate_turn_angle(self, p1, p2, p3):
+        """Calculate the turn angle at point p2 between p1->p2 and p2->p3"""
+        # Vector from p1 to p2
+        v1 = (p2[0] - p1[0], p2[1] - p1[1])
+        # Vector from p2 to p3
+        v2 = (p3[0] - p2[0], p3[1] - p2[1])
+        
+        # Calculate angle between vectors
+        dot_product = v1[0] * v2[0] + v1[1] * v2[1]
+        cross_product = v1[0] * v2[1] - v1[1] * v2[0]
+        
+        angle = math.degrees(math.atan2(cross_product, dot_product))
+        return angle
+    
+    def create_smooth_corner(self, path, corner_idx, severity, entity_size):
+        """Create a smooth curve around a corner"""
+        if corner_idx < 1 or corner_idx >= len(path) - 1:
+            return [path[corner_idx]]
+        
+        p0 = path[corner_idx - 1]
+        p1 = path[corner_idx]
+        p2 = path[corner_idx + 1]
+        
+        # Calculate curve control points
+        curve_distance = 0.2 + (severity * 0.3)  # 0.2 to 0.5 tiles
+        
+        # Ensure curve doesn't cause collisions
+        curve_distance = min(curve_distance, entity_size * 1.5)
+        
+        # Generate smooth curve points
+        curve_points = self.generate_smooth_curve(p0, p1, p2, curve_distance, entity_size)
+        
+        return curve_points
+    
+    def generate_smooth_curve(self, p0, p1, p2, curve_distance, entity_size):
+        """Generate a smooth curve between three points"""
+        # Calculate control points for the curve
+        # Direction vectors
+        d1 = math.sqrt((p1[0] - p0[0])**2 + (p1[1] - p0[1])**2)
+        d2 = math.sqrt((p2[0] - p1[0])**2 + (p2[1] - p1[1])**2)
+        
+        if d1 == 0 or d2 == 0:
+            return [p1]
+        
+        # Normalized direction vectors
+        u1 = ((p1[0] - p0[0]) / d1, (p1[1] - p0[1]) / d1)
+        u2 = ((p2[0] - p1[0]) / d2, (p2[1] - p1[1]) / d2)
+        
+        # Control points for the curve
+        c1 = (p1[0] - u1[0] * curve_distance, p1[1] - u1[1] * curve_distance)
+        c2 = (p1[0] + u2[0] * curve_distance, p1[1] + u2[1] * curve_distance)
+        
+        # Generate curve points using quadratic Bezier
+        curve_points = []
+        num_points = max(3, int(curve_distance * 8))  # More points for larger curves
+        
+        for i in range(num_points + 1):
+            t = i / num_points
+            # Quadratic Bezier curve: B(t) = (1-t)²P0 + 2(1-t)tP1 + t²P2
+            x = (1-t)**2 * c1[0] + 2*(1-t)*t * p1[0] + t**2 * c2[0]
+            y = (1-t)**2 * c1[1] + 2*(1-t)*t * p1[1] + t**2 * c2[1]
+            
+            # Validate curve point for collisions
+            if not self.check_collision(x, y, entity_size):
+                curve_points.append((x, y))
             else:
+                # If curve causes collision, fall back to original point
+                curve_points.append(p1)
                 break
         
-        # Always ensure the final destination is included
-        if smoothed[-1] != path[-1]:
-            smoothed.append(path[-1])
+        return curve_points if curve_points else [p1]
+    
+    def enhance_door_pathfinding(self, path, entity_size):
+        """Add special handling for door navigation with improved doorway handling"""
+        if len(path) < 2:
+            return path
         
-        return smoothed
+        enhanced_path = []
+        i = 0
+        
+        while i < len(path):
+            current_point = path[i]
+            enhanced_path.append(current_point)
+            
+            # Look ahead for door navigation opportunities
+            if i < len(path) - 1:
+                next_point = path[i + 1]
+                
+                # Check if we're approaching a door or door area
+                door_waypoints = self.generate_improved_door_waypoints(current_point, next_point, entity_size)
+                
+                if door_waypoints:
+                    enhanced_path.extend(door_waypoints)
+                    # Skip ahead if we've handled multiple points
+                    if len(door_waypoints) > 2:
+                        i += min(2, len(path) - i - 1)  # Skip some intermediate points
+            
+            i += 1
+        
+        return enhanced_path
+    
+    def generate_improved_door_waypoints(self, current, next_point, entity_size):
+        """Generate improved intermediate waypoints for door navigation"""
+        waypoints = []
+        
+        # Check if path crosses a door or door area
+        doors_info = self.find_doors_with_context(current, next_point)
+        
+        for door_info in doors_info:
+            door_pos = door_info['position']
+            door_orientation = door_info['orientation']
+            approach_side = door_info['approach_side']
+            
+            # Create more precise approach and exit points
+            approach_point = self.calculate_precise_door_approach(door_pos, door_orientation, approach_side, entity_size)
+            exit_point = self.calculate_precise_door_exit(door_pos, door_orientation, approach_side, entity_size)
+            
+            # Add alignment waypoint before door if needed
+            if self.needs_door_alignment(current, door_pos, door_orientation):
+                align_point = self.calculate_door_alignment_point(door_pos, door_orientation, current, entity_size)
+                waypoints.append(align_point)
+            
+            # Add the main door navigation waypoints
+            waypoints.extend([approach_point, door_pos, exit_point])
+        
+        return waypoints
+    
+    def find_doors_with_context(self, start, end):
+        """Find doors between points with additional context information"""
+        doors_info = []
+        
+        # Sample points along the line between start and end
+        dx = end[0] - start[0]
+        dy = end[1] - start[1]
+        distance = math.sqrt(dx*dx + dy*dy)
+        
+        if distance == 0:
+            return doors_info
+        
+        steps = max(int(distance * 3), 3)  # More sampling for better detection
+        
+        for i in range(steps + 1):
+            t = i / steps
+            x = start[0] + dx * t
+            y = start[1] + dy * t
+            
+            tile_x, tile_y = int(x), int(y)
+            if (0 <= tile_x < self.width and 0 <= tile_y < self.height and
+                self.tiles[tile_y][tile_x] == self.TILE_DOOR):
+                
+                door_pos = (tile_x + 0.5, tile_y + 0.5)
+                
+                # Check if we already found this door
+                already_found = any(info['position'] == door_pos for info in doors_info)
+                if not already_found:
+                    orientation = self.get_door_orientation(tile_x, tile_y)
+                    approach_side = self.determine_approach_side(start, door_pos, orientation)
+                    
+                    doors_info.append({
+                        'position': door_pos,
+                        'orientation': orientation,
+                        'approach_side': approach_side,
+                        'tile_pos': (tile_x, tile_y)
+                    })
+        
+        return doors_info
+    
+    def determine_approach_side(self, from_point, door_pos, orientation):
+        """Determine which side we're approaching the door from"""
+        dx = from_point[0] - door_pos[0]
+        dy = from_point[1] - door_pos[1]
+        
+        if orientation == "horizontal":
+            # For horizontal doors, check if approaching from north or south
+            return "north" if dy < 0 else "south"
+        else:
+            # For vertical doors, check if approaching from east or west
+            return "west" if dx < 0 else "east"
+    
+    def calculate_precise_door_approach(self, door_pos, orientation, approach_side, entity_size):
+        """Calculate precise approach point for door based on orientation and approach side"""
+        # Use larger clearance for approach to avoid getting stuck
+        clearance = max(0.7, entity_size + 0.3)
+        
+        if orientation == "horizontal":
+            if approach_side == "north":
+                return (door_pos[0], door_pos[1] - clearance)
+            else:  # south
+                return (door_pos[0], door_pos[1] + clearance)
+        else:  # vertical
+            if approach_side == "west":
+                return (door_pos[0] - clearance, door_pos[1])
+            else:  # east
+                return (door_pos[0] + clearance, door_pos[1])
+    
+    def calculate_precise_door_exit(self, door_pos, orientation, approach_side, entity_size):
+        """Calculate precise exit point from door"""
+        # Use larger clearance for exit to ensure we're fully through
+        clearance = max(0.8, entity_size + 0.4)
+        
+        if orientation == "horizontal":
+            if approach_side == "north":
+                return (door_pos[0], door_pos[1] + clearance)  # Exit to south
+            else:  # south
+                return (door_pos[0], door_pos[1] - clearance)  # Exit to north
+        else:  # vertical
+            if approach_side == "west":
+                return (door_pos[0] + clearance, door_pos[1])  # Exit to east
+            else:  # east
+                return (door_pos[0] - clearance, door_pos[1])  # Exit to west
+    
+    def needs_door_alignment(self, current_pos, door_pos, orientation):
+        """Check if we need an alignment waypoint before approaching the door"""
+        dx = abs(current_pos[0] - door_pos[0])
+        dy = abs(current_pos[1] - door_pos[1])
+        
+        # If we're not well-aligned with the door, we need an alignment point
+        if orientation == "horizontal":
+            return dx > 0.3  # Not aligned horizontally
+        else:
+            return dy > 0.3  # Not aligned vertically
+    
+    def calculate_door_alignment_point(self, door_pos, orientation, current_pos, entity_size):
+        """Calculate alignment point to approach door straight-on"""
+        clearance = max(1.0, entity_size + 0.6)  # Extra clearance for alignment
+        
+        if orientation == "horizontal":
+            # Align horizontally, maintain vertical distance
+            align_y = current_pos[1]
+            if align_y < door_pos[1]:
+                align_y = door_pos[1] - clearance
+            else:
+                align_y = door_pos[1] + clearance
+            return (door_pos[0], align_y)
+        else:  # vertical
+            # Align vertically, maintain horizontal distance
+            align_x = current_pos[0]
+            if align_x < door_pos[0]:
+                align_x = door_pos[0] - clearance
+            else:
+                align_x = door_pos[0] + clearance
+            return (align_x, door_pos[1])
+    
+    def generate_door_waypoints(self, current, next_point, entity_size):
+        """Generate intermediate waypoints for door navigation (legacy method)"""
+        waypoints = []
+        
+        # Check if path crosses a door
+        door_positions = self.find_doors_between_points(current, next_point)
+        
+        for door_pos in door_positions:
+            # Create approach waypoint (align with door)
+            approach_point = self.calculate_door_approach_point(door_pos, current, entity_size)
+            
+            # Create exit waypoint (clear of door)
+            exit_point = self.calculate_door_exit_point(door_pos, next_point, entity_size)
+            
+            waypoints.extend([approach_point, door_pos, exit_point])
+        
+        return waypoints
+    
+    def find_doors_between_points(self, start, end):
+        """Find door tiles between two points"""
+        doors = []
+        
+        # Sample points along the line between start and end
+        dx = end[0] - start[0]
+        dy = end[1] - start[1]
+        distance = math.sqrt(dx*dx + dy*dy)
+        
+        if distance == 0:
+            return doors
+        
+        steps = max(int(distance * 2), 2)
+        
+        for i in range(steps + 1):
+            t = i / steps
+            x = start[0] + dx * t
+            y = start[1] + dy * t
+            
+            tile_x, tile_y = int(x), int(y)
+            if (0 <= tile_x < self.width and 0 <= tile_y < self.height and
+                self.tiles[tile_y][tile_x] == self.TILE_DOOR):
+                door_pos = (tile_x + 0.5, tile_y + 0.5)
+                if door_pos not in doors:
+                    doors.append(door_pos)
+        
+        return doors
+    
+    def calculate_door_approach_point(self, door_pos, from_point, entity_size):
+        """Calculate optimal approach point for door"""
+        door_x, door_y = int(door_pos[0]), int(door_pos[1])
+        
+        # Find door orientation
+        door_orientation = self.get_door_orientation(door_x, door_y)
+        
+        if door_orientation == "horizontal":
+            # Approach from north or south
+            if from_point[1] < door_y:
+                return (door_pos[0], door_pos[1] - 0.6)  # Approach from north
+            else:
+                return (door_pos[0], door_pos[1] + 0.6)  # Approach from south
+        else:
+            # Approach from east or west
+            if from_point[0] < door_x:
+                return (door_pos[0] - 0.6, door_pos[1])  # Approach from west
+            else:
+                return (door_pos[0] + 0.6, door_pos[1])  # Approach from east
+    
+    def calculate_door_exit_point(self, door_pos, to_point, entity_size):
+        """Calculate optimal exit point from door"""
+        door_x, door_y = int(door_pos[0]), int(door_pos[1])
+        
+        # Find door orientation
+        door_orientation = self.get_door_orientation(door_x, door_y)
+        
+        if door_orientation == "horizontal":
+            # Exit to north or south
+            if to_point[1] < door_y:
+                return (door_pos[0], door_pos[1] - 0.6)  # Exit to north
+            else:
+                return (door_pos[0], door_pos[1] + 0.6)  # Exit to south
+        else:
+            # Exit to east or west
+            if to_point[0] < door_x:
+                return (door_pos[0] - 0.6, door_pos[1])  # Exit to west
+            else:
+                return (door_pos[0] + 0.6, door_pos[1])  # Exit to east
+    
+    def get_door_orientation(self, door_x, door_y):
+        """Determine if door is horizontal or vertical based on surrounding walls"""
+        # Check adjacent tiles to determine orientation
+        horizontal_walls = 0
+        vertical_walls = 0
+        
+        # Check north and south
+        if (door_y > 0 and self.is_wall_tile(self.tiles[door_y - 1][door_x])):
+            horizontal_walls += 1
+        if (door_y < self.height - 1 and self.is_wall_tile(self.tiles[door_y + 1][door_x])):
+            horizontal_walls += 1
+        
+        # Check east and west
+        if (door_x > 0 and self.is_wall_tile(self.tiles[door_y][door_x - 1])):
+            vertical_walls += 1
+        if (door_x < self.width - 1 and self.is_wall_tile(self.tiles[door_y][door_x + 1])):
+            vertical_walls += 1
+        
+        # If more walls on horizontal sides, door is horizontal
+        return "horizontal" if horizontal_walls >= vertical_walls else "vertical"
+    
+    def validate_path_with_entity_simulation(self, path, entity_size):
+        """Simulate entity movement along path to detect issues"""
+        if len(path) < 2:
+            return path
+        
+        validated_path = [path[0]]  # Always include start
+        
+        for i in range(1, len(path)):
+            current_pos = validated_path[-1]
+            target_pos = path[i]
+            
+            # Simulate movement from current to target
+            movement_valid, corrected_pos = self.simulate_movement_step(
+                current_pos, target_pos, entity_size
+            )
+            
+            if movement_valid:
+                validated_path.append(target_pos)
+            else:
+                # Find alternative waypoint
+                alternative = self.find_alternative_waypoint(
+                    current_pos, target_pos, entity_size
+                )
+                if alternative:
+                    validated_path.append(alternative)
+                else:
+                    # Can't proceed, truncate path
+                    break
+        
+        return validated_path
+    
+    def simulate_movement_step(self, start, end, entity_size):
+        """Simulate movement step and detect collision issues"""
+        dx = end[0] - start[0]
+        dy = end[1] - start[1]
+        distance = math.sqrt(dx*dx + dy*dy)
+        
+        if distance == 0:
+            return True, end
+        
+        # Check multiple points along the movement path
+        steps = max(int(distance * 4), 3)  # At least 3 steps
+        
+        for i in range(1, steps + 1):
+            t = i / steps
+            check_x = start[0] + dx * t
+            check_y = start[1] + dy * t
+            
+            # Use enhanced collision detection
+            if self.check_enhanced_collision(check_x, check_y, entity_size):
+                # Find the last valid position
+                if i == 1:
+                    return False, start  # Can't move at all
+                else:
+                    # Return last valid position
+                    valid_t = (i - 1) / steps
+                    valid_x = start[0] + dx * valid_t
+                    valid_y = start[1] + dy * valid_t
+                    return False, (valid_x, valid_y)
+        
+        return True, end
+    
+    def check_enhanced_collision(self, x, y, entity_size):
+        """Enhanced collision detection with predictive elements"""
+        # Standard collision check
+        if self.check_collision(x, y, entity_size):
+            return True
+        
+        # Check for "squeeze" situations
+        if self.is_squeeze_situation(x, y, entity_size):
+            return True
+        
+        return False
+    
+    def is_squeeze_situation(self, x, y, entity_size):
+        """Detect if entity would be squeezed between obstacles"""
+        # Check if there are obstacles on opposite sides
+        check_distance = entity_size + 0.2
+        
+        # Check cardinal directions for opposing obstacles
+        obstacles = {
+            'north': self.check_collision(x, y - check_distance, entity_size * 0.5),
+            'south': self.check_collision(x, y + check_distance, entity_size * 0.5),
+            'east': self.check_collision(x + check_distance, y, entity_size * 0.5),
+            'west': self.check_collision(x - check_distance, y, entity_size * 0.5)
+        }
+        
+        # If opposing sides have obstacles, it's a squeeze
+        return (obstacles['north'] and obstacles['south']) or (obstacles['east'] and obstacles['west'])
+    
+    def find_alternative_waypoint(self, current_pos, target_pos, entity_size):
+        """Find an alternative waypoint when direct movement fails"""
+        # Try positions around the target
+        offsets = [
+            (0.3, 0), (-0.3, 0), (0, 0.3), (0, -0.3),
+            (0.3, 0.3), (-0.3, 0.3), (0.3, -0.3), (-0.3, -0.3)
+        ]
+        
+        for dx, dy in offsets:
+            alt_x = target_pos[0] + dx
+            alt_y = target_pos[1] + dy
+            
+            # Check if alternative position is valid and reachable
+            if (not self.check_collision(alt_x, alt_y, entity_size) and
+                self.has_line_of_sight(current_pos, (alt_x, alt_y), entity_size)):
+                return (alt_x, alt_y)
+        
+        return None
     
     def has_line_of_sight(self, start, end, entity_size=0.4):
         """Check if there's a clear line of sight between two points"""
@@ -1787,7 +2534,7 @@ class Level:
             if not (0 <= grid_x < self.width and 0 <= grid_y < self.height):
                 return False
             
-            if not self.walkable[grid_y][grid_x]:
+            if self.walkable[grid_y][grid_x] <= 0:
                 return False
             
             # Check for blocking objects
@@ -1802,7 +2549,7 @@ class Level:
         if not (0 <= x < self.width and 0 <= y < self.height):
             return False
         
-        if not self.walkable[y][x]:
+        if self.walkable[y][x] <= 0:
             return False
         
         # Check for objects that block movement
@@ -1828,7 +2575,7 @@ class Level:
         if not (0 <= x < self.width and 0 <= y < self.height):
             return False
         
-        if not self.walkable[y][x]:
+        if self.walkable[y][x] <= 0:
             return False
         
         # Special handling for doors - be more lenient around door tiles
@@ -1921,7 +2668,8 @@ class Level:
     def find_nearest_walkable(self, x, y, entity_size=0.4, max_radius=5):
         """Find the nearest walkable position to the given coordinates"""
         # Check the position itself first
-        if self.is_position_walkable(x, y, entity_size):
+        if (0 <= x < self.width and 0 <= y < self.height and 
+            self.walkable[y][x] > 0):
             return x, y
         
         # Search in expanding circles
@@ -1933,7 +2681,8 @@ class Level:
                         check_x = x + dx
                         check_y = y + dy
                         
-                        if self.is_position_walkable(check_x, check_y, entity_size):
+                        if (0 <= check_x < self.width and 0 <= check_y < self.height and
+                            self.walkable[check_y][check_x] > 0):
                             return check_x, check_y
         
         return None, None  # No walkable position found
@@ -2060,7 +2809,13 @@ class Level:
                 }
                 tile_type = self.tiles[tile_y][tile_x]
                 tile_name = tile_names.get(tile_type, "Unknown")
-                walkable = "walkable" if self.walkable[tile_y][tile_x] else "blocked"
+                walkable_value = self.walkable[tile_y][tile_x]
+                if walkable_value <= 0:
+                    walkable = "blocked"
+                elif walkable_value < 1:
+                    walkable = f"restricted ({walkable_value:.1f})"
+                else:
+                    walkable = "walkable"
                 if self.player.game_log:
                     self.player.game_log.add_message(f"Tile ({tile_x}, {tile_y}): {tile_name} ({walkable})", "system")
     
@@ -2239,6 +2994,10 @@ class Level:
         for entity in sorted_entities:
             entity.render(game_surface, self.iso_renderer, self.camera_x, self.camera_y)
         
+        # Debug: Render pathfinding visualization if player has a path
+        if hasattr(self.player, 'path') and self.player.path and len(self.player.path) > 1:
+            self.render_path_debug(game_surface, self.player.path)
+        
         # Blit game surface to main screen
         screen.blit(game_surface, (0, 0))
         
@@ -2260,7 +3019,7 @@ class Level:
             self.player.current_dialogue.render(screen)
     
     def render_tile_at_position(self, surface, x, y):
-        """Render a single tile with proper isometric positioning"""
+        """Render a single tile with new flat surface wall system"""
         tile_type = self.tiles[y][x]
         height = self.heightmap[y][x]
         
@@ -2270,30 +3029,249 @@ class Level:
         # Adjust for height
         screen_y -= height * 16
         
-        # Render base floor tile first for all wall types
+        # ALWAYS render floor tile first (even under walls)
+        floor_sprite = None
         if self.is_wall_tile(tile_type):
             # Render appropriate floor tile underneath walls
             if tile_type == self.TILE_DOOR:
                 floor_sprite = self.tile_sprites[self.TILE_STONE]  # Stone under doors
             else:
                 floor_sprite = self.tile_sprites[self.TILE_BRICK]  # Brick under walls (interior)
-            
-            # Render floor tile centered on the isometric position
+        else:
+            # Normal floor tiles
+            floor_sprite = self.tile_sprites[tile_type]
+        
+        if floor_sprite:
             floor_rect = floor_sprite.get_rect()
             floor_rect.center = (screen_x, screen_y)
             surface.blit(floor_sprite, floor_rect)
         
-        # Now render the main tile
-        if tile_type == self.TILE_DOOR:
+        # Now render walls using flat surfaces
+        if self.is_wall_tile(tile_type):
+            self.render_flat_wall(surface, screen_x, screen_y, tile_type, x, y)
+        elif tile_type == self.TILE_DOOR:
             self.render_door_tile(surface, screen_x, screen_y, tile_type)
-        elif self.is_wall_tile(tile_type):
-            self.render_wall_tile(surface, screen_x, screen_y, tile_type)
+    
+    def render_flat_wall(self, surface, screen_x, screen_y, tile_type, world_x, world_y):
+        """Render walls using flat isometric surfaces with texture support"""
+        # Wall height in pixels
+        wall_height = 48
+        
+        # Load wall textures if not already loaded
+        if not hasattr(self, 'wall_texture'):
+            wall_texture_image = self.asset_loader.get_image("wall_texture")
+            if wall_texture_image:
+                self.wall_texture = wall_texture_image
+            else:
+                self.wall_texture = None
+        
+        # Load window wall texture if not already loaded
+        if not hasattr(self, 'wall_texture_window'):
+            window_texture_image = self.asset_loader.get_image("wall_texture_window")
+            if window_texture_image:
+                self.wall_texture_window = window_texture_image
+            else:
+                self.wall_texture_window = None
+        
+        # Base wall colors (fallback if no texture)
+        wall_color = (180, 180, 180)  # Light gray
+        shadow_color = (120, 120, 120)  # Darker gray for shadows
+        highlight_color = (220, 220, 220)  # Lighter gray for highlights
+        
+        # Check adjacent tiles to determine which faces to draw
+        # Swapped the directions to match isometric orientation
+        north_wall = self.has_wall_at(world_x - 1, world_y)  # Actually west in world coords
+        south_wall = self.has_wall_at(world_x + 1, world_y)  # Actually east in world coords  
+        east_wall = self.has_wall_at(world_x, world_y + 1)   # Actually south in world coords
+        west_wall = self.has_wall_at(world_x, world_y - 1)   # Actually north in world coords
+        
+        # Special handling for corner walls - they should only show outer faces
+        is_corner = self.is_corner_wall(tile_type)
+        
+        # Calculate isometric wall face points
+        tile_width = self.tile_width
+        tile_height = self.tile_height
+        
+        # Different positioning for corners vs regular walls
+        if is_corner:
+            # Corners use original positioning (they were working correctly before)
+            floor_y = screen_y  # Original position for corners
         else:
-            # Normal floor tile rendering
-            sprite = self.tile_sprites[tile_type]
-            sprite_rect = sprite.get_rect()
-            sprite_rect.center = (screen_x, screen_y)
-            surface.blit(sprite, sprite_rect)
+            # Regular walls use adjusted positioning to sit on floor properly
+            floor_y = screen_y + tile_height // 2  # Move walls down to sit on the floor properly
+        
+        # Base diamond points (floor level)
+        top_point = (screen_x, floor_y - tile_height // 2)
+        right_point = (screen_x + tile_width // 2, floor_y)
+        bottom_point = (screen_x, floor_y + tile_height // 2)
+        left_point = (screen_x - tile_width // 2, floor_y)
+        
+        # Top diamond points (wall height) - walls extend upward from floor level
+        top_top = (screen_x, floor_y - tile_height // 2 - wall_height)
+        right_top = (screen_x + tile_width // 2, floor_y - wall_height)
+        bottom_top = (screen_x, floor_y + tile_height // 2 - wall_height)
+        left_top = (screen_x - tile_width // 2, floor_y - wall_height)
+        
+        # Draw wall faces based on adjacent walls and corner type
+        if is_corner:
+            # Corner walls render ALL faces for a complete 3D look
+            # Always render all 4 side faces for corners
+            self.render_textured_wall_face(surface, [left_point, top_point, top_top, left_top], "north", tile_type)
+            self.render_textured_wall_face(surface, [top_point, right_point, right_top, top_top], "east", tile_type)
+            self.render_textured_wall_face(surface, [bottom_point, right_point, right_top, bottom_top], "south", tile_type)
+            self.render_textured_wall_face(surface, [left_point, bottom_point, bottom_top, left_top], "west", tile_type)
+        else:
+            # Regular wall rendering - show all exposed faces
+            # North face (top-left edge in isometric view)
+            if not north_wall:
+                self.render_textured_wall_face(surface, [left_point, top_point, top_top, left_top], "north", tile_type)
+            
+            # East face (top-right edge in isometric view)  
+            if not east_wall:
+                self.render_textured_wall_face(surface, [top_point, right_point, right_top, top_top], "east", tile_type)
+            
+            # South face (bottom-right edge in isometric view)
+            if not south_wall:
+                self.render_textured_wall_face(surface, [bottom_point, right_point, right_top, bottom_top], "south", tile_type)
+            
+            # West face (bottom-left edge in isometric view)
+            if not west_wall:
+                self.render_textured_wall_face(surface, [left_point, bottom_point, bottom_top, left_top], "west", tile_type)
+        
+        # Always draw the top face with texture
+        self.render_textured_wall_face(surface, [top_top, right_top, bottom_top, left_top], "top", tile_type)
+        
+        # Add window details for window walls (only if not using window texture)
+        if (tile_type in [self.TILE_WALL_WINDOW, self.TILE_WALL_WINDOW_HORIZONTAL, self.TILE_WALL_WINDOW_VERTICAL] and
+            not self.wall_texture_window):
+            self.render_window_on_wall(surface, screen_x, screen_y, wall_height, not north_wall, not east_wall, not south_wall, not west_wall)
+    
+    def render_textured_wall_face(self, surface, face_points, face_direction, tile_type=None):
+        """Render a single wall face with texture or fallback color"""
+        # Determine which texture to use based on tile type
+        is_window_wall = tile_type in [self.TILE_WALL_WINDOW, self.TILE_WALL_WINDOW_HORIZONTAL, self.TILE_WALL_WINDOW_VERTICAL] if tile_type else False
+        current_texture = self.wall_texture_window if (is_window_wall and self.wall_texture_window) else self.wall_texture
+        
+        if current_texture and len(face_points) == 4:
+            # Create a temporary surface for the face
+            min_x = min(p[0] for p in face_points)
+            max_x = max(p[0] for p in face_points)
+            min_y = min(p[1] for p in face_points)
+            max_y = max(p[1] for p in face_points)
+            
+            face_width = int(max_x - min_x) + 1
+            face_height = int(max_y - min_y) + 1
+            
+            if face_width > 0 and face_height > 0:
+                # Create face surface
+                face_surface = pygame.Surface((face_width, face_height), pygame.SRCALPHA)
+                
+                # Scale texture to fit the face
+                scaled_texture = pygame.transform.scale(current_texture, (face_width, face_height))
+                
+                # Apply lighting based on face direction
+                if face_direction == "north":
+                    # Brightest face (highlight)
+                    tinted_texture = self.apply_tint_to_surface(scaled_texture, (255, 255, 255), 1.2)
+                elif face_direction == "east":
+                    # Normal lighting
+                    tinted_texture = scaled_texture
+                elif face_direction in ["south", "west"]:
+                    # Darker faces (shadow)
+                    tinted_texture = self.apply_tint_to_surface(scaled_texture, (180, 180, 180), 0.8)
+                else:  # top
+                    # Top face - normal lighting
+                    tinted_texture = scaled_texture
+                
+                face_surface.blit(tinted_texture, (0, 0))
+                
+                # Create a mask for the face shape
+                adjusted_points = [(p[0] - min_x, p[1] - min_y) for p in face_points]
+                
+                # Create mask surface
+                mask_surface = pygame.Surface((face_width, face_height), pygame.SRCALPHA)
+                pygame.draw.polygon(mask_surface, (255, 255, 255, 255), adjusted_points)
+                
+                # Apply mask to textured surface
+                face_surface.blit(mask_surface, (0, 0), special_flags=pygame.BLEND_RGBA_MULT)
+                
+                # Blit the textured face to the main surface
+                surface.blit(face_surface, (min_x, min_y))
+                
+                # Draw border
+                pygame.draw.polygon(surface, (100, 100, 100), face_points, 1)
+        else:
+            # Fallback to solid color rendering
+            if face_direction == "north":
+                color = (220, 220, 220)  # Highlight
+            elif face_direction == "east":
+                color = (180, 180, 180)  # Normal
+            elif face_direction in ["south", "west"]:
+                color = (120, 120, 120)  # Shadow
+            else:  # top
+                color = (180, 180, 180)  # Normal
+            
+            pygame.draw.polygon(surface, color, face_points)
+            pygame.draw.polygon(surface, (100, 100, 100), face_points, 1)
+    
+    def apply_tint_to_surface(self, surface, tint_color, intensity=1.0):
+        """Apply a tint to a surface for lighting effects"""
+        tinted_surface = surface.copy()
+        
+        # Create tint overlay
+        tint_overlay = pygame.Surface(surface.get_size(), pygame.SRCALPHA)
+        
+        # Adjust tint color by intensity
+        adjusted_tint = (
+            min(255, int(tint_color[0] * intensity)),
+            min(255, int(tint_color[1] * intensity)),
+            min(255, int(tint_color[2] * intensity))
+        )
+        
+        tint_overlay.fill(adjusted_tint)
+        
+        # Apply tint using multiply blend mode
+        tinted_surface.blit(tint_overlay, (0, 0), special_flags=pygame.BLEND_MULT)
+        
+        return tinted_surface
+    
+    def is_corner_wall(self, tile_type):
+        """Check if a tile type is a corner wall"""
+        corner_types = [
+            self.TILE_WALL_CORNER_TL, self.TILE_WALL_CORNER_TR,
+            self.TILE_WALL_CORNER_BL, self.TILE_WALL_CORNER_BR
+        ]
+        return tile_type in corner_types
+    
+    def render_window_on_wall(self, surface, screen_x, screen_y, wall_height, show_north, show_east, show_south, show_west):
+        """Render window details on exposed wall faces"""
+        window_color = (150, 200, 255)  # Light blue for glass
+        frame_color = (80, 60, 40)      # Brown for window frame
+        
+        window_size = 16
+        window_height = 12
+        
+        # Render windows on exposed faces
+        if show_north:  # North face window
+            window_center_x = screen_x - self.tile_width // 4
+            window_center_y = screen_y - wall_height // 2
+            window_rect = pygame.Rect(window_center_x - window_size//2, window_center_y - window_height//2, window_size, window_height)
+            pygame.draw.rect(surface, frame_color, window_rect)
+            pygame.draw.rect(surface, window_color, (window_rect.x + 2, window_rect.y + 2, window_rect.width - 4, window_rect.height - 4))
+        
+        if show_east:   # East face window
+            window_center_x = screen_x + self.tile_width // 4
+            window_center_y = screen_y - wall_height // 2
+            window_rect = pygame.Rect(window_center_x - window_size//2, window_center_y - window_height//2, window_size, window_height)
+            pygame.draw.rect(surface, frame_color, window_rect)
+            pygame.draw.rect(surface, window_color, (window_rect.x + 2, window_rect.y + 2, window_rect.width - 4, window_rect.height - 4))
+    
+    def has_wall_at(self, x, y):
+        """Check if there's a wall at the given coordinates"""
+        if not (0 <= x < self.width and 0 <= y < self.height):
+            return True  # Treat out-of-bounds as walls
+        
+        return self.is_wall_tile(self.tiles[y][x])
     
     def is_wall_tile(self, tile_type):
         """Check if a tile type is any kind of wall"""
@@ -2306,36 +3284,190 @@ class Level:
         return tile_type in wall_types
     
     def render_door_tile(self, surface, screen_x, screen_y, tile_type):
-        """Render door with proper isometric positioning"""
-        door_sprite = self.tile_sprites[tile_type]
+        """Render door exactly like walls but with rounded front face"""
+        # Door height in pixels (same as walls)
+        door_height = 48
         
-        # Simple door rendering without complex effects that might cause issues
-        door_rect = door_sprite.get_rect()
-        door_rect.centerx = screen_x
-        door_rect.bottom = screen_y + self.tile_height // 4  # Align door bottom with tile base
-        surface.blit(door_sprite, door_rect)
+        # Door colors
+        door_color = (139, 69, 19)      # Brown door
+        door_shadow = (100, 50, 10)     # Darker brown for shadows
+        door_highlight = (180, 90, 30)  # Lighter brown for highlights
+        
+        # Get world coordinates for adjacency checking
+        # Convert screen coordinates back to world coordinates using the isometric renderer
+        world_x, world_y = self.iso_renderer.screen_to_world(screen_x, screen_y, self.camera_x, self.camera_y)
+        world_x = int(world_x)
+        world_y = int(world_y)
+        
+        # Check adjacent tiles to determine which faces to draw (same logic as walls)
+        north_wall = self.has_wall_or_door_at(world_x - 1, world_y)
+        south_wall = self.has_wall_or_door_at(world_x + 1, world_y)  
+        east_wall = self.has_wall_or_door_at(world_x, world_y + 1)
+        west_wall = self.has_wall_or_door_at(world_x, world_y - 1)
+        
+        # Calculate isometric door face points (same as walls)
+        tile_width = self.tile_width
+        tile_height = self.tile_height
+        
+        # Use same positioning as the original door code (which was correct)
+        floor_y = screen_y + tile_height // 4
+        
+        # Base diamond points (floor level)
+        top_point = (screen_x, floor_y - tile_height // 2)
+        right_point = (screen_x + tile_width // 2, floor_y)
+        bottom_point = (screen_x, floor_y + tile_height // 2)
+        left_point = (screen_x - tile_width // 2, floor_y)
+        
+        # Top diamond points (door height)
+        top_top = (screen_x, floor_y - tile_height // 2 - door_height)
+        right_top = (screen_x + tile_width // 2, floor_y - door_height)
+        bottom_top = (screen_x, floor_y + tile_height // 2 - door_height)
+        left_top = (screen_x - tile_width // 2, floor_y - door_height)
+        
+        # Render door faces exactly like walls (show all exposed faces)
+        
+        # North face (top-left edge in isometric view)
+        if not north_wall:
+            north_face = [left_point, top_point, top_top, left_top]
+            pygame.draw.polygon(surface, door_highlight, north_face)
+            pygame.draw.polygon(surface, (60, 30, 5), north_face, 1)  # Dark border
+        
+        # East face (top-right edge in isometric view)  
+        if not east_wall:
+            east_face = [right_point, top_point, top_top, right_top]
+            pygame.draw.polygon(surface, door_color, east_face)
+            pygame.draw.polygon(surface, (60, 30, 5), east_face, 1)  # Dark border
+        
+        # South face (bottom-right edge in isometric view) - THE ROUNDED FRONT FACE
+        if not south_wall:
+            # Instead of a flat polygon, render a rounded face
+            self.render_rounded_door_face(surface, bottom_point, right_point, right_top, bottom_top, door_shadow)
+        
+        # West face (bottom-left edge in isometric view)
+        if not west_wall:
+            west_face = [left_point, bottom_point, bottom_top, left_top]
+            pygame.draw.polygon(surface, door_shadow, west_face)
+            pygame.draw.polygon(surface, (60, 30, 5), west_face, 1)  # Dark border
+        
+        # Always draw the top face (same as walls) - but make it transparent
+        # Skip drawing the top face to make it transparent
+        # top_face = [top_top, right_top, bottom_top, left_top]
+        # pygame.draw.polygon(surface, door_color, top_face)
+        # pygame.draw.polygon(surface, (60, 30, 5), top_face, 1)  # Dark border
+        
+        # Add door handle on the front (south) face if it's visible
+        if not south_wall:
+            handle_x = screen_x + tile_width // 3
+            handle_y = floor_y - door_height // 2
+            pygame.draw.circle(surface, (255, 215, 0), (handle_x, handle_y), 3)  # Gold handle
+            pygame.draw.circle(surface, (200, 160, 0), (handle_x, handle_y), 3, 1)  # Handle border
     
-    def render_wall_tile(self, surface, screen_x, screen_y, tile_type):
-        """Render wall with proper isometric positioning and depth"""
-        wall_sprite = self.tile_sprites[tile_type]
+    def has_wall_or_door_at(self, x, y):
+        """Check if there's a wall or door at the given coordinates"""
+        if x < 0 or x >= self.width or y < 0 or y >= self.height:
+            return True  # Treat out of bounds as walls
         
-        # Add subtle shadow for depth
-        shadow_offset = 3
-        shadow_sprite = wall_sprite.copy()
-        shadow_sprite.fill((0, 0, 0, 100), special_flags=pygame.BLEND_RGBA_MULT)
+        tile = self.tiles[y][x]
+        return self.is_wall_tile(tile) or tile == self.TILE_DOOR
+    
+    def render_rounded_door_face(self, surface, bottom_point, right_point, right_top, bottom_top, color):
+        """Render a rounded door face using the door texture"""
+        # Get the door texture from assets
+        door_texture = self.asset_loader.get_image("door")
         
-        shadow_rect = shadow_sprite.get_rect()
-        shadow_rect.centerx = screen_x + shadow_offset
-        shadow_rect.bottom = screen_y + self.tile_height // 4 + shadow_offset
-        surface.blit(shadow_sprite, shadow_rect)
+        print(f"DEBUG: Door texture loaded: {door_texture is not None}")
+        if door_texture:
+            print(f"DEBUG: Door texture size: {door_texture.get_size()}")
         
-        # Render main wall sprite
-        wall_rect = wall_sprite.get_rect()
-        wall_rect.centerx = screen_x
-        # Position wall so its base aligns with the tile center
-        # This creates proper isometric building appearance
-        wall_rect.bottom = screen_y + self.tile_height // 4
-        surface.blit(wall_sprite, wall_rect)
+        if door_texture:
+            # For simplicity, let's just render the texture as a flat face first
+            # Calculate the face rectangle
+            face_left = min(bottom_point[0], right_point[0], bottom_top[0], right_top[0])
+            face_top = min(bottom_point[1], right_point[1], bottom_top[1], right_top[1])
+            face_width = max(bottom_point[0], right_point[0], bottom_top[0], right_top[0]) - face_left
+            face_height = max(bottom_point[1], right_point[1], bottom_top[1], right_top[1]) - face_top
+            
+            print(f"DEBUG: Face dimensions: {face_width}x{face_height}")
+            
+            if face_width > 0 and face_height > 0:
+                # Scale the door texture to fit the face
+                scaled_door = pygame.transform.scale(door_texture, (int(face_width), int(face_height)))
+                
+                # Create a surface for the door face
+                face_surface = pygame.Surface((int(face_width), int(face_height)), pygame.SRCALPHA)
+                
+                # Draw the door face shape as a mask
+                face_points = [
+                    (bottom_point[0] - face_left, bottom_point[1] - face_top),
+                    (right_point[0] - face_left, right_point[1] - face_top),
+                    (right_top[0] - face_left, right_top[1] - face_top),
+                    (bottom_top[0] - face_left, bottom_top[1] - face_top)
+                ]
+                
+                # First, blit the texture
+                face_surface.blit(scaled_door, (0, 0))
+                
+                # Create a mask surface
+                mask_surface = pygame.Surface((int(face_width), int(face_height)), pygame.SRCALPHA)
+                pygame.draw.polygon(mask_surface, (255, 255, 255, 255), face_points)
+                
+                # Apply the mask to the texture
+                face_surface.blit(mask_surface, (0, 0), special_flags=pygame.BLEND_ALPHA_SDL2)
+                
+                # Blit the final textured face to the main surface
+                surface.blit(face_surface, (face_left, face_top))
+                
+                # Draw border
+                actual_face_points = [bottom_point, right_point, right_top, bottom_top]
+                pygame.draw.polygon(surface, (60, 30, 5), actual_face_points, 2)
+                
+                print("DEBUG: Successfully rendered textured door face")
+            else:
+                print("DEBUG: Face dimensions invalid, using fallback")
+                # Fallback to solid color
+                self.render_rounded_door_face_fallback(surface, bottom_point, right_point, right_top, bottom_top, color)
+        else:
+            print("DEBUG: No door texture found, using fallback")
+            # Fallback to solid color if no texture
+            self.render_rounded_door_face_fallback(surface, bottom_point, right_point, right_top, bottom_top, color)
+    
+    def render_rounded_door_face_fallback(self, surface, bottom_point, right_point, right_top, bottom_top, color):
+        """Fallback method for rounded door face with solid color"""
+        # Calculate the center line of the face
+        center_bottom_x = (bottom_point[0] + right_point[0]) // 2
+        center_bottom_y = (bottom_point[1] + right_point[1]) // 2
+        center_top_x = (bottom_top[0] + right_top[0]) // 2
+        center_top_y = (bottom_top[1] + right_top[1]) // 2
+        
+        # Create curved segments by offsetting the center outward
+        curve_offset = 8  # How much to curve outward
+        
+        # Calculate the outward direction (perpendicular to the face)
+        face_dx = right_point[0] - bottom_point[0]
+        face_dy = right_point[1] - bottom_point[1]
+        # Rotate 90 degrees to get perpendicular (outward direction)
+        outward_dx = -face_dy
+        outward_dy = face_dx
+        # Normalize
+        length = math.sqrt(outward_dx * outward_dx + outward_dy * outward_dy)
+        if length > 0:
+            outward_dx = outward_dx / length * curve_offset
+            outward_dy = outward_dy / length * curve_offset
+        
+        # Create curved points
+        curved_bottom = (center_bottom_x + outward_dx, center_bottom_y + outward_dy)
+        curved_top = (center_top_x + outward_dx, center_top_y + outward_dy)
+        
+        # Draw the curved face as multiple segments
+        # Left segment
+        left_segment = [bottom_point, curved_bottom, curved_top, bottom_top]
+        pygame.draw.polygon(surface, color, left_segment)
+        pygame.draw.polygon(surface, (60, 30, 5), left_segment, 1)
+        
+        # Right segment  
+        right_segment = [curved_bottom, right_point, right_top, curved_top]
+        pygame.draw.polygon(surface, color, right_segment)
+        pygame.draw.polygon(surface, (60, 30, 5), right_segment, 1)
     
     def render_ui(self, screen):
         """Render enhanced game UI"""
