@@ -33,6 +33,8 @@ class AssetLoader:
             "stone_tile": "stone_tile.png", 
             "water_tile": "water_tile.png",
             "wall_tile": "wall_texture.png",
+            "wall_texture": "wall_texture.png",  # Added for wall face rendering
+            "wall_texture_window": "wall_texture_window.png",  # Added for window wall rendering
             "wall_corner_tl": "wall_texture.png",
             "wall_corner_tr": "wall_texture.png", 
             "wall_corner_bl": "wall_texture.png",
@@ -43,6 +45,7 @@ class AssetLoader:
             "wall_window_vertical": "wall_texture_window.png",
             "dirt_tile": "dirt_tile.png",  # Added dirt tile
             "door_tile": "door.png",  # Fixed: use door.png instead of door_tile.png
+            "door_tile_isometric": "door.png",  # Added for isometric door rendering
             "door": "door.png",  # Added door texture for front face
             "brick_tile": "brick_tile.png",  # Added brick tile for building interiors
             "player_sprite": "player_sprite.png",
@@ -145,6 +148,8 @@ class AssetLoader:
             "stone_tile": (150, 150, 150),
             "water_tile": (50, 100, 200),
             "wall_tile": (100, 100, 100),
+            "wall_texture": (100, 100, 100),  # Added for wall face rendering
+            "wall_texture_window": (120, 120, 150),  # Added for window wall rendering
             "wall_corner_tl": (90, 90, 90),    # Slightly darker for corners
             "wall_corner_tr": (90, 90, 90),
             "wall_corner_bl": (90, 90, 90), 
@@ -155,6 +160,7 @@ class AssetLoader:
             "wall_window_vertical": (120, 120, 150),    # Slightly blue-tinted for window walls
             "dirt_tile": (139, 69, 19),  # Brown for dirt
             "door_tile": (139, 69, 19),  # Brown for door
+            "door_tile_isometric": (139, 69, 19),  # Brown for isometric door
             "door": (139, 69, 19),  # Brown for door texture
             "brick_tile": (150, 80, 60),  # Reddish-brown for brick
             "player_sprite": (100, 150, 255),
