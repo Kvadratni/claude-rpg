@@ -1589,20 +1589,21 @@ class Level:
                                    self.TILE_WALL_HORIZONTAL, self.TILE_WALL_VERTICAL, self.TILE_WALL_WINDOW,
                                    self.TILE_WALL_WINDOW_HORIZONTAL, self.TILE_WALL_WINDOW_VERTICAL]:
                     # Render all wall types with better positioning and subtle shadow
-                    # Add shadow first
+                    # Add shadow first with improved positioning
                     shadow_offset = 2
                     wall_sprite = self.tile_sprites[tile_type]
                     shadow_sprite = wall_sprite.copy()
                     shadow_sprite.fill((0, 0, 0, 80), special_flags=pygame.BLEND_RGBA_MULT)
                     shadow_rect = shadow_sprite.get_rect()
                     shadow_rect.centerx = screen_x + shadow_offset
-                    shadow_rect.bottom = screen_y + self.tile_height // 2 + 16 + shadow_offset
+                    shadow_rect.bottom = screen_y + 8 + shadow_offset  # Match wall positioning
                     game_surface.blit(shadow_sprite, shadow_rect)
                     
-                    # Then render wall
+                    # Then render wall with improved positioning
                     wall_rect = wall_sprite.get_rect()
                     wall_rect.centerx = screen_x
-                    wall_rect.bottom = screen_y + self.tile_height // 2 + 16  # Position walls properly
+                    # Better wall positioning - align bottom of wall with tile center
+                    wall_rect.bottom = screen_y + 8  # Reduced offset for better alignment
                     game_surface.blit(wall_sprite, wall_rect)
                 else:
                     # Normal tile rendering
