@@ -494,31 +494,23 @@ class Chest(Entity):
         self.create_chest_sprite()
     
     def create_chest_sprite(self):
-        """Create chest sprite"""
+        """Create chest sprite using separate closed/open assets"""
         size = 48
         
         # Try to use loaded sprite first
         if self.asset_loader:
-            # Check for chest-specific sprites
-            chest_image = None
-            if self.chest_type == "wooden":
-                chest_image = self.asset_loader.get_image("wooden_chest")
-            elif self.chest_type == "iron":
-                chest_image = self.asset_loader.get_image("iron_chest")
-            elif self.chest_type == "gold":
-                chest_image = self.asset_loader.get_image("gold_chest")
-            elif self.chest_type == "magical":
-                chest_image = self.asset_loader.get_image("magical_chest")
+            # Determine sprite name based on chest type and state
+            if self.is_opened:
+                sprite_name = f"{self.chest_type}_chest_open"
+            else:
+                sprite_name = f"{self.chest_type}_chest_closed"
             
-            # Fallback to generic chest
-            if not chest_image:
-                chest_image = self.asset_loader.get_image("chest")
-            
+            chest_image = self.asset_loader.get_image(sprite_name)
             if chest_image:
                 self.sprite = pygame.transform.scale(chest_image, (size, size))
                 return
         
-        # Fallback to generated sprite
+        # Fallback to generated sprite (same as before)
         self.sprite = pygame.Surface((size, size), pygame.SRCALPHA)
         
         # Different colors for different chest types
@@ -564,139 +556,149 @@ class Chest(Entity):
             pygame.draw.rect(self.sprite, (101, 67, 33), interior_rect)  # Dark brown interior
     
     def generate_loot(self):
-        """Generate loot based on chest type"""
+        """Generate loot based on chest type with proper rarity matching"""
         self.loot_items = []
         
         if self.chest_type == "wooden":
-            # Basic loot - 1-2 items
+            # Basic loot - 1-2 common items, low value
             num_items = random.randint(1, 2)
             for _ in range(num_items):
-                item_type = random.choice(["consumable", "consumable", "weapon", "misc"])  # Favor consumables
+                item_type = random.choice(["consumable", "consumable", "consumable", "misc"])  # Heavily favor consumables
                 if item_type == "consumable":
+                    # Only basic potions
                     potion_types = ["Health Potion", "Stamina Potion"]
                     potion_name = random.choice(potion_types)
                     if potion_name == "Health Potion":
                         item = Item(self.x, self.y, "Health Potion", item_type="consumable", 
-                                  effect={"health": 50}, value=25, asset_loader=self.asset_loader)
+                                  effect={"health": 30}, value=15, asset_loader=self.asset_loader)  # Reduced healing and value
                     else:
                         item = Item(self.x, self.y, "Stamina Potion", item_type="consumable", 
-                                  effect={"stamina": 30}, value=20, asset_loader=self.asset_loader)
-                elif item_type == "weapon":
-                    weapons = ["Iron Sword", "Bronze Mace", "Silver Dagger"]
-                    weapon_name = random.choice(weapons)
-                    damage = random.randint(10, 15)
-                    item = Item(self.x, self.y, weapon_name, item_type="weapon", 
-                              effect={"damage": damage}, value=100, asset_loader=self.asset_loader)
-                else:  # misc
-                    item = Item(self.x, self.y, "Gold Ring", item_type="misc", 
-                              effect={"magic_resistance": 3}, value=150, asset_loader=self.asset_loader)
+                                  effect={"stamina": 20}, value=12, asset_loader=self.asset_loader)  # Reduced effect and value
+                else:  # misc - only low-value items
+                    item = Item(self.x, self.y, "Crystal Gem", item_type="misc", 
+                              effect={"value": 25}, value=50, asset_loader=self.asset_loader)  # Much lower value
                 
                 self.loot_items.append(item)
         
         elif self.chest_type == "iron":
-            # Better loot - 2-3 items
+            # Mid-tier loot - 2-3 items, moderate value
             num_items = random.randint(2, 3)
             for _ in range(num_items):
                 item_type = random.choice(["consumable", "weapon", "armor", "misc"])
                 if item_type == "consumable":
-                    potion_types = ["Health Potion", "Stamina Potion", "Mana Potion", "Strength Potion"]
+                    # Basic to mid-tier potions
+                    potion_types = ["Health Potion", "Stamina Potion", "Mana Potion"]
                     potion_name = random.choice(potion_types)
                     if potion_name == "Health Potion":
                         item = Item(self.x, self.y, "Health Potion", item_type="consumable", 
-                                  effect={"health": 50}, value=25, asset_loader=self.asset_loader)
+                                  effect={"health": 40}, value=20, asset_loader=self.asset_loader)  # Standard healing
                     elif potion_name == "Stamina Potion":
                         item = Item(self.x, self.y, "Stamina Potion", item_type="consumable", 
-                                  effect={"stamina": 30}, value=20, asset_loader=self.asset_loader)
-                    elif potion_name == "Mana Potion":
-                        item = Item(self.x, self.y, "Mana Potion", item_type="consumable", 
-                                  effect={"mana": 40}, value=30, asset_loader=self.asset_loader)
+                                  effect={"stamina": 25}, value=15, asset_loader=self.asset_loader)
                     else:
-                        item = Item(self.x, self.y, "Strength Potion", item_type="consumable", 
-                                  effect={"damage_boost": 10, "duration": 60}, value=50, asset_loader=self.asset_loader)
+                        item = Item(self.x, self.y, "Mana Potion", item_type="consumable", 
+                                  effect={"mana": 30}, value=18, asset_loader=self.asset_loader)
                 elif item_type == "weapon":
-                    weapons = ["Steel Axe", "War Hammer", "Magic Bow", "Crossbow"]
+                    # Basic to mid-tier weapons
+                    weapons = ["Iron Sword", "Bronze Mace", "Silver Dagger"]
                     weapon_name = random.choice(weapons)
-                    damage = random.randint(15, 20)
+                    damage = random.randint(12, 16)  # Moderate damage
+                    value = random.randint(80, 120)  # Moderate value
                     item = Item(self.x, self.y, weapon_name, item_type="weapon", 
-                              effect={"damage": damage}, value=150, asset_loader=self.asset_loader)
+                              effect={"damage": damage}, value=value, asset_loader=self.asset_loader)
                 elif item_type == "armor":
-                    armors = ["Chain Mail", "Studded Leather", "Scale Mail"]
+                    # Basic to mid-tier armor
+                    armors = ["Leather Armor", "Studded Leather"]
                     armor_name = random.choice(armors)
-                    defense = random.randint(8, 12)
+                    defense = random.randint(6, 10)  # Moderate defense
+                    value = random.randint(60, 100)  # Moderate value
                     item = Item(self.x, self.y, armor_name, item_type="armor", 
-                              effect={"defense": defense}, value=120, asset_loader=self.asset_loader)
+                              effect={"defense": defense}, value=value, asset_loader=self.asset_loader)
                 else:  # misc
-                    misc_items = [("Magic Scroll", {"spell_power": 15}), ("Crystal Gem", {"value": 100})]
+                    # Mid-tier misc items
+                    misc_items = [("Magic Scroll", {"spell_power": 8}), ("Crystal Gem", {"value": 50})]
                     item_name, effect = random.choice(misc_items)
+                    value = random.randint(100, 150)  # Moderate value
                     item = Item(self.x, self.y, item_name, item_type="misc", 
-                              effect=effect, value=200, asset_loader=self.asset_loader)
+                              effect=effect, value=value, asset_loader=self.asset_loader)
                 
                 self.loot_items.append(item)
         
         elif self.chest_type == "gold":
-            # High-quality loot - 3-4 items
+            # High-tier loot - 3-4 items, high value
             num_items = random.randint(3, 4)
             for _ in range(num_items):
                 item_type = random.choice(["weapon", "armor", "consumable", "misc"])
                 if item_type == "weapon":
-                    weapons = ["Crystal Staff", "Throwing Knife", "War Hammer"]
+                    # High-tier weapons
+                    weapons = ["Steel Axe", "War Hammer", "Magic Bow", "Crossbow"]
                     weapon_name = random.choice(weapons)
-                    damage = random.randint(18, 25)
+                    damage = random.randint(18, 24)  # High damage
+                    value = random.randint(150, 220)  # High value
                     item = Item(self.x, self.y, weapon_name, item_type="weapon", 
-                              effect={"damage": damage}, value=200, asset_loader=self.asset_loader)
+                              effect={"damage": damage}, value=value, asset_loader=self.asset_loader)
                 elif item_type == "armor":
-                    armors = ["Plate Armor", "Dragon Scale Armor", "Mage Robes"]
+                    # High-tier armor
+                    armors = ["Chain Mail", "Scale Mail", "Plate Armor"]
                     armor_name = random.choice(armors)
-                    defense = random.randint(15, 20)
+                    defense = random.randint(12, 18)  # High defense
+                    value = random.randint(120, 200)  # High value
                     item = Item(self.x, self.y, armor_name, item_type="armor", 
-                              effect={"defense": defense}, value=250, asset_loader=self.asset_loader)
+                              effect={"defense": defense}, value=value, asset_loader=self.asset_loader)
                 elif item_type == "consumable":
                     # High-quality consumables
                     consumables = ["Strength Potion", "Mana Potion", "Antidote"]
                     consumable_name = random.choice(consumables)
                     if consumable_name == "Strength Potion":
                         item = Item(self.x, self.y, "Strength Potion", item_type="consumable", 
-                                  effect={"damage_boost": 15, "duration": 90}, value=75, asset_loader=self.asset_loader)
+                                  effect={"damage_boost": 12, "duration": 75}, value=45, asset_loader=self.asset_loader)
                     elif consumable_name == "Mana Potion":
                         item = Item(self.x, self.y, "Mana Potion", item_type="consumable", 
-                                  effect={"mana": 60}, value=45, asset_loader=self.asset_loader)
+                                  effect={"mana": 50}, value=35, asset_loader=self.asset_loader)
                     else:
                         item = Item(self.x, self.y, "Antidote", item_type="consumable", 
-                                  effect={"cure_poison": True}, value=50, asset_loader=self.asset_loader)
+                                  effect={"cure_poison": True}, value=40, asset_loader=self.asset_loader)
                 else:  # misc
+                    # High-value misc items
                     item = Item(self.x, self.y, "Gold Ring", item_type="misc", 
-                              effect={"magic_resistance": 8}, value=300, asset_loader=self.asset_loader)
+                              effect={"magic_resistance": 6}, value=200, asset_loader=self.asset_loader)
                 
                 self.loot_items.append(item)
         
         elif self.chest_type == "magical":
-            # Rare magical loot - 2-3 high-value items
+            # Legendary loot - 2-3 rare magical items with enhanced effects
             num_items = random.randint(2, 3)
             for _ in range(num_items):
                 item_type = random.choice(["weapon", "armor", "misc"])
                 if item_type == "weapon":
-                    weapons = ["Crystal Staff", "Magic Bow"]
+                    # Legendary magical weapons
+                    weapons = ["Crystal Staff", "Throwing Knife"]  # Only the most magical weapons
                     weapon_name = random.choice(weapons)
-                    damage = random.randint(20, 30)
-                    spell_power = random.randint(10, 20)
+                    damage = random.randint(22, 30)  # Very high damage
+                    spell_power = random.randint(15, 25)  # High spell power
+                    value = random.randint(250, 350)  # Very high value
                     item = Item(self.x, self.y, weapon_name, item_type="weapon", 
-                              effect={"damage": damage, "spell_power": spell_power}, value=300, asset_loader=self.asset_loader)
+                              effect={"damage": damage, "spell_power": spell_power}, value=value, asset_loader=self.asset_loader)
                 elif item_type == "armor":
-                    armors = ["Mage Robes", "Royal Armor"]
+                    # Legendary magical armor
+                    armors = ["Dragon Scale Armor", "Mage Robes", "Royal Armor"]
                     armor_name = random.choice(armors)
-                    defense = random.randint(18, 25)
-                    magic_resist = random.randint(8, 15)
+                    defense = random.randint(20, 28)  # Very high defense
+                    magic_resist = random.randint(10, 18)  # High magic resistance
+                    value = random.randint(300, 450)  # Very high value
                     item = Item(self.x, self.y, armor_name, item_type="armor", 
-                              effect={"defense": defense, "magic_resistance": magic_resist}, value=400, asset_loader=self.asset_loader)
+                              effect={"defense": defense, "magic_resistance": magic_resist}, value=value, asset_loader=self.asset_loader)
                 else:  # misc
+                    # Legendary misc items
                     misc_items = [
-                        ("Magic Scroll", {"spell_power": 25}),
-                        ("Crystal Gem", {"value": 200}),
-                        ("Gold Ring", {"magic_resistance": 12})
+                        ("Magic Scroll", {"spell_power": 30}),  # Very powerful scroll
+                        ("Crystal Gem", {"value": 150}),  # Valuable gem
+                        ("Gold Ring", {"magic_resistance": 15})  # Very powerful ring
                     ]
                     item_name, effect = random.choice(misc_items)
+                    value = random.randint(300, 500)  # Very high value
                     item = Item(self.x, self.y, item_name, item_type="misc", 
-                              effect=effect, value=350, asset_loader=self.asset_loader)
+                              effect=effect, value=value, asset_loader=self.asset_loader)
                 
                 self.loot_items.append(item)
     
@@ -705,6 +707,13 @@ class Chest(Entity):
         if self.is_opened:
             if player.game_log:
                 player.game_log.add_message("This chest is already empty.", "system")
+            return
+        
+        # Check if player is close enough
+        dist = math.sqrt((player.x - self.x)**2 + (player.y - self.y)**2)
+        if dist > 1.5:
+            if player.game_log:
+                player.game_log.add_message("You need to be closer to open the chest.", "system")
             return
         
         # Get audio manager
