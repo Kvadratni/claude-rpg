@@ -1,5 +1,5 @@
 """
-Claude RPG - An Isometric RPG Game
+Goose RPG - An Isometric RPG Game
 Module entry point
 """
 

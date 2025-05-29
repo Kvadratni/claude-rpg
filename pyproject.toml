@@ -1,9 +1,9 @@
 [project]
-name = "claude-rpg"
+name = "goose-rpg"
 version = "0.1.0"
 description = "A classic isometric RPG game inspired by Fallout 1, Arcanum, and X-COM: UFO Defense"
 authors = [
-    {name = "Claude RPG Team"}
+    {name = "Goose RPG Team"}
 ]
 readme = "README.md"
 requires-python = ">=3.8"
@@ -12,7 +12,7 @@ dependencies = [
 ]
 
 [project.scripts]
-claude-rpg = "src.main:main"
+goose-rpg = "src.main:main"
 
 [build-system]
 requires = ["hatchling"]

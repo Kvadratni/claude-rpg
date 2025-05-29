@@ -1,8 +1,8 @@
-# Claude RPG Map Template System
+# Goose RPG Map Template System
 
 ## Overview
 
-The Claude RPG game uses an image-based map template system for deterministic world generation. Instead of procedural generation, maps are designed as PNG images where each pixel color represents different terrain types, spawn points, and game elements.
+The Goose RPG game uses an image-based map template system for deterministic world generation. Instead of procedural generation, maps are designed as PNG images where each pixel color represents different terrain types, spawn points, and game elements.
 
 ## How It Works
 
@@ -237,6 +237,6 @@ elif terrain == 'SWAMP':
 
 ## Conclusion
 
-The map template system provides a powerful, flexible foundation for world design in Claude RPG. It combines the precision of hand-crafted design with the efficiency of automated generation, supporting maps of virtually any size while maintaining excellent performance and gameplay quality.
+The map template system provides a powerful, flexible foundation for world design in Goose RPG. It combines the precision of hand-crafted design with the efficiency of automated generation, supporting maps of virtually any size while maintaining excellent performance and gameplay quality.
 
 The system is **not bound to fixed sizes** and can accommodate everything from small dungeon rooms to massive overworld maps, limited primarily by practical considerations rather than technical constraints.

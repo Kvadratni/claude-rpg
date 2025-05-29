@@ -72,7 +72,7 @@ def test_basic_functionality():
 
 def main():
     """Run all tests"""
-    print("Running Claude RPG tests...")
+    print("Running Goose RPG tests...")
     
     tests_passed = 0
     total_tests = 2

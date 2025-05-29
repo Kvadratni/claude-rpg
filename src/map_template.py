@@ -380,7 +380,7 @@ if __name__ == "__main__":
     pygame.init()
     
     # Create default template
-    template_path = "/Users/mnovich/Development/claude-rpg/assets/maps/main_world.png"
+    template_path = "assets/maps/main_world.png"
     os.makedirs(os.path.dirname(template_path), exist_ok=True)
     
     create_default_template(200, 200, template_path)

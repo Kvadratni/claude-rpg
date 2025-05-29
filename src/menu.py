@@ -576,7 +576,7 @@ class MainMenu:
     def render_main_title(self, screen, width, height):
         """Render the main game title with effects"""
         # Main title with shadow and glow effect
-        title_text = "CLAUDE RPG"
+        title_text = "GOOSE RPG"
         
         # Calculate title size with pulse effect
         pulse_scale = self.title_pulse

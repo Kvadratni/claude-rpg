@@ -1,4 +1,4 @@
-# Claude RPG - Audio Assets
+# Goose RPG - Audio Assets
 
 ## Primary Audio Dependency: OpenGameArt.org Fantasy Sound Effects Library
 

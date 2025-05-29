@@ -36,7 +36,7 @@ class Game:
             flags |= pygame.FULLSCREEN
             
         self.screen = pygame.display.set_mode((self.width, self.height), flags)
-        pygame.display.set_caption("Claude RPG")
+        pygame.display.set_caption("Goose RPG")
         
         self.clock = pygame.time.Clock()
         self.running = True
@@ -60,7 +60,7 @@ class Game:
             self.settings.apply_audio_settings(self.asset_loader.audio_manager)
         
         # Welcome message
-        self.game_log.add_message("Welcome to Claude RPG!", "system")
+        self.game_log.add_message("Welcome to Goose RPG!", "system")
     
     def load_resources(self):
         """Load game resources"""

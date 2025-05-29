@@ -1,7 +1,7 @@
-# Claude RPG - Audio Asset Manifest
+# Goose RPG - Audio Asset Manifest
 
 ## Overview
-This manifest documents all audio assets organized and ready for use in the Claude RPG project.
+This manifest documents all audio assets organized and ready for use in the Goose RPG project.
 
 **Total Audio Files**: 96 sound effects
 **Primary Sources**: 

@@ -1,4 +1,4 @@
-# Claude RPG
+# Goose RPG
 
 An isometric RPG game built with Python and Pygame, featuring mouse-driven gameplay, combat systems, and exploration mechanics.
 
@@ -31,7 +31,7 @@ An isometric RPG game built with Python and Pygame, featuring mouse-driven gamep
 1. Clone the repository:
    ```bash
    git clone <repository-url>
-   cd claude-rpg
+   cd goose-rpg
    ```
 
 2. Install dependencies:
@@ -41,7 +41,7 @@ An isometric RPG game built with Python and Pygame, featuring mouse-driven gamep
 
 3. Run the game:
    ```bash
-   uv run claude-rpg
+   uv run goose-rpg
    ```
 
 ## Game Mechanics
@@ -107,7 +107,7 @@ An isometric RPG game built with Python and Pygame, featuring mouse-driven gamep
 
 ### Project Structure
 ```
-claude-rpg/
+goose-rpg/
 ├── src/
 │   ├── __init__.py
 │   ├── main.py          # Entry point

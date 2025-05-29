@@ -132,7 +132,7 @@ def main():
         print(f"Entities: {len(level.npcs)} NPCs, {len(level.enemies)} enemies, {len(level.objects)} objects, {len(level.chests)} chests")
         
         # Create output directory
-        output_dir = "/Users/mnovich/Development/claude-rpg/assets/maps"
+        output_dir = "assets/maps"
         os.makedirs(output_dir, exist_ok=True)
         
         # Create visualizations

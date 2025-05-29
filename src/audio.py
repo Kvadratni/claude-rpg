@@ -1,5 +1,5 @@
 """
-Audio system for Claude RPG
+Audio system for Goose RPG
 Manages loading and playing of sound effects and music
 """
 

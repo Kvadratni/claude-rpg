@@ -3,6 +3,14 @@
 ## Project Overview
 This is an isometric RPG game built with Python and Pygame. The game features a player character exploring a large world, fighting enemies, collecting items, and managing inventory/equipment.
 
+## Development Documentation
+**IMPORTANT**: Check `documents/development/` folder for detailed development plans, implementation guides, and testing checklists:
+- `procedural_generation_plan.md` - Main plan for procedural map generation system
+- `implementation_details.md` - Technical implementation guide with code examples
+- `testing_checklist.md` - Comprehensive testing checklist for new features
+
+Always check this folder first when working on new features or major changes.
+
 ## Development Notes
 **IMPORTANT**: The user will be running the game during development sessions. The game can be started with:
 ```bash

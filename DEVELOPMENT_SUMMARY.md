@@ -1,4 +1,4 @@
-# Claude RPG - Development Summary
+# Goose RPG - Development Summary
 
 ## What We Built
 
@@ -56,8 +56,8 @@ I've created a **complete, feature-rich isometric RPG** that goes far beyond the
 
 ### Quick Start
 ```bash
-cd claude-rpg
-uv run claude-rpg
+cd goose-rpg
+uv run goose-rpg
 ```
 
 ### Full Experience

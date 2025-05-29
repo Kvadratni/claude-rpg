@@ -10,6 +10,8 @@ import os
 from .isometric import IsometricRenderer, sort_by_depth
 from .entity import Entity, NPC, Enemy, Item, Chest
 from .template_level import integrate_template_generation
+from .door_renderer import DoorRenderer
+from .door_pathfinder import DoorPathfinder
 
 class Level:
     """Game level class"""
@@ -46,6 +48,10 @@ class Level:
         self.tile_width = self.iso_renderer.tile_width
         self.tile_height = self.iso_renderer.tile_height
         
+        # Door rendering and pathfinding systems
+        self.door_renderer = DoorRenderer(asset_loader, self.iso_renderer)
+        self.door_pathfinder = DoorPathfinder(self)
+        
         # Camera
         self.camera_x = 0
         self.camera_y = 0
@@ -54,7 +60,7 @@ class Level:
         self.template_generator = None
         
         # Try template-based generation first
-        template_path = "/Users/mnovich/Development/claude-rpg/assets/maps/main_world.png"
+        template_path = "assets/maps/main_world.png"
         if os.path.exists(template_path):
             print("Using template-based map generation...")
             success = integrate_template_generation(self, template_path)
@@ -770,7 +776,7 @@ class Level:
             self.tile_sprites[self.TILE_DOOR] = scaled_door
         else:
             # Create enhanced door sprite with proper isometric proportions
-            door_sprite = self.create_enhanced_door_sprite()
+            door_sprite = self.door_renderer.create_enhanced_door_sprite(self.tile_width, self.tile_height)
             self.tile_sprites[self.TILE_DOOR] = door_sprite
     
     def create_wall_corner_sprites(self, base_wall_sprite):
@@ -1674,54 +1680,15 @@ class Level:
     
     def analyze_door_context(self, tile_x, tile_y, world_x, world_y):
         """Analyze the door context around a position for better collision handling"""
-        context = {
-            'is_door_area': False,
-            'is_double_door': False,
-            'door_orientation': None,
-            'distance_to_door': float('inf')
-        }
-        
-        # Check current tile and surrounding area for doors
-        check_radius = 2  # Check 2 tiles around
-        doors_found = []
-        
-        for dy in range(-check_radius, check_radius + 1):
-            for dx in range(-check_radius, check_radius + 1):
-                check_x = tile_x + dx
-                check_y = tile_y + dy
-                
-                if (0 <= check_x < self.width and 0 <= check_y < self.height):
-                    if self.tiles[check_y][check_x] == self.TILE_DOOR:
-                        door_distance = math.sqrt(dx*dx + dy*dy)
-                        doors_found.append({
-                            'pos': (check_x, check_y),
-                            'distance': door_distance,
-                            'world_pos': (check_x + 0.5, check_y + 0.5)
-                        })
-        
-        if doors_found:
-            # Find closest door
-            closest_door = min(doors_found, key=lambda d: d['distance'])
-            context['distance_to_door'] = closest_door['distance']
-            
-            # Consider it a door area if we're close enough
-            if closest_door['distance'] <= 1.5:
-                context['is_door_area'] = True
-                
-                # Check for double doors (adjacent door tiles)
-                door_x, door_y = closest_door['pos']
-                adjacent_doors = 0
-                
-                for dx, dy in [(-1, 0), (1, 0), (0, -1), (0, 1)]:
-                    adj_x, adj_y = door_x + dx, door_y + dy
-                    if (0 <= adj_x < self.width and 0 <= adj_y < self.height):
-                        if self.tiles[adj_y][adj_x] == self.TILE_DOOR:
-                            adjacent_doors += 1
-                
-                context['is_double_door'] = adjacent_doors > 0
-                context['door_orientation'] = self.get_door_orientation(door_x, door_y)
-        
-        return context
+        return self.door_pathfinder.analyze_door_context(tile_x, tile_y, world_x, world_y)
+    
+    def enhance_door_pathfinding(self, path, entity_size):
+        """Add special handling for door navigation with improved doorway handling"""
+        return self.door_pathfinder.enhance_door_pathfinding(path, entity_size)
+    
+    def get_door_orientation(self, door_x, door_y):
+        """Determine if door is horizontal or vertical based on surrounding walls"""
+        return self.door_pathfinder.get_door_orientation(door_x, door_y)
     
     def render_path_debug(self, surface, path):
         """Render debug visualization of the current path"""
@@ -3285,142 +3252,7 @@ class Level:
     
     def render_door_tile(self, surface, screen_x, screen_y, tile_type):
         """Render door exactly like walls but with door texture on all faces"""
-        # Door height in pixels (same as walls)
-        door_height = 48
-        
-        # Load door texture if not already loaded
-        if not hasattr(self, 'door_texture'):
-            door_texture_image = self.asset_loader.get_image("door")
-            if door_texture_image:
-                self.door_texture = door_texture_image
-            else:
-                self.door_texture = None
-        
-        # Get world coordinates for adjacency checking
-        # Convert screen coordinates back to world coordinates using the isometric renderer
-        world_x, world_y = self.iso_renderer.screen_to_world(screen_x, screen_y, self.camera_x, self.camera_y)
-        world_x = int(world_x)
-        world_y = int(world_y)
-        
-        # Check adjacent tiles to determine which faces to draw (same logic as walls)
-        north_wall = self.has_wall_or_door_at(world_x - 1, world_y)
-        south_wall = self.has_wall_or_door_at(world_x + 1, world_y)  
-        east_wall = self.has_wall_or_door_at(world_x, world_y + 1)
-        west_wall = self.has_wall_or_door_at(world_x, world_y - 1)
-        
-        # Calculate isometric door face points (same as walls)
-        tile_width = self.tile_width
-        tile_height = self.tile_height
-        
-        # Use same positioning as the original door code (which was correct)
-        floor_y = screen_y + tile_height // 4
-        
-        # Base diamond points (floor level)
-        top_point = (screen_x, floor_y - tile_height // 2)
-        right_point = (screen_x + tile_width // 2, floor_y)
-        bottom_point = (screen_x, floor_y + tile_height // 2)
-        left_point = (screen_x - tile_width // 2, floor_y)
-        
-        # Top diamond points (door height)
-        top_top = (screen_x, floor_y - tile_height // 2 - door_height)
-        right_top = (screen_x + tile_width // 2, floor_y - door_height)
-        bottom_top = (screen_x, floor_y + tile_height // 2 - door_height)
-        left_top = (screen_x - tile_width // 2, floor_y - door_height)
-        
-        # Render door faces with texture (similar to walls)
-        
-        # North face (top-left edge in isometric view)
-        if not north_wall:
-            north_face = [left_point, top_point, top_top, left_top]
-            self.render_textured_door_face(surface, north_face, "north")
-        
-        # East face (top-right edge in isometric view)  
-        if not east_wall:
-            east_face = [top_point, right_point, right_top, top_top]
-            self.render_textured_door_face(surface, east_face, "east")
-        
-        # South face (bottom-right edge in isometric view) - THE FRONT FACE
-        if not south_wall:
-            south_face = [bottom_point, right_point, right_top, bottom_top]
-            self.render_textured_door_face(surface, south_face, "south")
-        
-        # West face (bottom-left edge in isometric view)
-        if not west_wall:
-            west_face = [left_point, bottom_point, bottom_top, left_top]
-            self.render_textured_door_face(surface, west_face, "west")
-        
-        # Skip drawing the top face to make it transparent (doors are open at top)
-        
-        # Add door handle on the front (south) face if it's visible
-        if not south_wall:
-            handle_x = screen_x + tile_width // 3
-            handle_y = floor_y - door_height // 2
-            pygame.draw.circle(surface, (255, 215, 0), (handle_x, handle_y), 3)  # Gold handle
-            pygame.draw.circle(surface, (200, 160, 0), (handle_x, handle_y), 3, 1)  # Handle border
-    
-    def render_textured_door_face(self, surface, face_points, face_direction):
-        """Render a single door face with texture or fallback color"""
-        if self.door_texture and len(face_points) == 4:
-            # Create a temporary surface for the face
-            min_x = min(p[0] for p in face_points)
-            max_x = max(p[0] for p in face_points)
-            min_y = min(p[1] for p in face_points)
-            max_y = max(p[1] for p in face_points)
-            
-            face_width = int(max_x - min_x) + 1
-            face_height = int(max_y - min_y) + 1
-            
-            if face_width > 0 and face_height > 0:
-                # Create face surface
-                face_surface = pygame.Surface((face_width, face_height), pygame.SRCALPHA)
-                
-                # Scale texture to fit the face
-                scaled_texture = pygame.transform.scale(self.door_texture, (face_width, face_height))
-                
-                # Apply lighting based on face direction
-                if face_direction == "north":
-                    # Brightest face (highlight)
-                    tinted_texture = self.apply_tint_to_surface(scaled_texture, (255, 255, 255), 1.2)
-                elif face_direction == "east":
-                    # Normal lighting
-                    tinted_texture = scaled_texture
-                elif face_direction in ["south", "west"]:
-                    # Darker faces (shadow)
-                    tinted_texture = self.apply_tint_to_surface(scaled_texture, (180, 180, 180), 0.8)
-                else:  # top
-                    # Top face - normal lighting
-                    tinted_texture = scaled_texture
-                
-                face_surface.blit(tinted_texture, (0, 0))
-                
-                # Create a mask for the face shape
-                adjusted_points = [(p[0] - min_x, p[1] - min_y) for p in face_points]
-                
-                # Create mask surface
-                mask_surface = pygame.Surface((face_width, face_height), pygame.SRCALPHA)
-                pygame.draw.polygon(mask_surface, (255, 255, 255, 255), adjusted_points)
-                
-                # Apply mask to textured surface
-                face_surface.blit(mask_surface, (0, 0), special_flags=pygame.BLEND_RGBA_MULT)
-                
-                # Blit the textured face to the main surface
-                surface.blit(face_surface, (min_x, min_y))
-                
-                # Draw border
-                pygame.draw.polygon(surface, (60, 30, 5), face_points, 1)
-        else:
-            # Fallback to solid color rendering
-            if face_direction == "north":
-                color = (180, 90, 30)  # Door highlight
-            elif face_direction == "east":
-                color = (139, 69, 19)  # Door normal
-            elif face_direction in ["south", "west"]:
-                color = (100, 50, 10)  # Door shadow
-            else:  # top
-                color = (139, 69, 19)  # Door normal
-            
-            pygame.draw.polygon(surface, color, face_points)
-            pygame.draw.polygon(surface, (60, 30, 5), face_points, 1)
+        self.door_renderer.render_door_tile(surface, screen_x, screen_y, tile_type, self, self.tile_width, self.tile_height)
     
     def has_wall_or_door_at(self, x, y):
         """Check if there's a wall or door at the given coordinates"""
@@ -3430,94 +3262,6 @@ class Level:
         tile = self.tiles[y][x]
         return self.is_wall_tile(tile) or tile == self.TILE_DOOR
     
-    def render_rounded_door_face(self, surface, bottom_point, right_point, right_top, bottom_top, color):
-        """Render a rounded door face using the door texture"""
-        # Get the door texture from assets
-        door_texture = self.asset_loader.get_image("door")
-        
-        if door_texture:
-            # For simplicity, let's just render the texture as a flat face first
-            # Calculate the face rectangle
-            face_left = min(bottom_point[0], right_point[0], bottom_top[0], right_top[0])
-            face_top = min(bottom_point[1], right_point[1], bottom_top[1], right_top[1])
-            face_width = max(bottom_point[0], right_point[0], bottom_top[0], right_top[0]) - face_left
-            face_height = max(bottom_point[1], right_point[1], bottom_top[1], right_top[1]) - face_top
-            
-            if face_width > 0 and face_height > 0:
-                # Scale the door texture to fit the face
-                scaled_door = pygame.transform.scale(door_texture, (int(face_width), int(face_height)))
-                
-                # Create a surface for the door face
-                face_surface = pygame.Surface((int(face_width), int(face_height)), pygame.SRCALPHA)
-                
-                # Draw the door face shape as a mask
-                face_points = [
-                    (bottom_point[0] - face_left, bottom_point[1] - face_top),
-                    (right_point[0] - face_left, right_point[1] - face_top),
-                    (right_top[0] - face_left, right_top[1] - face_top),
-                    (bottom_top[0] - face_left, bottom_top[1] - face_top)
-                ]
-                
-                # First, blit the texture
-                face_surface.blit(scaled_door, (0, 0))
-                
-                # Create a mask surface
-                mask_surface = pygame.Surface((int(face_width), int(face_height)), pygame.SRCALPHA)
-                pygame.draw.polygon(mask_surface, (255, 255, 255, 255), face_points)
-                
-                # Apply the mask to the texture
-                face_surface.blit(mask_surface, (0, 0), special_flags=pygame.BLEND_ALPHA_SDL2)
-                
-                # Blit the final textured face to the main surface
-                surface.blit(face_surface, (face_left, face_top))
-                
-                # Draw border
-                actual_face_points = [bottom_point, right_point, right_top, bottom_top]
-                pygame.draw.polygon(surface, (60, 30, 5), actual_face_points, 2)
-            else:
-                # Fallback to solid color
-                self.render_rounded_door_face_fallback(surface, bottom_point, right_point, right_top, bottom_top, color)
-        else:
-            # Fallback to solid color if no texture
-            self.render_rounded_door_face_fallback(surface, bottom_point, right_point, right_top, bottom_top, color)
-    
-    def render_rounded_door_face_fallback(self, surface, bottom_point, right_point, right_top, bottom_top, color):
-        """Fallback method for rounded door face with solid color"""
-        # Calculate the center line of the face
-        center_bottom_x = (bottom_point[0] + right_point[0]) // 2
-        center_bottom_y = (bottom_point[1] + right_point[1]) // 2
-        center_top_x = (bottom_top[0] + right_top[0]) // 2
-        center_top_y = (bottom_top[1] + right_top[1]) // 2
-        
-        # Create curved segments by offsetting the center outward
-        curve_offset = 8  # How much to curve outward
-        
-        # Calculate the outward direction (perpendicular to the face)
-        face_dx = right_point[0] - bottom_point[0]
-        face_dy = right_point[1] - bottom_point[1]
-        # Rotate 90 degrees to get perpendicular (outward direction)
-        outward_dx = -face_dy
-        outward_dy = face_dx
-        # Normalize
-        length = math.sqrt(outward_dx * outward_dx + outward_dy * outward_dy)
-        if length > 0:
-            outward_dx = outward_dx / length * curve_offset
-            outward_dy = outward_dy / length * curve_offset
-        
-        # Create curved points
-        curved_bottom = (center_bottom_x + outward_dx, center_bottom_y + outward_dy)
-        curved_top = (center_top_x + outward_dx, center_top_y + outward_dy)
-        
-        # Draw the curved face as multiple segments
-        # Left segment
-        left_segment = [bottom_point, curved_bottom, curved_top, bottom_top]
-        pygame.draw.polygon(surface, color, left_segment)
-        pygame.draw.polygon(surface, (60, 30, 5), left_segment, 1)
-        
-        # Right segment  
-        right_segment = [curved_bottom, right_point, right_top, curved_top]
-        pygame.draw.polygon(surface, color, right_segment)
-        pygame.draw.polygon(surface, (60, 30, 5), right_segment, 1)
     
     def render_ui(self, screen):
         """Render enhanced game UI"""

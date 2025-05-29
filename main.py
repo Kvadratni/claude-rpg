@@ -1,6 +1,6 @@
 #!/usr/bin/env python3
 """
-Claude RPG - An Isometric RPG Game
+Goose RPG - An Isometric RPG Game
 Main entry point for the game
 """
 

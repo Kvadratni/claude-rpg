@@ -379,7 +379,7 @@ def integrate_template_generation(level_instance, template_path: str = None):
     Integrate template-based generation into existing Level class
     """
     if template_path is None:
-        template_path = "/Users/mnovich/Development/claude-rpg/assets/maps/main_world.png"
+        template_path = "assets/maps/main_world.png"
     
     if not os.path.exists(template_path):
         print(f"Template not found: {template_path}")
@@ -436,7 +436,7 @@ if __name__ == "__main__":
     # Test the template-based generation
     pygame.init()
     
-    template_path = "/Users/mnovich/Development/claude-rpg/assets/maps/main_world.png"
+    template_path = "assets/maps/main_world.png"
     
     if os.path.exists(template_path):
         generator = TemplateBasedLevel(template_path)

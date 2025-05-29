@@ -1,5 +1,5 @@
 """
-Claude RPG - Audio System Integration Example
+Goose RPG - Audio System Integration Example
 
 This module provides an example of how to integrate the organized sound effects
 into your game's audio system using pygame.mixer.
