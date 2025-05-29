@@ -1754,35 +1754,6 @@ class Level:
         
         return curve_points if curve_points else [p1]
     
-    def enhance_door_pathfinding(self, path, entity_size):
-        """Add special handling for door navigation with improved doorway handling"""
-        if len(path) < 2:
-            return path
-        
-        enhanced_path = []
-        i = 0
-        
-        while i < len(path):
-            current_point = path[i]
-            enhanced_path.append(current_point)
-            
-            # Look ahead for door navigation opportunities
-            if i < len(path) - 1:
-                next_point = path[i + 1]
-                
-                # Check if we're approaching a door or door area
-                door_waypoints = self.generate_improved_door_waypoints(current_point, next_point, entity_size)
-                
-                if door_waypoints:
-                    enhanced_path.extend(door_waypoints)
-                    # Skip ahead if we've handled multiple points
-                    if len(door_waypoints) > 2:
-                        i += min(2, len(path) - i - 1)  # Skip some intermediate points
-            
-            i += 1
-        
-        return enhanced_path
-    
     def generate_improved_door_waypoints(self, current, next_point, entity_size):
         """Generate improved intermediate waypoints for door navigation"""
         waypoints = []
@@ -2010,27 +1981,6 @@ class Level:
                 return (door_pos[0] - 0.6, door_pos[1])  # Exit to west
             else:
                 return (door_pos[0] + 0.6, door_pos[1])  # Exit to east
-    
-    def get_door_orientation(self, door_x, door_y):
-        """Determine if door is horizontal or vertical based on surrounding walls"""
-        # Check adjacent tiles to determine orientation
-        horizontal_walls = 0
-        vertical_walls = 0
-        
-        # Check north and south
-        if (door_y > 0 and self.is_wall_tile(self.tiles[door_y - 1][door_x])):
-            horizontal_walls += 1
-        if (door_y < self.height - 1 and self.is_wall_tile(self.tiles[door_y + 1][door_x])):
-            horizontal_walls += 1
-        
-        # Check east and west
-        if (door_x > 0 and self.is_wall_tile(self.tiles[door_y][door_x - 1])):
-            vertical_walls += 1
-        if (door_x < self.width - 1 and self.is_wall_tile(self.tiles[door_y][door_x + 1])):
-            vertical_walls += 1
-        
-        # If more walls on horizontal sides, door is horizontal
-        return "horizontal" if horizontal_walls >= vertical_walls else "vertical"
     
     def validate_path_with_entity_simulation(self, path, entity_size):
         """Simulate entity movement along path to detect issues"""
