@@ -37,6 +37,9 @@ class ProceduralWorldMenu(BaseMenu):
         self.input_color = (200, 200, 255)
         self.background_color = (0, 0, 0, 180)
         
+        # Add input font
+        self.input_font = pygame.font.Font(None, 32)
+        
     def handle_event(self, event):
         """Handle menu events with mouse and keyboard support"""
         if event.type == pygame.MOUSEMOTION:
@@ -246,6 +249,6 @@ class ProceduralWorldMenu(BaseMenu):
         ]
         
         for i, line in enumerate(info_lines):
-            info_surface = pygame.font.Font(None, 24).render(line, True, self.colors['menu_dim'])
+            info_surface = pygame.font.Font(None, 24).render(line, True, self.colors['menu_normal'])
             info_rect = info_surface.get_rect(center=(screen_width // 2, info_y + i * 25))
             screen.blit(info_surface, info_rect)
