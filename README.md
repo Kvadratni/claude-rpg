@@ -3,7 +3,7 @@
 
 An immersive isometric RPG game featuring combat, exploration, inventory management, and NPC interactions - **entirely created by artificial intelligence** with zero human programming.
 
-![Main Menu](screenshots/mainmenu.png)
+![Main Menu](screenshots/mainmeenu.png)
 
 ### AI Development Team
 - **Programming**: Goose AI agent using Claude 4 Sonnet
