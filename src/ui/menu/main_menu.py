@@ -13,7 +13,7 @@ class MainMenu(BaseMenu):
         super().__init__(game)
         
         # Main menu items
-        self.menu_items = ["New Game", "Load Game", "Settings", "Exit"]
+        self.menu_items = ["New Game", "Procedural World", "Load Game", "Settings", "Exit"]
         self.selected_item = 0
         self.menu_hover_time = [0] * len(self.menu_items)
         
@@ -46,15 +46,19 @@ class MainMenu(BaseMenu):
         if self.selected_item == 0:  # New Game
             self.start_game_music()
             self.game.new_game()
-        elif self.selected_item == 1:  # Load Game
+        elif self.selected_item == 1:  # Procedural World
+            # Switch to procedural world menu
+            from .procedural_menu import ProceduralWorldMenu
+            self.game.menu = ProceduralWorldMenu(self.game)
+        elif self.selected_item == 2:  # Load Game
             # Switch to load menu
             from .load_menu import LoadMenu
             self.game.menu = LoadMenu(self.game, self)
-        elif self.selected_item == 2:  # Settings
+        elif self.selected_item == 3:  # Settings
             # Switch to settings menu
             from .settings_menu import SettingsMenu
             self.game.menu = SettingsMenu(self.game, self)
-        elif self.selected_item == 3:  # Exit
+        elif self.selected_item == 4:  # Exit
             self.game.running = False
     
     def render(self, screen):
