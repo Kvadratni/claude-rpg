@@ -91,15 +91,24 @@ class EntitySpawner:
                     
                     # Import NPC class dynamically to avoid circular imports
                     try:
-                        from src.entities.npc import NPC
+                        from ...entities import NPC
                     except ImportError:
-                        # Fallback for testing without game dependencies
-                        class MockNPC:
-                            def __init__(self, *args, **kwargs):
-                                self.x = args[0] if args else 0
-                                self.y = args[1] if len(args) > 1 else 0
-                                self.name = args[2] if len(args) > 2 else "NPC"
-                        NPC = MockNPC
+                        try:
+                            # Alternative import path
+                            import sys
+                            import os
+                            sys.path.append(os.path.dirname(os.path.dirname(os.path.dirname(__file__))))
+                            from entities import NPC
+                        except ImportError:
+                            # Fallback for testing without game dependencies
+                            class MockNPC:
+                                def __init__(self, *args, **kwargs):
+                                    self.x = args[0] if args else 0
+                                    self.y = args[1] if len(args) > 1 else 0
+                                    self.name = args[2] if len(args) > 2 else "NPC"
+                                def update(self, level):
+                                    pass
+                            NPC = MockNPC
                     
                     npc = NPC(npc_x, npc_y, npc_name, dialog=dialog, 
                              asset_loader=asset_loader, has_shop=has_shop)
@@ -159,15 +168,24 @@ class EntitySpawner:
             
             # Import Enemy class dynamically to avoid circular imports
             try:
-                from src.entities.enemy import Enemy
+                from ...entities import Enemy
             except ImportError:
-                # Fallback for testing without game dependencies
-                class MockEnemy:
-                    def __init__(self, *args, **kwargs):
-                        self.x = args[0] if args else 0
-                        self.y = args[1] if len(args) > 1 else 0
-                        self.name = args[2] if len(args) > 2 else "Enemy"
-                Enemy = MockEnemy
+                try:
+                    # Alternative import path
+                    import sys
+                    import os
+                    sys.path.append(os.path.dirname(os.path.dirname(os.path.dirname(__file__))))
+                    from entities import Enemy
+                except ImportError:
+                    # Fallback for testing without game dependencies
+                    class MockEnemy:
+                        def __init__(self, *args, **kwargs):
+                            self.x = args[0] if args else 0
+                            self.y = args[1] if len(args) > 1 else 0
+                            self.name = args[2] if len(args) > 2 else "Enemy"
+                        def update(self, level):
+                            pass
+                    Enemy = MockEnemy
             
             enemy = Enemy(x, y, enemy_config['name'],
                          health=enemy_config['health'],
@@ -219,15 +237,24 @@ class EntitySpawner:
                 
                 # Import Enemy class dynamically to avoid circular imports
                 try:
-                    from src.entities.enemy import Enemy
+                    from ...entities import Enemy
                 except ImportError:
-                    # Fallback for testing without game dependencies
-                    class MockEnemy:
-                        def __init__(self, *args, **kwargs):
-                            self.x = args[0] if args else 0
-                            self.y = args[1] if len(args) > 1 else 0
-                            self.name = args[2] if len(args) > 2 else "Boss"
-                    Enemy = MockEnemy
+                    try:
+                        # Alternative import path
+                        import sys
+                        import os
+                        sys.path.append(os.path.dirname(os.path.dirname(os.path.dirname(__file__))))
+                        from entities import Enemy
+                    except ImportError:
+                        # Fallback for testing without game dependencies
+                        class MockEnemy:
+                            def __init__(self, *args, **kwargs):
+                                self.x = args[0] if args else 0
+                                self.y = args[1] if len(args) > 1 else 0
+                                self.name = args[2] if len(args) > 2 else "Boss"
+                            def update(self, level):
+                                pass
+                        Enemy = MockEnemy
                 
                 # Spawn boss
                 boss = Enemy(x, y, boss_config['name'],
@@ -292,15 +319,24 @@ class EntitySpawner:
                 if random.random() < spawn_chance:
                     # Import Entity class dynamically to avoid circular imports
                     try:
-                        from src.entities.base import Entity
+                        from ...entities import Entity
                     except ImportError:
-                        # Fallback for testing without game dependencies
-                        class MockEntity:
-                            def __init__(self, *args, **kwargs):
-                                self.x = args[0] if args else 0
-                                self.y = args[1] if len(args) > 1 else 0
-                                self.name = args[2] if len(args) > 2 else "Object"
-                        Entity = MockEntity
+                        try:
+                            # Alternative import path
+                            import sys
+                            import os
+                            sys.path.append(os.path.dirname(os.path.dirname(os.path.dirname(__file__))))
+                            from entities import Entity
+                        except ImportError:
+                            # Fallback for testing without game dependencies
+                            class MockEntity:
+                                def __init__(self, *args, **kwargs):
+                                    self.x = args[0] if args else 0
+                                    self.y = args[1] if len(args) > 1 else 0
+                                    self.name = args[2] if len(args) > 2 else "Object"
+                                def update(self, level):
+                                    pass
+                            Entity = MockEntity
                     
                     obj = Entity(x, y, object_type, entity_type="object", 
                                blocks_movement=True, asset_loader=asset_loader)
@@ -353,15 +389,24 @@ class EntitySpawner:
             
             # Import Chest class dynamically to avoid circular imports
             try:
-                from src.entities.chest import Chest
+                from ...entities import Chest
             except ImportError:
-                # Fallback for testing without game dependencies
-                class MockChest:
-                    def __init__(self, *args, **kwargs):
-                        self.x = args[0] if args else 0
-                        self.y = args[1] if len(args) > 1 else 0
-                        self.chest_type = args[2] if len(args) > 2 else "wooden"
-                Chest = MockChest
+                try:
+                    # Alternative import path
+                    import sys
+                    import os
+                    sys.path.append(os.path.dirname(os.path.dirname(os.path.dirname(__file__))))
+                    from entities import Chest
+                except ImportError:
+                    # Fallback for testing without game dependencies
+                    class MockChest:
+                        def __init__(self, *args, **kwargs):
+                            self.x = args[0] if args else 0
+                            self.y = args[1] if len(args) > 1 else 0
+                            self.chest_type = args[2] if len(args) > 2 else "wooden"
+                        def update(self, level):
+                            pass
+                    Chest = MockChest
             
             chest = Chest(x, y, chest_type, asset_loader)
             chests.append(chest)
