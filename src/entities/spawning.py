@@ -1,5 +1,5 @@
 """
-Spawning system for the Claude RPG game.
+Spawning system for the Goose RPG game.
 
 This module contains all methods related to enemy, NPC, and object spawning
 that were extracted from level.py to improve code organization.

@@ -1,4 +1,4 @@
-# Claude RPG - Goose Development Hints
+# Goose RPG - Goose Development Hints
 
 ## Project Overview
 This is an isometric RPG game built with Python and Pygame. The game features a player character exploring a large world, fighting enemies, collecting items, and managing inventory/equipment. The project has recently undergone significant refactoring.

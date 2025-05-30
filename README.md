@@ -1,4 +1,4 @@
-# Claude RPG
+# Goose RPG
 ## 🤖 **100% AI-Developed Isometric RPG**
 
 An immersive isometric RPG game featuring combat, exploration, inventory management, and NPC interactions - **entirely created by artificial intelligence** with zero human programming.
@@ -169,7 +169,7 @@ This project is licensed under the MIT License - see the [LICENSE](LICENSE) file
 
 ## 🎯 About This Project
 
-Claude RPG serves as a demonstration of what AI can accomplish in game development when given creative freedom. Every line of code, game mechanic, and system was designed and implemented by AI, showcasing the potential for AI-assisted creative projects.
+Goose RPG serves as a demonstration of what AI can accomplish in game development when given creative freedom. Every line of code, game mechanic, and system was designed and implemented by AI, showcasing the potential for AI-assisted creative projects.
 
 The game is actively developed with new features and improvements added regularly through AI-driven development processes.
 
