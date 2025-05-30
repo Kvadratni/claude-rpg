@@ -329,8 +329,8 @@ class WallRenderer:
             # Corners use original positioning (they were working correctly before)
             floor_y = screen_y  # Original position for corners
         else:
-            # Regular walls use adjusted positioning to sit on floor properly
-            floor_y = screen_y + tile_height // 2  # Move walls down to sit on the floor properly
+            # Regular walls also use the same positioning as corners to be consistent
+            floor_y = screen_y  # Use same positioning for all wall types
         
         # Base diamond points (floor level)
         top_point = (screen_x, floor_y - tile_height // 2)
@@ -353,22 +353,39 @@ class WallRenderer:
             self.render_textured_wall_face(surface, [bottom_point, right_point, right_top, bottom_top], "south", tile_type)
             self.render_textured_wall_face(surface, [left_point, bottom_point, bottom_top, left_top], "west", tile_type)
         else:
-            # Regular wall rendering - show all exposed faces
-            # North face (top-left edge in isometric view)
-            if not north_wall:
-                self.render_textured_wall_face(surface, [left_point, top_point, top_top, left_top], "north", tile_type)
+            # Different rendering based on wall orientation
+            is_horizontal_wall = tile_type in [self.TILE_WALL_HORIZONTAL, self.TILE_WALL_WINDOW_HORIZONTAL]
+            is_vertical_wall = tile_type in [self.TILE_WALL_VERTICAL, self.TILE_WALL_WINDOW_VERTICAL]
             
-            # East face (top-right edge in isometric view)  
-            if not east_wall:
-                self.render_textured_wall_face(surface, [top_point, right_point, right_top, top_top], "east", tile_type)
-            
-            # South face (bottom-right edge in isometric view)
-            if not south_wall:
-                self.render_textured_wall_face(surface, [bottom_point, right_point, right_top, bottom_top], "south", tile_type)
-            
-            # West face (bottom-left edge in isometric view)
-            if not west_wall:
-                self.render_textured_wall_face(surface, [left_point, bottom_point, bottom_top, left_top], "west", tile_type)
+            if is_horizontal_wall:
+                # Horizontal walls show left and right faces (east and west)
+                # East face (right side in isometric view)  
+                if not east_wall:
+                    self.render_textured_wall_face(surface, [top_point, right_point, right_top, top_top], "east", tile_type)
+                
+                # West face (left side in isometric view)
+                if not west_wall:
+                    self.render_textured_wall_face(surface, [left_point, bottom_point, bottom_top, left_top], "west", tile_type)
+                    
+            elif is_vertical_wall:
+                # Vertical walls show front and back faces (north and south)
+                # North face (front face in isometric view)
+                if not north_wall:
+                    self.render_textured_wall_face(surface, [left_point, top_point, top_top, left_top], "north", tile_type)
+                
+                # South face (back face in isometric view)
+                if not south_wall:
+                    self.render_textured_wall_face(surface, [bottom_point, right_point, right_top, bottom_top], "south", tile_type)
+                    
+            else:
+                # Regular walls (fallback) - show front and back faces
+                # North face (front face in isometric view)
+                if not north_wall:
+                    self.render_textured_wall_face(surface, [left_point, top_point, top_top, left_top], "north", tile_type)
+                
+                # South face (back face in isometric view)
+                if not south_wall:
+                    self.render_textured_wall_face(surface, [bottom_point, right_point, right_top, bottom_top], "south", tile_type)
         
         # Always draw the top face with texture
         self.render_textured_wall_face(surface, [top_top, right_top, bottom_top, left_top], "top", tile_type)
@@ -380,9 +397,15 @@ class WallRenderer:
 
     def render_textured_wall_face(self, surface, face_points, face_direction, tile_type=None):
         """Render a single wall face with texture or fallback color"""
-        # Determine which texture to use based on tile type
+        # Determine which texture to use based on tile type and face direction
         is_window_wall = tile_type in [self.TILE_WALL_WINDOW, self.TILE_WALL_WINDOW_HORIZONTAL, self.TILE_WALL_WINDOW_VERTICAL] if tile_type else False
-        current_texture = self.wall_texture_window if (is_window_wall and self.wall_texture_window) else self.wall_texture
+        
+        # Only use window texture on side faces, not on top faces
+        if is_window_wall and face_direction != "top":
+            current_texture = self.wall_texture_window if self.wall_texture_window else self.wall_texture
+        else:
+            # Use regular wall texture for top faces, even on window walls
+            current_texture = self.wall_texture
         
         if current_texture and len(face_points) == 4:
             # Create a temporary surface for the face
@@ -434,14 +457,17 @@ class WallRenderer:
                 pygame.draw.polygon(surface, (100, 100, 100), face_points, 1)
         else:
             # Fallback to solid color rendering
-            if face_direction == "north":
+            # Don't use window-specific colors for top faces
+            if face_direction == "top":
+                color = (180, 180, 180)  # Normal color for all top faces
+            elif face_direction == "north":
                 color = (220, 220, 220)  # Highlight
             elif face_direction == "east":
                 color = (180, 180, 180)  # Normal
             elif face_direction in ["south", "west"]:
                 color = (120, 120, 120)  # Shadow
-            else:  # top
-                color = (180, 180, 180)  # Normal
+            else:
+                color = (180, 180, 180)  # Default normal
             
             pygame.draw.polygon(surface, color, face_points)
             pygame.draw.polygon(surface, (100, 100, 100), face_points, 1)

@@ -48,6 +48,10 @@ class AssetLoader:
             "door_tile_isometric": "door.png",  # Added for isometric door rendering
             "door": "door.png",  # Added door texture for front face
             "brick_tile": "brick_tile.png",  # Added brick tile for building interiors
+            "sand_tile": "sand_tile.png",
+            "snow_tile": "snow_tile.png",
+            "forest_floor_tile": "forest_floor_tile.png",
+            "swamp_tile": "swamp_tile.png",
             "player_sprite": "player_sprite.png",
             "goblin_sprite": "goblin_sprite.png",
             "orc_boss_sprite": "orc_boss_sprite.png",
@@ -163,6 +167,10 @@ class AssetLoader:
             "door_tile_isometric": (139, 69, 19),  # Brown for isometric door
             "door": (139, 69, 19),  # Brown for door texture
             "brick_tile": (150, 80, 60),  # Reddish-brown for brick
+            "sand_tile": (220, 180, 120),  # Sandy beige
+            "snow_tile": (240, 240, 255),  # Snowy white
+            "forest_floor_tile": (80, 60, 40),  # Dark forest floor
+            "swamp_tile": (60, 80, 50),  # Murky swamp color
             "player_sprite": (100, 150, 255),
             "goblin_sprite": (0, 100, 0),
             "orc_boss_sprite": (139, 0, 0),

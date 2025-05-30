@@ -112,7 +112,7 @@ class TemplateBasedLevel:
         walkable = []
         
         # Walkable tile types
-        walkable_tiles = {0, 1, 2, 5, 13}  # GRASS, DIRT, STONE, DOOR, BRICK
+        walkable_tiles = {0, 1, 2, 5, 13, 16, 17, 18, 19}  # GRASS, DIRT, STONE, DOOR, BRICK, SAND, SNOW, FOREST_FLOOR, SWAMP
         
         for y in range(self.height):
             row = []

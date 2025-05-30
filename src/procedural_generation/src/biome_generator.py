@@ -22,22 +22,28 @@ class BiomeGenerator:
             'water_chance': 0.005  # Reduced from 0.02
         },
         'FOREST': {
-            'primary': 0,    # TILE_GRASS
-            'secondary': 1,  # TILE_DIRT
+            'primary': 18,   # TILE_FOREST_FLOOR
+            'secondary': 0,  # TILE_GRASS
             'paths': 1,      # TILE_DIRT (forest paths)
             'water_chance': 0.008  # Reduced from 0.03
         },
         'DESERT': {
-            'primary': 1,    # TILE_DIRT (sand)
+            'primary': 16,   # TILE_SAND
             'secondary': 2,  # TILE_STONE (rocky outcrops)
             'paths': 2,      # TILE_STONE
             'water_chance': 0.002  # Reduced from 0.005
         },
         'SNOW': {
-            'primary': 0,    # TILE_GRASS (snow-covered)
+            'primary': 17,   # TILE_SNOW
             'secondary': 2,  # TILE_STONE (frozen ground)
             'paths': 2,      # TILE_STONE
             'water_chance': 0.003  # Reduced from 0.01
+        },
+        'SWAMP': {
+            'primary': 19,   # TILE_SWAMP
+            'secondary': 3,  # TILE_WATER (swamp water)
+            'paths': 1,      # TILE_DIRT (muddy paths)
+            'water_chance': 0.015  # Higher water chance for swamps
         }
     }
     
@@ -74,13 +80,15 @@ class BiomeGenerator:
                 # Simple noise based on position and seed
                 noise_value = self.simple_noise(x, y)
                 
-                # Determine biome based on noise value - Balanced distribution
-                if noise_value < 0.15:
+                # Determine biome based on noise value - Balanced distribution with SWAMP
+                if noise_value < 0.12:
                     biome = 'DESERT'
-                elif noise_value < 0.45:
+                elif noise_value < 0.32:
                     biome = 'PLAINS'
-                elif noise_value < 0.75:
+                elif noise_value < 0.52:
                     biome = 'FOREST'
+                elif noise_value < 0.72:
+                    biome = 'SWAMP'
                 else:
                     biome = 'SNOW'
                 
@@ -176,7 +184,7 @@ class BiomeGenerator:
         Returns:
             Dictionary with biome counts
         """
-        biome_counts = {'DESERT': 0, 'PLAINS': 0, 'FOREST': 0, 'SNOW': 0}
+        biome_counts = {'DESERT': 0, 'PLAINS': 0, 'FOREST': 0, 'SWAMP': 0, 'SNOW': 0}
         
         for y in range(self.height):
             for x in range(self.width):

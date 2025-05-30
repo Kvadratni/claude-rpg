@@ -50,6 +50,11 @@ class LevelBase(SpawningMixin):
     # Specific window wall types
     TILE_WALL_WINDOW_HORIZONTAL = 14  # Horizontal wall with window
     TILE_WALL_WINDOW_VERTICAL = 15    # Vertical wall with window
+    # Biome-specific tiles
+    TILE_SAND = 16            # Desert sand
+    TILE_SNOW = 17            # Snow/ice
+    TILE_FOREST_FLOOR = 18    # Forest floor
+    TILE_SWAMP = 19           # Swamp mud
     
     def __init__(self, level_name, player, asset_loader, game=None):
         """Initialize the base level"""

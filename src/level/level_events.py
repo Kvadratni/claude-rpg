@@ -117,7 +117,11 @@ class EventHandlingMixin:
                     self.TILE_WATER: "Water",
                     self.TILE_WALL: "Wall",
                     self.TILE_DOOR: "Door",
-                    self.TILE_BRICK: "Brick Floor"
+                    self.TILE_BRICK: "Brick Floor",
+                    self.TILE_SAND: "Sand",
+                    self.TILE_SNOW: "Snow",
+                    self.TILE_FOREST_FLOOR: "Forest Floor",
+                    self.TILE_SWAMP: "Swamp"
                 }
                 tile_type = self.tiles[tile_y][tile_x]
                 tile_name = tile_names.get(tile_type, "Unknown")

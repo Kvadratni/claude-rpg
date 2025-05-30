@@ -180,8 +180,8 @@ class ProceduralWorldGenerator:
             row = []
             for x in range(self.width):
                 tile_type = self.tiles[y][x]
-                # Walkable tiles: grass, dirt, stone, door, brick
-                is_walkable = tile_type in [0, 1, 2, 5, 13]
+                # Walkable tiles: grass, dirt, stone, door, brick, sand, snow, forest_floor, swamp
+                is_walkable = tile_type in [0, 1, 2, 5, 13, 16, 17, 18, 19]
                 row.append(1.0 if is_walkable else 0.0)
             walkable.append(row)
         

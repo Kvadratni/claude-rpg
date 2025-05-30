@@ -109,3 +109,32 @@ class TileManagerMixin:
             # Create enhanced door sprite with proper isometric proportions
             door_sprite = self.door_renderer.create_enhanced_door_sprite(self.tile_width, self.tile_height)
             self.tile_sprites[self.TILE_DOOR] = door_sprite
+
+        # Load biome-specific tiles
+        sand_image = self.asset_loader.get_image("sand_tile")
+        if sand_image:
+            rotated_sand = pygame.transform.rotate(sand_image, 45)
+            self.tile_sprites[self.TILE_SAND] = pygame.transform.scale(rotated_sand, (self.tile_width, self.tile_height))
+        else:
+            self.tile_sprites[self.TILE_SAND] = self.iso_renderer.create_diamond_tile((220, 180, 120))  # Sandy color
+
+        snow_image = self.asset_loader.get_image("snow_tile")
+        if snow_image:
+            rotated_snow = pygame.transform.rotate(snow_image, 45)
+            self.tile_sprites[self.TILE_SNOW] = pygame.transform.scale(rotated_snow, (self.tile_width, self.tile_height))
+        else:
+            self.tile_sprites[self.TILE_SNOW] = self.iso_renderer.create_diamond_tile((240, 240, 255))  # Snowy white
+
+        forest_floor_image = self.asset_loader.get_image("forest_floor_tile")
+        if forest_floor_image:
+            rotated_forest = pygame.transform.rotate(forest_floor_image, 45)
+            self.tile_sprites[self.TILE_FOREST_FLOOR] = pygame.transform.scale(rotated_forest, (self.tile_width, self.tile_height))
+        else:
+            self.tile_sprites[self.TILE_FOREST_FLOOR] = self.iso_renderer.create_diamond_tile((80, 60, 40))  # Dark forest floor
+
+        swamp_image = self.asset_loader.get_image("swamp_tile")
+        if swamp_image:
+            rotated_swamp = pygame.transform.rotate(swamp_image, 45)
+            self.tile_sprites[self.TILE_SWAMP] = pygame.transform.scale(rotated_swamp, (self.tile_width, self.tile_height))
+        else:
+            self.tile_sprites[self.TILE_SWAMP] = self.iso_renderer.create_diamond_tile((60, 80, 50))  # Murky swamp color

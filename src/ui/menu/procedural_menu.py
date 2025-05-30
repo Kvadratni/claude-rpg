@@ -172,10 +172,10 @@ class ProceduralWorldMenu(BaseMenu):
         # Clear previous rectangles
         self.menu_rects = []
         
-        # Draw options with main menu styling
-        start_y = screen_height // 2 - 50
+        # Draw options with main menu styling - moved up more to prevent overlap
+        start_y = screen_height // 2 - 120  # Moved up more to make room for all content
         for i, option in enumerate(self.options):
-            y_pos = start_y + i * 60
+            y_pos = start_y + i * 45  # Reduced spacing to 45 to fit more content
             
             # Determine colors based on selection and hover
             if i == self.selected_option or i == self.mouse_hover:
@@ -216,7 +216,7 @@ class ProceduralWorldMenu(BaseMenu):
         
         # Draw seed input field if custom seed is selected
         if not self.use_random_seed:
-            input_y = start_y + len(self.options) * 60 + 30
+            input_y = start_y + len(self.options) * 45 + 15  # Adjusted for new spacing and reduced gap
             
             # Input label
             label_text = "Enter Seed (1-9999999999):"
@@ -227,7 +227,7 @@ class ProceduralWorldMenu(BaseMenu):
             # Input field with main menu styling
             input_text = self.seed_input if self.seed_input else "Random"
             input_surface = self.input_font.render(input_text, True, self.colors['accent_blue'])
-            input_rect = input_surface.get_rect(center=(screen_width // 2, input_y + 35))
+            input_rect = input_surface.get_rect(center=(screen_width // 2, input_y + 30))
             
             # Draw input background with glow effect
             bg_rect = input_rect.inflate(30, 15)
@@ -236,19 +236,27 @@ class ProceduralWorldMenu(BaseMenu):
             
             screen.blit(input_surface, input_rect)
         
-        # Instructions (matching main menu style)
+        # Instructions (matching main menu style) - moved up more to prevent overlap
         instruction_text = "Use Mouse to Navigate • Click to Select"
-        self.render_instructions(screen, screen_width, screen_height, instruction_text)
+        instruction_surface = self.small_font.render(instruction_text, True, self.colors['menu_normal'])
+        instruction_rect = instruction_surface.get_rect(center=(screen_width // 2, screen_height - 120))  # Moved up more
         
-        # Additional info
-        info_y = screen_height - 120
+        # Semi-transparent background for instructions
+        bg_rect = instruction_rect.inflate(20, 10)
+        bg_surface = pygame.Surface((bg_rect.width, bg_rect.height), pygame.SRCALPHA)
+        bg_surface.fill((*self.colors['bg_dark'], 180))
+        screen.blit(bg_surface, bg_rect)
+        pygame.draw.rect(screen, self.colors['border_color'], bg_rect, 1)
+        screen.blit(instruction_surface, instruction_rect)
+        
+        # Additional info - moved up more and made more compact
+        info_y = screen_height - 90  # Moved up more to prevent overlap
         info_lines = [
-            "Random Seed: Generate a completely random world",
-            "Custom Seed: Use a specific number for reproducible worlds",
+            "Random: Completely random world • Custom: Reproducible world",
             "Same seed = Same world every time!"
         ]
         
         for i, line in enumerate(info_lines):
-            info_surface = pygame.font.Font(None, 24).render(line, True, self.colors['menu_normal'])
-            info_rect = info_surface.get_rect(center=(screen_width // 2, info_y + i * 25))
+            info_surface = pygame.font.Font(None, 18).render(line, True, self.colors['menu_normal'])  # Even smaller font
+            info_rect = info_surface.get_rect(center=(screen_width // 2, info_y + i * 18))  # Tighter spacing
             screen.blit(info_surface, info_rect)

@@ -264,7 +264,7 @@ class SettlementGenerator:
     def create_building(self, tiles: List[List[int]], start_x: int, start_y: int, 
                        width: int, height: int) -> None:
         """
-        Create a building structure using enhanced building system
+        Create a building structure using enhanced building system with proper corners
         
         Args:
             tiles: 2D list of tile types
@@ -277,7 +277,7 @@ class SettlementGenerator:
                 if 0 <= x < self.width and 0 <= y < self.height:
                     tiles[y][x] = 13  # TILE_BRICK
         
-        # Building walls - use enhanced wall system
+        # Building walls - use enhanced wall system with proper corners
         for y in range(start_y, start_y + height):
             for x in range(start_x, start_x + width):
                 if 0 <= x < self.width and 0 <= y < self.height:
@@ -286,45 +286,37 @@ class SettlementGenerator:
                         y > start_y and y < start_y + height - 1):
                         continue
                     
-                    # Use regular walls for all positions initially
-                    tiles[y][x] = 4  # TILE_WALL
-        
-        # Add variety with horizontal and vertical walls
-        # Top and bottom walls
-        for x in range(start_x + 1, start_x + width - 1):
-            if 0 <= x < self.width:
-                # Top wall
-                if start_y >= 0 and start_y < self.height:
-                    if random.random() < 0.2:  # 20% chance for windows
-                        tiles[start_y][x] = 14  # TILE_WALL_WINDOW_HORIZONTAL
+                    # Determine wall type based on position
+                    is_top_edge = (y == start_y)
+                    is_bottom_edge = (y == start_y + height - 1)
+                    is_left_edge = (x == start_x)
+                    is_right_edge = (x == start_x + width - 1)
+                    
+                    # Set corner tiles first
+                    if is_top_edge and is_left_edge:
+                        tiles[y][x] = 6  # TILE_WALL_CORNER_TL
+                    elif is_top_edge and is_right_edge:
+                        tiles[y][x] = 7  # TILE_WALL_CORNER_TR
+                    elif is_bottom_edge and is_left_edge:
+                        tiles[y][x] = 8  # TILE_WALL_CORNER_BL
+                    elif is_bottom_edge and is_right_edge:
+                        tiles[y][x] = 9  # TILE_WALL_CORNER_BR
+                    # Then set edge walls (horizontal/vertical)
+                    elif is_top_edge or is_bottom_edge:
+                        # Horizontal walls (top and bottom edges)
+                        if random.random() < 0.2:  # 20% chance for windows
+                            tiles[y][x] = 14  # TILE_WALL_WINDOW_HORIZONTAL
+                        else:
+                            tiles[y][x] = 10  # TILE_WALL_HORIZONTAL
+                    elif is_left_edge or is_right_edge:
+                        # Vertical walls (left and right edges)
+                        if random.random() < 0.15:  # 15% chance for windows
+                            tiles[y][x] = 15  # TILE_WALL_WINDOW_VERTICAL
+                        else:
+                            tiles[y][x] = 11  # TILE_WALL_VERTICAL
                     else:
-                        tiles[start_y][x] = 10  # TILE_WALL_HORIZONTAL
-                
-                # Bottom wall (will be overridden by doors)
-                bottom_y = start_y + height - 1
-                if 0 <= bottom_y < self.height:
-                    if random.random() < 0.2:  # 20% chance for windows
-                        tiles[bottom_y][x] = 14  # TILE_WALL_WINDOW_HORIZONTAL
-                    else:
-                        tiles[bottom_y][x] = 10  # TILE_WALL_HORIZONTAL
-        
-        # Left and right walls
-        for y in range(start_y + 1, start_y + height - 1):
-            if 0 <= y < self.height:
-                # Left wall
-                if start_x >= 0 and start_x < self.width:
-                    if random.random() < 0.15:  # 15% chance for windows
-                        tiles[y][start_x] = 15  # TILE_WALL_WINDOW_VERTICAL
-                    else:
-                        tiles[y][start_x] = 11  # TILE_WALL_VERTICAL
-                
-                # Right wall
-                right_x = start_x + width - 1
-                if 0 <= right_x < self.width:
-                    if random.random() < 0.15:  # 15% chance for windows
-                        tiles[y][right_x] = 15  # TILE_WALL_WINDOW_VERTICAL
-                    else:
-                        tiles[y][right_x] = 11  # TILE_WALL_VERTICAL
+                        # This shouldn't happen, but fallback to regular wall
+                        tiles[y][x] = 4  # TILE_WALL
         
         # Add double doors (2 tiles wide) - replace bottom wall sections
         door_center_x = start_x + width // 2
