@@ -92,3 +92,26 @@ class Entity:
     def is_adjacent_to(self, other_entity, threshold=1.5):
         """Check if this entity is adjacent to another entity"""
         return self.get_distance_to(other_entity) <= threshold
+    
+    def get_save_data(self):
+        """Get basic entity data for saving"""
+        return {
+            "x": self.x,
+            "y": self.y,
+            "name": self.name,
+            "entity_type": self.entity_type,
+            "blocks_movement": self.blocks_movement
+        }
+    
+    @classmethod
+    def from_save_data(cls, data, asset_loader=None):
+        """Create entity from save data"""
+        entity = cls(
+            x=data["x"],
+            y=data["y"],
+            name=data["name"],
+            entity_type=data.get("entity_type", "entity"),
+            blocks_movement=data.get("blocks_movement", False),
+            asset_loader=asset_loader
+        )
+        return entity

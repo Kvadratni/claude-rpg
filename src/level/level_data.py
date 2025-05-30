@@ -28,9 +28,9 @@ class LevelDataMixin:
         }
     
     @classmethod
-    def from_save_data(cls, data, player, asset_loader):
+    def from_save_data(cls, data, player, asset_loader, game=None):
         """Create level from save data"""
-        level = cls(data["name"], player, asset_loader)
+        level = cls(data["name"], player, asset_loader, game)
         level.tiles = data["tiles"]
         level.heightmap = data["heightmap"]
         level.camera_x = data["camera_x"]

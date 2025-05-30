@@ -95,7 +95,7 @@ class Game:
         if game_data:
             # Create player and level from saved data
             self.player = Player.from_save_data(game_data["player"], self.asset_loader, self.game_log)
-            self.current_level = Level.from_save_data(game_data["level"], self.player, self.asset_loader)
+            self.current_level = Level.from_save_data(game_data["level"], self.player, self.asset_loader, self)
             self.state = Game.STATE_PLAYING
             self.game_log.add_message(f"Game loaded: {save_name}", "system")
             return True
