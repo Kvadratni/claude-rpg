@@ -31,7 +31,6 @@ class Player:
         # Combat
         self.attack_damage = 25
         self.attack_range = 1.2
-        self.attacking = False
         self.defense = 5
         
         # Movement
@@ -54,6 +53,10 @@ class Player:
         self.inventory = Inventory(max_size=20)
         self.equipped_weapon = None
         self.equipped_armor = None
+        
+        # Stamina regeneration
+        self.stamina_regen_timer = 0
+        self.stamina_regen_rate = 30  # Regenerate 1 stamina every 30 frames (0.5 seconds at 60 FPS)
         
         # UI state
         self.show_stats = False
@@ -210,11 +213,7 @@ class Player:
                 else:
                     self.direction = 0 if dy > 0 else 2  # Down or Up
         
-        # Attack with space bar (keep this for combat)
-        if keys[pygame.K_SPACE]:
-            self.attacking = True
-        else:
-            self.attacking = False
+
         
         # Update animation
         if self.moving:
@@ -353,15 +352,24 @@ class Player:
                     # Check if player is close enough to attack
                     player_dist = math.sqrt((self.x - enemy.x)**2 + (self.y - enemy.y)**2)
                     if player_dist <= self.attack_range:
+                        # Update player direction to face the enemy before attacking
+                        enemy_dx = enemy.x - self.x
+                        enemy_dy = enemy.y - self.y
+                        if abs(enemy_dx) > abs(enemy_dy):
+                            self.direction = 3 if enemy_dx > 0 else 1  # Right or Left
+                        else:
+                            self.direction = 0 if enemy_dy > 0 else 2  # Down or Up
+                        
                         # Attack immediately if in range and have stamina
-                        stamina_cost = 10
+                        stamina_cost = self.get_weapon_stamina_cost()
                         if self.stamina >= stamina_cost:
                             self.attack([enemy])
                             if self.game_log:
                                 self.game_log.add_message(f"Attacking {enemy.name}!", "combat")
                         else:
                             if self.game_log:
-                                self.game_log.add_message("Not enough stamina to attack!", "combat")
+                                weapon_name = self.equipped_weapon.name if self.equipped_weapon else "fists"
+                                self.game_log.add_message(f"Not enough stamina to attack with {weapon_name}! (Need {stamina_cost})", "combat")
                     else:
                         # Use pathfinding to move towards enemy for attack
                         path = level.find_path(self.x, self.y, enemy.x, enemy.y, self.size)
@@ -404,15 +412,6 @@ class Player:
     
     def update(self, level):
         """Update player logic"""
-        # We've moved collision detection to handle_input
-        # This is now just for additional updates
-        
-        # Handle attacks
-        if self.attacking:
-            stamina_cost = 10
-            if self.stamina >= stamina_cost:
-                self.attack(level.enemies)
-        
         # Update projectile effects
         if hasattr(self, 'projectiles'):
             for projectile in self.projectiles[:]:
@@ -420,17 +419,50 @@ class Player:
                 if projectile['timer'] <= 0:
                     self.projectiles.remove(projectile)
         
-        # Regenerate stamina slowly over time
-        if self.stamina < self.max_stamina and random.random() < 0.02:
-            self.stamina += 1
+        # Regenerate stamina at a fixed rate
+        if self.stamina < self.max_stamina:
+            self.stamina_regen_timer += 1
+            if self.stamina_regen_timer >= self.stamina_regen_rate:
+                self.stamina_regen_timer = 0
+                self.stamina += 1
+    
+    def get_weapon_stamina_cost(self):
+        """Get stamina cost based on equipped weapon"""
+        if not self.equipped_weapon:
+            return 6  # Unarmed attacks cost less stamina (reduced from 8)
+        
+        weapon_name = self.equipped_weapon.name
+        
+        # Define stamina costs for different weapon types (reduced by 20%)
+        weapon_stamina_costs = {
+            # Light weapons - low stamina cost
+            "Silver Dagger": 5,      # was 6
+            "Throwing Knife": 6,     # was 7
+            
+            # Medium weapons - moderate stamina cost
+            "Iron Sword": 8,         # was 10
+            "Bronze Mace": 9,        # was 11
+            "Magic Bow": 7,          # was 9
+            "Crossbow": 10,          # was 12
+            
+            # Heavy weapons - high stamina cost
+            "Steel Axe": 12,         # was 15
+            "War Hammer": 14,        # was 18
+            
+            # Magical weapons - variable stamina cost
+            "Crystal Staff": 11,     # was 14
+        }
+        
+        return weapon_stamina_costs.get(weapon_name, 8)  # Default to 8 if weapon not found (was 10)
     
     def attack(self, enemies):
         """Attack nearby enemies or use ranged attack"""
         # Check if player has enough stamina to attack
-        stamina_cost = 10  # Cost 10 stamina per attack
+        stamina_cost = self.get_weapon_stamina_cost()
         if self.stamina < stamina_cost:
             if self.game_log:
-                self.game_log.add_message("Not enough stamina to attack!", "combat")
+                weapon_name = self.equipped_weapon.name if self.equipped_weapon else "fists"
+                self.game_log.add_message(f"Not enough stamina to attack with {weapon_name}! (Need {stamina_cost})", "combat")
             return
         
         # Get audio manager
@@ -768,10 +800,6 @@ class Player:
                 for point in path_points:
                     pygame.draw.circle(screen, (0, 255, 0), point, 3)
         
-        # Render attack indicator if attacking
-        if self.attacking:
-            self.render_attack(screen, screen_x, screen_y)
-        
         # Render health bar
         self.render_health_bar(screen, screen_x, screen_y - 30)
         
@@ -810,24 +838,7 @@ class Player:
                                (start_screen_x, start_screen_y), 
                                (end_screen_x, end_screen_y), 3 + i)
     
-    def render_attack(self, screen, x, y):
-        """Render attack indicator"""
-        attack_x, attack_y = x, y
-        
-        # Adjust position based on direction
-        if self.direction == 0:  # Down
-            attack_y += 20
-        elif self.direction == 1:  # Left
-            attack_x -= 20
-        elif self.direction == 2:  # Up
-            attack_y -= 20
-        elif self.direction == 3:  # Right
-            attack_x += 20
-        
-        # Draw attack indicator
-        pygame.draw.circle(screen, (255, 255, 0), (attack_x, attack_y), 8)
-        pygame.draw.circle(screen, (255, 0, 0), (attack_x, attack_y), 5)
-    
+
     def render_health_bar(self, screen, x, y):
         """Render player health bar"""
         bar_width = 40

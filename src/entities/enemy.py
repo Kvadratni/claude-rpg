@@ -19,8 +19,8 @@ class Enemy(Entity):
         self.is_boss = is_boss
         self.asset_loader = asset_loader
         
-        # AI properties
-        self.speed = 0.02 if not is_boss else 0.015  # Much slower speeds
+        # AI properties - speed varies by enemy type
+        self.speed = self.get_enemy_speed()
         self.detection_range = 6 if not is_boss else 8
         self.attack_range = 1.2
         self.attack_cooldown = 0
@@ -34,6 +34,126 @@ class Enemy(Entity):
         
         # Create enemy sprite
         self.create_enemy_sprite()
+    
+    def get_enemy_speed(self):
+        """Get movement speed based on enemy type"""
+        # Speed categories:
+        # Very Fast: 0.035-0.04 (agile creatures)
+        # Fast: 0.025-0.03 (quick enemies)
+        # Normal: 0.018-0.022 (standard enemies)
+        # Slow: 0.012-0.016 (heavy/tanky enemies)
+        # Very Slow: 0.008-0.012 (bosses/massive creatures)
+        
+        speed_table = {
+            # Fast, agile enemies
+            "Forest Sprite": 0.038,      # Very fast magical creature
+            "Bandit Scout": 0.032,       # Quick and nimble
+            "Goblin": 0.028,             # Fast and aggressive
+            "Forest Goblin": 0.026,      # Slightly slower in forest
+            
+            # Normal speed enemies
+            "Giant Scorpion": 0.022,     # Decent speed with claws
+            "Crystal Elemental": 0.020,  # Magical floating movement
+            "Orc Warrior": 0.019,       # Armored but mobile
+            "Fire Drake": 0.018,         # Flying but cautious
+            
+            # Slow, heavy enemies
+            "Ancient Guardian": 0.016,   # Skeletal, deliberate movement
+            "Swamp Troll": 0.014,       # Large and lumbering
+            
+            # Boss enemies (very slow but powerful)
+            "Orc Warlord": 0.012,       # Heavy armor, commanding presence
+            "Ancient Dragon": 0.010,     # Massive, deliberate movements
+        }
+        
+        # Get speed for this enemy type, with fallback for unknown types
+        base_speed = speed_table.get(self.name, 0.020)  # Default to normal speed
+        
+        # Apply boss modifier if needed (some bosses already have their speed set above)
+        if self.is_boss and self.name not in speed_table:
+            base_speed *= 0.6  # Bosses are generally 40% slower
+        
+        # Add small random variation (±10%) to make each enemy unique
+        speed_variation = random.uniform(0.9, 1.1)
+        final_speed = base_speed * speed_variation
+        
+        return final_speed
+    
+    def apply_movement_style(self, move_x, move_y, dx, dy, distance):
+        """Apply enemy-specific movement patterns and behaviors"""
+        # Different enemies have different movement styles
+        
+        if "Sprite" in self.name:
+            # Forest Sprites: Erratic, darting movement
+            if random.random() < 0.3:  # 30% chance to dart sideways
+                # Add perpendicular movement
+                perp_x = -dy / distance * self.speed * 0.5
+                perp_y = dx / distance * self.speed * 0.5
+                move_x += perp_x
+                move_y += perp_y
+        
+        elif "Goblin" in self.name:
+            # Goblins: Aggressive, direct approach with occasional zigzag
+            if random.random() < 0.2:  # 20% chance to zigzag
+                move_x *= 1.2  # Burst of speed
+                move_y *= 1.2
+        
+        elif "Bandit" in self.name:
+            # Bandits: Try to circle around the player
+            if distance > 3:  # Only when not too close
+                # Add circular movement component
+                angle_offset = math.pi / 4  # 45 degrees
+                circle_x = math.cos(math.atan2(dy, dx) + angle_offset) * self.speed * 0.3
+                circle_y = math.sin(math.atan2(dy, dx) + angle_offset) * self.speed * 0.3
+                move_x += circle_x
+                move_y += circle_y
+        
+        elif "Scorpion" in self.name:
+            # Scorpions: Side-stepping movement, like real scorpions
+            if random.random() < 0.4:  # 40% chance to sidestep
+                # Add perpendicular movement
+                perp_x = -dy / distance * self.speed * 0.4
+                perp_y = dx / distance * self.speed * 0.4
+                move_x += perp_x
+                move_y += perp_y
+        
+        elif "Troll" in self.name or "Guardian" in self.name:
+            # Large enemies: Steady, unstoppable movement
+            # No modifications - they move straight and steady
+            pass
+        
+        elif "Dragon" in self.name or "Drake" in self.name:
+            # Flying enemies: Smooth, swooping movement
+            if hasattr(self, 'swoop_counter'):
+                self.swoop_counter += 1
+            else:
+                self.swoop_counter = 0
+            
+            # Add sine wave movement for swooping effect
+            swoop_offset = math.sin(self.swoop_counter * 0.1) * 0.01
+            move_x += swoop_offset
+            move_y += swoop_offset
+        
+        elif "Elemental" in self.name:
+            # Elementals: Floating, oscillating movement
+            if hasattr(self, 'float_counter'):
+                self.float_counter += 1
+            else:
+                self.float_counter = 0
+            
+            # Add floating oscillation
+            float_x = math.sin(self.float_counter * 0.15) * 0.008
+            float_y = math.cos(self.float_counter * 0.15) * 0.008
+            move_x += float_x
+            move_y += float_y
+        
+        elif self.is_boss:
+            # Bosses: Powerful, deliberate movement with occasional charges
+            if random.random() < 0.05:  # 5% chance to charge
+                move_x *= 2.0  # Double speed charge
+                move_y *= 2.0
+        
+        return move_x, move_y
     
     def create_enemy_sprite(self):
         """Create enemy sprite with support for all new enemy types"""
@@ -228,6 +348,9 @@ class Enemy(Entity):
                     move_x = (dx / distance) * self.speed
                     move_y = (dy / distance) * self.speed
                     
+                    # Apply enemy-specific movement modifiers
+                    move_x, move_y = self.apply_movement_style(move_x, move_y, dx, dy, distance)
+                    
                     # Check collision before moving
                     new_x = self.x + move_x
                     new_y = self.y + move_y
@@ -247,10 +370,13 @@ class Enemy(Entity):
                                 self.direction = 0 if dy > 0 else 2  # Down or Up
         else:
             self.state = "idle"
-            # Random movement when idle
-            if random.random() < 0.01:  # 1% chance per frame
-                move_x = random.uniform(-0.2, 0.2)
-                move_y = random.uniform(-0.2, 0.2)
+            # Random movement when idle - speed affects idle movement frequency
+            idle_chance = 0.005 + (self.speed * 0.2)  # Faster enemies move more when idle
+            if random.random() < idle_chance:
+                # Idle movement distance based on enemy speed
+                idle_speed = self.speed * 0.3  # 30% of combat speed for idle movement
+                move_x = random.uniform(-idle_speed, idle_speed)
+                move_y = random.uniform(-idle_speed, idle_speed)
                 
                 new_x = self.x + move_x
                 new_y = self.y + move_y
