@@ -51,12 +51,17 @@ class ProceduralGenerationMixin:
             self.items.clear()
         else:
             self.items = []
+            
+        if hasattr(self, 'chests'):
+            self.chests.clear()
+        else:
+            self.chests = []
         
         # Add procedural entities
         self.npcs.extend(world_data['npcs'])
         self.enemies.extend(world_data['enemies'])
         self.objects.extend(world_data['objects'])
-        self.items.extend(world_data['chests'])  # Chests go in items list
+        self.chests.extend(world_data['chests'])  # Chests go to chests list
         
         # Update walkable grid
         self.walkable = world_data['walkable_grid']

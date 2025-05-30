@@ -80,6 +80,7 @@ class Level(
             self.enemies = []
             self.objects = []
             self.items = []
+            self.chests = []  # Add chests list
             
             # Generate procedural world
             self.generate_procedural_level(seed)
