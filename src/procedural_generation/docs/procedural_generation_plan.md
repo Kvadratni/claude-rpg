@@ -206,20 +206,70 @@ class PlacementValidator:
 - `test_desert_placement.py` - Specific testing for desert settlement issues
 - `test_settlement_fixes.py` - Comprehensive testing of all fixes
 
-### Phase 3: Entity Spawning (Week 3)
+### Phase 3: Entity Spawning (Week 3) ✅ COMPLETED
 **Tasks:**
-- [ ] Implement enemy spawning with safe zone restrictions
-- [ ] Add boss location templates and spawning
-- [ ] Implement object spawning (trees, rocks) by biome
-- [ ] Add chest spawning with rarity based on distance from settlements
+- [x] Implement enemy spawning with safe zone restrictions ✅
+- [x] Add boss location templates and spawning ✅
+- [x] Implement object spawning (trees, rocks) by biome ✅
+- [x] Add chest spawning with rarity based on distance from settlements ✅
 
-### Phase 4: Integration & Polish (Week 4)
+**Test Results:**
+- ✅ Enemy spawning: 40 enemies per 200x200 world with biome restrictions
+- ✅ Boss spawning: Orc Warlord (Plains), Ancient Dragon (Snow) placed correctly
+- ✅ Object spawning: 5000+ objects with biome-appropriate distribution
+- ✅ Chest spawning: 15 chests with distance-based rarity system
+- ✅ Safe zone enforcement: No entities spawn within settlement safe zones
+
+### Phase 4: Integration & Polish (Week 4) ❌ NOT COMPLETED
+**Current Architecture Integration Points:**
+
+**Files to modify:**
+- `src/level/__init__.py` - Add ProceduralGenerationMixin to Level class
+- `src/level/level_base.py` - Create procedural generation mixin
+- `src/game.py` - Add procedural option to new_game() method
+- `src/ui/menu/main_menu.py` - Add procedural world menu option
+
 **Tasks:**
-- [ ] Integrate procedural system into existing Level class
+- [ ] Create ProceduralGenerationMixin for the refactored Level system
+- [ ] Integrate with the mixin-based Level architecture
 - [ ] Add menu option to choose procedural vs template generation
-- [ ] Implement save/load for procedural worlds (store seed)
+- [ ] Update save/load system to handle procedural worlds (store seed)
 - [ ] Add debug visualization for biome maps
-- [ ] Performance testing and optimization
+- [ ] Performance testing with actual game assets and entity classes
+
+**Integration Pattern:**
+```python
+# In src/level/procedural_mixin.py (new file)
+from procedural_generation import ProceduralWorldGenerator
+
+class ProceduralGenerationMixin:
+    def generate_procedural_level(self, seed=None):
+        generator = ProceduralWorldGenerator(self.width, self.height, seed)
+        world_data = generator.generate_world(self.asset_loader)
+        
+        # Replace template data with procedural data
+        self.tiles = world_data['tiles']
+        self.npcs = world_data['npcs']
+        self.enemies = world_data['enemies']
+        # ... etc
+
+# In src/level/__init__.py
+class Level(
+    LevelBase,
+    ProceduralGenerationMixin,  # Add this mixin
+    WorldGenerationMixin,
+    CollisionMixin,
+    # ... other mixins
+):
+    def __init__(self, level_name, player, asset_loader, game=None, use_procedural=False, seed=None):
+        if use_procedural:
+            # Initialize base, then generate procedural world
+            super().__init__(level_name, player, asset_loader, game)
+            self.generate_procedural_level(seed)
+        else:
+            # Use existing template system
+            super().__init__(level_name, player, asset_loader, game)
+```
 
 ## Configuration Options
 
@@ -271,20 +321,32 @@ SAFE_ZONE_RULES = {
 - Memory usage during generation
 - Frame rate impact during gameplay
 
-## File Structure
+## File Structure (Updated for Refactored Architecture)
 ```
 src/
-├── procedural_generator.py     # New - Core procedural system
-├── level.py                    # Modified - Add procedural option
-├── game.py                     # Modified - Add menu option
-├── entity.py                   # Existing - No changes needed
-├── template_level.py           # Existing - Keep as fallback
-└── map_template.py             # Existing - Keep for template mode
-
-documents/development/
-├── procedural_generation_plan.md  # This file
-├── biome_design_notes.md          # Biome-specific details
-└── testing_checklist.md           # QA checklist
+├── procedural_generation/          # New - Complete modular procedural system
+│   ├── __init__.py                # Package interface
+│   ├── src/                       # Modular components
+│   │   ├── biome_generator.py     # Biome and tile generation
+│   │   ├── settlement_generator.py # Settlement placement
+│   │   ├── entity_spawner.py      # Entity spawning
+│   │   ├── modular_generator.py   # Main coordinator
+│   │   └── procedural_generator.py # Legacy monolithic version
+│   ├── tests/                     # Comprehensive test suite
+│   ├── examples/                  # Integration examples
+│   └── docs/                      # Documentation
+├── level/                         # Refactored - Mixin-based Level system
+│   ├── __init__.py               # Main Level class with mixins
+│   ├── level_base.py             # Base Level functionality
+│   ├── procedural_mixin.py       # New - Procedural generation mixin
+│   └── [other mixins]            # Existing mixins
+├── game.py                       # Modified - Add procedural option
+├── ui/menu/                      # Modified - Add procedural menu options
+│   ├── main_menu.py             # Add procedural world choice
+│   └── procedural_menu.py       # New - Procedural world configuration
+├── entities/                     # Existing - Compatible with procedural system
+├── core/                         # Existing - Asset loading, etc.
+└── [other existing files]        # Existing - No changes needed
 ```
 
 ## Success Criteria
