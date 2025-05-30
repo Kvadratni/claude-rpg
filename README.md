@@ -1,5 +1,5 @@
 # Goose RPG
-## 🤖 **100% AI-Developed Isometric RPG**
+## 🤖 **100% AI-Developed Isometric RPG** 
 
 An immersive isometric RPG game featuring combat, exploration, inventory management, and NPC interactions - **entirely created by artificial intelligence** with zero human programming.
 
