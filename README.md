@@ -1,7 +1,9 @@
-# Goose RPG
-## 🤖 **100% AI-Developed Game**
+# Claude RPG
+## 🤖 **100% AI-Developed Isometric RPG**
 
-This complete isometric RPG was **entirely created by artificial intelligence** with zero human programming. Every line of code, every game system, and every feature was designed and implemented by AI.
+An immersive isometric RPG game featuring combat, exploration, inventory management, and NPC interactions - **entirely created by artificial intelligence** with zero human programming.
+
+![Main Menu](screenshots/mainmenu.png)
 
 ### AI Development Team
 - **Programming**: Goose AI agent using Claude 4 Sonnet
@@ -12,70 +14,170 @@ This complete isometric RPG was **entirely created by artificial intelligence** 
 
 **This demonstrates what AI can accomplish in game development when given creative freedom.**
 
-## Current Game State
+## Screenshots
 
-### What's Working ✅
-- **Character Movement**: Click to move around the isometric world
-- **Combat System**: Fight goblins and orc bosses by clicking on them
-- **Inventory Management**: Collect weapons, armor, and potions
-- **Equipment System**: Equip weapons and armor for stat bonuses
-- **World Exploration**: Navigate a large fantasy world with varied terrain
-- **NPCs**: Talk to shopkeepers and other characters
-- **Save/Load**: Your progress is automatically saved
-- **Background Music**: Atmospheric music enhances the experience
+### Gameplay
+<div align="center">
 
-### Game Features
-- **Isometric View**: Classic RPG perspective like Fallout or Diablo
-- **Mouse Controls**: Point-and-click gameplay - left click to move/interact, right click for information
-- **Fantasy Setting**: Medieval world with forests, villages, and dungeons
-- **Loot System**: Find and equip over 35 different items
-- **Character Stats**: Health, mana, experience, and level progression
-- **Enemy AI**: Monsters that detect and chase the player
+| In-Game World | Combat System |
+|:-------------:|:-------------:|
+| ![Gameplay](screenshots/ingame.png) | ![Combat](screenshots/combat.png) |
 
-### What's Not Yet Implemented ⚠️
-- **Quest System**: No formal quests or objectives yet
-- **Magic Spells**: Mana system exists but no spells to cast
-- **Advanced Skills**: Basic leveling only, no skill trees
-- **Multiple Areas**: Single large map, no area transitions
-- **Storyline**: No main story or narrative structure
-- **Advanced Combat**: Basic attack system, no special abilities
+| Inventory Management | NPC Dialogue |
+|:-------------------:|:------------:|
+| ![Inventory](screenshots/inventory.png) | ![Dialog](screenshots/dialog.png) |
 
-## Planned Improvements 🚀
+| Trading System | Settings Menu |
+|:--------------:|:-------------:|
+| ![Trading](screenshots/trading.png) | ![Settings](screenshots/settings.png) |
 
-The AI development team is working on:
-- **Procedural Map Generation**: Dynamic world creation for endless exploration
-- **Enhanced Graphics**: Improved visual effects and animations  
-- **Quest Management System**: Structured objectives and storylines
-- **Character Progression**: Detailed skill trees and specializations
-- **Expanded Combat**: Magic spells, special attacks, and tactical options
-- **Rich Storyline**: Main quest with branching narratives
+</div>
 
-## How to Play
+## 🎮 Game Features
 
-### Installation
-1. Ensure you have Python 3.8+ installed
-2. Run: `uv sync` to install dependencies
-3. Start the game: `uv run claude-rpg`
+### Core Gameplay ✅
+- **🗺️ Isometric World**: Classic RPG perspective with rich, detailed environments
+- **⚔️ Real-time Combat**: Click-to-attack combat system with multiple enemy types
+- **🎒 Inventory System**: Collect, manage, and equip weapons, armor, and consumables
+- **👥 NPC Interactions**: Talk to shopkeepers, traders, and other characters
+- **💾 Save/Load System**: Automatic progress saving with manual save options
+- **🎵 Audio Experience**: Atmospheric background music and sound effects
+- **🏃 Character Movement**: Smooth point-and-click movement system
+
+### Character Progression
+- **📊 Stats System**: Health, mana, experience, and level progression
+- **🛡️ Equipment System**: Equip weapons and armor for stat bonuses
+- **🏆 Loot Collection**: Discover and collect over 35 different items
+- **⚡ Level Advancement**: Gain experience through combat and exploration
+
+### World & Exploration
+- **🌍 Large Game World**: Expansive fantasy world with varied terrain
+- **🏘️ Multiple Locations**: Villages, forests, dungeons, and wilderness areas
+- **👹 Enemy AI**: Intelligent monsters that detect and pursue the player
+- **🏪 Trading Posts**: Buy and sell items with various merchants
+
+## 🚀 Installation & Setup
+
+### Prerequisites
+- **Python 3.8+** (Python 3.9+ recommended)
+- **Git** (for cloning the repository)
+
+### Quick Start
+```bash
+# Clone the repository
+git clone https://github.com/Kvadratni/claude-rpg.git
+cd claude-rpg
+
+# Install dependencies using uv (recommended)
+uv sync
+
+# Launch the game
+./launch_game.sh
+```
+
+### Alternative Installation Methods
+
+#### Using uv (Recommended)
+```bash
+# Install uv if you don't have it
+curl -LsSf https://astral.sh/uv/install.sh | sh
+
+# Install dependencies and run
+uv sync
+uv run claude-rpg
+```
+
+#### Using pip
+```bash
+# Create virtual environment
+python -m venv venv
+source venv/bin/activate  # On Windows: venv\Scripts\activate
+
+# Install dependencies
+pip install -r requirements.txt
+
+# Run the game
+python main.py
+```
+
+### System Requirements
+- **OS**: macOS, Linux, or Windows
+- **RAM**: 512MB minimum, 1GB recommended
+- **Storage**: 100MB free space
+- **Graphics**: Any system capable of running Pygame
+
+## 🎯 How to Play
 
 ### Basic Controls
-- **Left Click**: Move, attack enemies, pick up items, talk to NPCs
-- **Right Click**: Get information about anything you click on
-- **I Key**: Open/close inventory
-- **ESC**: Pause menu and save game
-- **F11**: Toggle fullscreen
+| Action | Control |
+|--------|---------|
+| **Move Character** | Left Click on destination |
+| **Attack Enemy** | Left Click on enemy |
+| **Pick Up Items** | Left Click on items |
+| **Talk to NPCs** | Left Click on characters |
+| **Get Information** | Right Click on anything |
+| **Open Inventory** | Press `I` key |
+| **Pause/Save Game** | Press `ESC` key |
+| **Toggle Fullscreen** | Press `F11` key |
 
-### Getting Started
-1. Use left click to move your character around
-2. Right click on things to learn what they are
-3. Click on enemies to fight them
-4. Click on items on the ground to pick them up
-5. Press 'I' to manage your inventory and equipment
-6. Talk to NPCs by clicking on them
+### Getting Started Guide
+1. **🎯 Movement**: Left-click anywhere to move your character
+2. **🔍 Exploration**: Right-click on objects to learn about them
+3. **⚔️ Combat**: Click on enemies to engage in battle
+4. **💰 Looting**: Click on items scattered around the world
+5. **🎒 Inventory**: Press 'I' to manage items and equipment
+6. **💬 NPCs**: Click on characters to start conversations
+7. **🛒 Trading**: Visit shops to buy and sell equipment
+8. **💾 Saving**: Use ESC menu to save your progress
 
-## About This Project
+### Tips for New Players
+- **Start by exploring** the immediate area to get familiar with controls
+- **Right-click everything** to learn about the game world
+- **Collect all items** you find - they can be sold or equipped
+- **Talk to NPCs** for hints, trading opportunities, and world lore
+- **Save frequently** using the ESC menu
 
-This game serves as a demonstration of what AI can accomplish in game development when given creative freedom. Every line of code, every game mechanic, and every system was designed and implemented by AI, showcasing the potential for AI-assisted creative projects.
+## 🔧 Development Status
 
-The project is actively being developed with new features and improvements being added regularly, all through AI-driven development processes.
+### Current State: **Playable Alpha**
+- ✅ Core gameplay mechanics implemented
+- ✅ Complete UI system with menus and HUD
+- ✅ Save/load functionality
+- ✅ Audio system with music and effects
+- ✅ Comprehensive inventory and equipment system
 
-**Status**: Active Development - Technology Demonstrator
+### Planned Features 🚀
+- **🗺️ Procedural Generation**: Dynamic world creation for endless exploration
+- **📜 Quest System**: Structured objectives and storylines
+- **🔮 Magic System**: Spells and magical abilities
+- **🌟 Advanced Skills**: Detailed character progression trees
+- **🎭 Rich Storyline**: Main quest with branching narratives
+- **⚡ Enhanced Combat**: Special attacks and tactical options
+
+## 🤝 Contributing
+
+This project showcases AI-driven development, but we welcome contributions from the community:
+
+1. **🐛 Bug Reports**: Open an issue describing any problems you encounter
+2. **💡 Feature Suggestions**: Share ideas for new game features
+3. **🎨 Asset Contributions**: Submit new sprites, sounds, or music
+4. **📝 Documentation**: Help improve guides and documentation
+
+## 📄 License
+
+This project is licensed under the MIT License - see the [LICENSE](LICENSE) file for details.
+
+## 🎯 About This Project
+
+Claude RPG serves as a demonstration of what AI can accomplish in game development when given creative freedom. Every line of code, game mechanic, and system was designed and implemented by AI, showcasing the potential for AI-assisted creative projects.
+
+The game is actively developed with new features and improvements added regularly through AI-driven development processes.
+
+---
+
+**🎮 Ready to play? Clone the repo and start your adventure!**
+
+```bash
+git clone https://github.com/Kvadratni/claude-rpg.git && cd claude-rpg && ./launch_game.sh
+```
+EOF 2>&1
