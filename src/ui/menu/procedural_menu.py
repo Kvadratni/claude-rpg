@@ -22,25 +22,34 @@ class ProceduralWorldMenu(BaseMenu):
         # Menu options
         self.options = [
             "Random Seed",
-            "Custom Seed",
+            "Custom Seed", 
             "Generate World",
             "Back to Main Menu"
         ]
         
-        # Colors
+        # Mouse support
+        self.mouse_hover = -1
+        self.menu_rects = []
+        
+        # Colors (matching main menu style)
         self.text_color = (255, 255, 255)
         self.selected_color = (255, 255, 0)
         self.input_color = (200, 200, 255)
         self.background_color = (0, 0, 0, 180)
         
-        # Font
-        self.font = pygame.font.Font(None, 36)
-        self.title_font = pygame.font.Font(None, 48)
-        self.input_font = pygame.font.Font(None, 32)
-        
     def handle_event(self, event):
-        """Handle menu events"""
-        if event.type == pygame.KEYDOWN:
+        """Handle menu events with mouse and keyboard support"""
+        if event.type == pygame.MOUSEMOTION:
+            mouse_x, mouse_y = event.pos
+            self.update_mouse_hover(mouse_x, mouse_y)
+            
+        elif event.type == pygame.MOUSEBUTTONDOWN:
+            if event.button == 1:  # Left click
+                if self.mouse_hover >= 0:
+                    self.selected_option = self.mouse_hover
+                    self.select_option()
+                    
+        elif event.type == pygame.KEYDOWN:
             if event.key == pygame.K_UP:
                 self.selected_option = (self.selected_option - 1) % len(self.options)
                 self.play_ui_sound("menu_move")
@@ -60,6 +69,16 @@ class ProceduralWorldMenu(BaseMenu):
                     self.seed_input = self.seed_input[:-1]
                 elif event.unicode.isdigit() and len(self.seed_input) < 10:
                     self.seed_input += event.unicode
+    
+    def update_mouse_hover(self, mouse_x, mouse_y):
+        """Update mouse hover state"""
+        self.mouse_hover = -1
+        for i, rect in enumerate(self.menu_rects):
+            if rect and rect.collidepoint(mouse_x, mouse_y):
+                if self.mouse_hover != i:
+                    self.mouse_hover = i
+                    self.selected_option = i
+                break
     
     def select_option(self):
         """Handle option selection"""
@@ -116,32 +135,57 @@ class ProceduralWorldMenu(BaseMenu):
         pass
     
     def render(self, screen):
-        """Render the procedural world menu"""
+        """Render the procedural world menu with main menu styling"""
         screen_width = screen.get_width()
         screen_height = screen.get_height()
         
-        # Draw background overlay
-        overlay = pygame.Surface((screen_width, screen_height))
-        overlay.set_alpha(180)
-        overlay.fill((0, 0, 0))
-        screen.blit(overlay, (0, 0))
+        # Render background (matching main menu style)
+        self.render_gradient_background(screen, screen_width, screen_height)
+        self.render_background_stars(screen)
+        self.render_particles(screen)
         
-        # Draw title
-        title_surface = self.title_font.render(self.title, True, self.text_color)
-        title_rect = title_surface.get_rect(center=(screen_width // 2, 100))
+        # Draw title with main menu styling
+        title_text = "PROCEDURAL WORLD"
+        pulse_scale = 1.0 + self.title_pulse * 0.05
+        title_size = int(72 * pulse_scale)
+        title_font = pygame.font.Font(None, title_size)
+        
+        # Shadow effect
+        shadow_surface = title_font.render(title_text, True, self.colors['title_shadow'])
+        shadow_rect = shadow_surface.get_rect(center=(screen_width // 2 + 3, screen_height // 4 + 3))
+        screen.blit(shadow_surface, shadow_rect)
+        
+        # Main title
+        title_surface = title_font.render(title_text, True, self.colors['title_gold'])
+        title_rect = title_surface.get_rect(center=(screen_width // 2, screen_height // 4))
         screen.blit(title_surface, title_rect)
         
-        # Draw description
-        desc_text = "Choose how to generate your world:"
-        desc_surface = self.font.render(desc_text, True, self.text_color)
-        desc_rect = desc_surface.get_rect(center=(screen_width // 2, 150))
-        screen.blit(desc_surface, desc_rect)
+        # Subtitle
+        subtitle_text = "Create Your Own Adventure"
+        subtitle_surface = self.subtitle_font.render(subtitle_text, True, self.colors['menu_normal'])
+        subtitle_rect = subtitle_surface.get_rect(center=(screen_width // 2, screen_height // 4 + 50))
+        screen.blit(subtitle_surface, subtitle_rect)
         
-        # Draw options
-        start_y = 220
+        # Clear previous rectangles
+        self.menu_rects = []
+        
+        # Draw options with main menu styling
+        start_y = screen_height // 2 - 50
         for i, option in enumerate(self.options):
-            color = self.selected_color if i == self.selected_option else self.text_color
+            y_pos = start_y + i * 60
             
+            # Determine colors based on selection and hover
+            if i == self.selected_option or i == self.mouse_hover:
+                color = self.colors['menu_selected']
+                # Hover effect - slight glow
+                glow_surface = self.menu_font.render(option, True, self.colors['accent_blue'])
+                glow_rect = glow_surface.get_rect(center=(screen_width // 2 + 2, y_pos + 2))
+                glow_surface.set_alpha(100)
+                screen.blit(glow_surface, glow_rect)
+            else:
+                color = self.colors['menu_normal']
+            
+            # Special formatting for seed options
             if option == "Random Seed":
                 display_text = f"● {option}" if self.use_random_seed else f"○ {option}"
             elif option == "Custom Seed":
@@ -149,46 +193,59 @@ class ProceduralWorldMenu(BaseMenu):
             else:
                 display_text = option
             
-            text_surface = self.font.render(display_text, True, color)
-            text_rect = text_surface.get_rect(center=(screen_width // 2, start_y + i * 50))
+            # Main text
+            text_surface = self.menu_font.render(display_text, True, color)
+            text_rect = text_surface.get_rect(center=(screen_width // 2, y_pos))
             screen.blit(text_surface, text_rect)
+            
+            # Store rectangle for mouse collision
+            self.menu_rects.append(text_rect)
+            
+            # Selection indicator (matching main menu style)
+            if i == self.selected_option:
+                indicator_x = text_rect.left - 30
+                indicator_y = text_rect.centery
+                pygame.draw.polygon(screen, self.colors['menu_selected'], [
+                    (indicator_x, indicator_y - 8),
+                    (indicator_x, indicator_y + 8),
+                    (indicator_x + 12, indicator_y)
+                ])
         
         # Draw seed input field if custom seed is selected
         if not self.use_random_seed:
-            input_y = start_y + len(self.options) * 50 + 20
+            input_y = start_y + len(self.options) * 60 + 30
             
             # Input label
             label_text = "Enter Seed (1-9999999999):"
-            label_surface = self.input_font.render(label_text, True, self.text_color)
+            label_surface = self.input_font.render(label_text, True, self.colors['menu_normal'])
             label_rect = label_surface.get_rect(center=(screen_width // 2, input_y))
             screen.blit(label_surface, label_rect)
             
-            # Input field
+            # Input field with main menu styling
             input_text = self.seed_input if self.seed_input else "Random"
-            input_surface = self.input_font.render(input_text, True, self.input_color)
-            input_rect = input_surface.get_rect(center=(screen_width // 2, input_y + 30))
+            input_surface = self.input_font.render(input_text, True, self.colors['accent_blue'])
+            input_rect = input_surface.get_rect(center=(screen_width // 2, input_y + 35))
             
-            # Draw input background
-            bg_rect = input_rect.inflate(20, 10)
-            pygame.draw.rect(screen, (50, 50, 50), bg_rect)
-            pygame.draw.rect(screen, self.input_color, bg_rect, 2)
+            # Draw input background with glow effect
+            bg_rect = input_rect.inflate(30, 15)
+            pygame.draw.rect(screen, (20, 20, 40), bg_rect)
+            pygame.draw.rect(screen, self.colors['accent_blue'], bg_rect, 2)
             
             screen.blit(input_surface, input_rect)
         
-        # Draw instructions
-        instructions = [
-            "↑↓ Navigate   ENTER Select   ESC Back",
-            "",
+        # Instructions (matching main menu style)
+        instruction_text = "Use Mouse to Navigate • Click to Select"
+        self.render_instructions(screen, screen_width, screen_height, instruction_text)
+        
+        # Additional info
+        info_y = screen_height - 120
+        info_lines = [
             "Random Seed: Generate a completely random world",
             "Custom Seed: Use a specific number for reproducible worlds",
-            "",
             "Same seed = Same world every time!"
         ]
         
-        instruction_y = screen_height - 150
-        for instruction in instructions:
-            if instruction:  # Skip empty lines
-                inst_surface = pygame.font.Font(None, 24).render(instruction, True, (180, 180, 180))
-                inst_rect = inst_surface.get_rect(center=(screen_width // 2, instruction_y))
-                screen.blit(inst_surface, inst_rect)
-            instruction_y += 20
+        for i, line in enumerate(info_lines):
+            info_surface = pygame.font.Font(None, 24).render(line, True, self.colors['menu_dim'])
+            info_rect = info_surface.get_rect(center=(screen_width // 2, info_y + i * 25))
+            screen.blit(info_surface, info_rect)

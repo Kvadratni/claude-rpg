@@ -71,7 +71,8 @@ class ProceduralGenerationMixin:
             'is_procedural': True,
             'seed': world_data['seed'],
             'settlements': world_data['settlements'],
-            'safe_zones': world_data['safe_zones']
+            'safe_zones': world_data['safe_zones'],
+            'player_spawn': world_data.get('player_spawn', (self.width // 2, self.height // 2))
         }
         
         # Regenerate heightmap for new tiles

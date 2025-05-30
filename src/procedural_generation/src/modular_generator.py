@@ -35,7 +35,15 @@ class ProceduralWorldGenerator:
         # Initialize subsystem generators
         self.biome_generator = BiomeGenerator(width, height, self.seed)
         self.settlement_generator = SettlementGenerator(width, height, self.seed)
-        self.entity_spawner = EntitySpawner(width, height, self.seed)
+        
+        # Use enhanced entity spawner for better logic
+        try:
+            from .enhanced_entity_spawner import EnhancedEntitySpawner
+            self.entity_spawner = EnhancedEntitySpawner(width, height, self.seed)
+        except ImportError:
+            # Fallback to regular entity spawner
+            from .entity_spawner import EntitySpawner
+            self.entity_spawner = EntitySpawner(width, height, self.seed)
         
         # Generated data
         self.biome_map = None
@@ -89,6 +97,9 @@ class ProceduralWorldGenerator:
         # Generate walkable grid
         walkable_grid = self.generate_walkable_grid()
         
+        # Find optimal player spawn location (closest settlement)
+        player_spawn = self.entity_spawner.find_closest_settlement(self.settlements) if hasattr(self.entity_spawner, 'find_closest_settlement') else (self.width // 2, self.height // 2)
+        
         world_data = {
             'seed': self.seed,
             'width': self.width,
@@ -102,7 +113,8 @@ class ProceduralWorldGenerator:
             'objects': objects,
             'chests': chests,
             'walkable_grid': walkable_grid,
-            'safe_zones': self.settlement_generator.settlement_safe_zones
+            'safe_zones': self.settlement_generator.settlement_safe_zones,
+            'player_spawn': player_spawn  # Add optimal player spawn location
         }
         
         print(f"World generation complete! Generated {len(self.settlements)} settlements")

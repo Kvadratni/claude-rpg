@@ -69,29 +69,47 @@ class Game:
     
     def new_game(self, use_procedural=False, seed=None):
         """Start a new game with optional procedural generation"""
-        # Create player at the starting position
         if use_procedural:
-            # For procedural worlds, start at center
-            start_x, start_y = 100, 100
+            # For procedural worlds, we'll determine spawn after world generation
             level_name = f"Procedural World"
             if seed:
                 level_name += f" (Seed: {seed})"
+            
+            # Create level first to get optimal spawn location
+            self.current_level = Level(
+                level_name, 
+                None,  # Player will be created after we know spawn location
+                self.asset_loader, 
+                self,
+                use_procedural=use_procedural,
+                seed=seed
+            )
+            
+            # Get optimal player spawn location from procedural generation
+            if hasattr(self.current_level, 'procedural_info') and 'player_spawn' in self.current_level.procedural_info:
+                start_x, start_y = self.current_level.procedural_info['player_spawn']
+            else:
+                start_x, start_y = 100, 100  # Fallback
+            
+            # Create player at optimal location
+            self.player = Player(start_x, start_y, self.asset_loader, self.game_log)
+            self.current_level.player = self.player
+            
         else:
             # For template worlds, use village center
             start_x, start_y = 100, 102
             level_name = "village"
-        
-        self.player = Player(start_x, start_y, self.asset_loader, self.game_log)
-        
-        # Create the level with procedural option
-        self.current_level = Level(
-            level_name, 
-            self.player, 
-            self.asset_loader, 
-            self,
-            use_procedural=use_procedural,
-            seed=seed
-        )
+            
+            self.player = Player(start_x, start_y, self.asset_loader, self.game_log)
+            
+            # Create the level with template system
+            self.current_level = Level(
+                level_name, 
+                self.player, 
+                self.asset_loader, 
+                self,
+                use_procedural=False
+            )
         
         # Initialize quest system
         from .quest_system import QuestManager
@@ -110,6 +128,7 @@ class Game:
             self.game_log.add_message("Explore and discover what awaits you...", "exploration")
             if seed:
                 self.game_log.add_message(f"World seed: {seed}", "system")
+            self.game_log.add_message(f"You find yourself near a settlement...", "story")
         else:
             self.game_log.add_message("Welcome to Eldermoor Village!", "system")
             self.game_log.add_message("The village elder seeks your help...", "story")
