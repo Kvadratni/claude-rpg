@@ -78,3 +78,7 @@ settings.json
 
 # Logs
 *.log
+
+# Development/refactoring documentation
+PROPOSED_STRUCTURE.md
+REFACTORING_PHASES.md
