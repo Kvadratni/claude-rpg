@@ -31,11 +31,8 @@ class Entity:
             # First try to load by exact name (for biome-specific objects)
             object_image = self.asset_loader.get_image(self.name.lower())
             if object_image:
-                print(f"DEBUG: Loaded biome-specific sprite for {self.name}")
                 self.sprite = pygame.transform.scale(object_image, (size, size))
                 return
-            else:
-                print(f"DEBUG: No sprite found for {self.name}, trying fallbacks...")
             
             # Fallback to generic types for backwards compatibility
             if "tree" in self.name.lower():

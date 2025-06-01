@@ -36,11 +36,11 @@ class LevelRendererMixin:
         center_x = int(self.player.x)
         center_y = int(self.player.y)
         
-        # Calculate tile range - render much more area
-        start_x = max(0, center_x - visible_width)  # Remove // 2 to get full range
-        end_x = min(self.width, center_x + visible_width)
-        start_y = max(0, center_y - visible_height)  # Remove // 2 to get full range
-        end_y = min(self.height, center_y + visible_height)
+        # Calculate tile range - render visible area (optimized for chunked worlds)
+        start_x = max(0, center_x - visible_width)
+        end_x = center_x + visible_width  # Don't limit by world size for chunked worlds
+        start_y = max(0, center_y - visible_height)
+        end_y = center_y + visible_height  # Don't limit by world size for chunked worlds
         
         # Render tiles in proper isometric order (back to front)
         # This ensures proper depth sorting for buildings
@@ -86,8 +86,8 @@ class LevelRendererMixin:
     
     def render_tile_at_position(self, surface, x, y):
         """Render a single tile with new flat surface wall system"""
-        tile_type = self.tiles[y][x]
-        height = self.heightmap[y][x]
+        tile_type = self.get_tile(x, y) if hasattr(self, 'get_tile') else self.tiles[y][x]
+        height = self.heightmap[y][x] if hasattr(self, 'heightmap') and self.heightmap else 0
         
         # Calculate screen position using proper isometric conversion
         screen_x, screen_y = self.iso_renderer.world_to_screen(x, y, self.camera_x, self.camera_y)
