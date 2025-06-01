@@ -107,8 +107,12 @@ class EnhancedEntitySpawner:
         
         # Entity-specific validation
         if entity_type == "object":
-            # Trees can only spawn on grass or dirt
-            if tile_type not in [self.TILE_GRASS, self.TILE_DIRT]:
+            # Objects can spawn on walkable biome-specific tiles
+            valid_object_tiles = [
+                self.TILE_GRASS, self.TILE_DIRT, self.TILE_STONE,
+                self.TILE_SAND, self.TILE_SNOW, self.TILE_FOREST_FLOOR, self.TILE_SWAMP
+            ]
+            if tile_type not in valid_object_tiles:
                 return False
             
             # Check for nearby walls/buildings (objects shouldn't spawn too close to structures)
@@ -116,8 +120,12 @@ class EnhancedEntitySpawner:
                 return False
         
         elif entity_type in ["enemy", "boss"]:
-            # Enemies need walkable terrain
-            if tile_type not in [self.TILE_GRASS, self.TILE_DIRT, self.TILE_STONE]:
+            # Enemies need walkable terrain (including biome-specific tiles)
+            valid_enemy_tiles = [
+                self.TILE_GRASS, self.TILE_DIRT, self.TILE_STONE,
+                self.TILE_SAND, self.TILE_SNOW, self.TILE_FOREST_FLOOR, self.TILE_SWAMP
+            ]
+            if tile_type not in valid_enemy_tiles:
                 return False
             
             # Enemies shouldn't spawn too close to walls (need movement space)
@@ -125,8 +133,12 @@ class EnhancedEntitySpawner:
                 return False
         
         elif entity_type == "chest":
-            # Chests can spawn on grass, dirt, or stone
-            if tile_type not in [self.TILE_GRASS, self.TILE_DIRT, self.TILE_STONE]:
+            # Chests can spawn on walkable terrain (including biome-specific tiles)
+            valid_chest_tiles = [
+                self.TILE_GRASS, self.TILE_DIRT, self.TILE_STONE,
+                self.TILE_SAND, self.TILE_SNOW, self.TILE_FOREST_FLOOR, self.TILE_SWAMP
+            ]
+            if tile_type not in valid_chest_tiles:
                 return False
             
             # Chests shouldn't be completely surrounded by walls
@@ -272,11 +284,12 @@ class EnhancedEntitySpawner:
                 if self._is_in_safe_zone(x, y, settlement_safe_zones):
                     continue
                 
+                biome = biome_map[y][x]
+                
                 # Enhanced position validation for objects
                 if not self.is_position_valid_for_entity(x, y, tiles, biome_map, "object"):
                     continue
                 
-                biome = biome_map[y][x]
                 
                 # Biome-specific object spawning with terrain validation and variants
                 spawn_chance = 0
@@ -331,6 +344,7 @@ class EnhancedEntitySpawner:
                     # Choose random variant from biome-appropriate options
                     chosen_variant = random.choice(object_variants)
                     
+                        
                     # Create object with biome-specific sprite
                     obj = Entity(x, y, chosen_variant, entity_type="object", 
                                blocks_movement=True, asset_loader=asset_loader)
@@ -339,7 +353,6 @@ class EnhancedEntitySpawner:
                     # Mark position as occupied
                     self.mark_position_occupied(x, y)
         
-        print(f"Spawned {len(objects)} objects with terrain validation")
         return objects
     
     def spawn_chests(self, tiles: List[List[int]], biome_map: List[List[str]], 
