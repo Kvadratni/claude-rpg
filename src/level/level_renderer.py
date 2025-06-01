@@ -29,7 +29,7 @@ class LevelRendererMixin:
         game_surface.fill((0, 0, 0))
         
         # Calculate visible tile range - much larger rendering area
-        visible_width = (screen_width // self.tile_width) + 30  # Much larger area
+        visible_width = (screen_width // self.tile_width) + 10  # Optimized for large worlds
         visible_height = (game_area_height // (self.tile_height // 2)) + 30  # Much larger area
         
         # Calculate center tile

@@ -62,8 +62,8 @@ class LevelBase(SpawningMixin):
         self.player = player
         self.asset_loader = asset_loader
         self.game = game
-        self.width = 200  # Default size, may be overridden by template
-        self.height = 200
+        self.width = 1000  # Large procedural world size
+        self.height = 1000
         
         # Isometric renderer
         self.iso_renderer = IsometricRenderer(64, 32)

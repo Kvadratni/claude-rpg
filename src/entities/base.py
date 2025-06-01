@@ -28,15 +28,31 @@ class Entity:
         
         # Try to use loaded assets first
         if self.asset_loader and self.entity_type == "object":
-            if "Tree" in self.name:
+            # First try to load by exact name (for biome-specific objects)
+            object_image = self.asset_loader.get_image(self.name.lower())
+            if object_image:
+                print(f"DEBUG: Loaded biome-specific sprite for {self.name}")
+                self.sprite = pygame.transform.scale(object_image, (size, size))
+                return
+            else:
+                print(f"DEBUG: No sprite found for {self.name}, trying fallbacks...")
+            
+            # Fallback to generic types for backwards compatibility
+            if "tree" in self.name.lower():
                 tree_image = self.asset_loader.get_image("tree")
                 if tree_image:
                     self.sprite = pygame.transform.scale(tree_image, (size, size))
                     return
-            elif "Rock" in self.name:
+            elif "rock" in self.name.lower():
                 rock_image = self.asset_loader.get_image("rock")
                 if rock_image:
                     self.sprite = pygame.transform.scale(rock_image, (size, size))
+                    return
+            elif "cactus" in self.name.lower():
+                # Try specific cactus first, fallback to generic tree
+                tree_image = self.asset_loader.get_image("tree")
+                if tree_image:
+                    self.sprite = pygame.transform.scale(tree_image, (size, size))
                     return
         
         # Fallback to generated sprite

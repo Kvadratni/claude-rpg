@@ -47,6 +47,11 @@ class EnhancedEntitySpawner:
     TILE_WATER = 3
     TILE_WALL = 4
     TILE_DOOR = 5
+    # Biome-specific tiles
+    TILE_SAND = 16
+    TILE_SNOW = 17
+    TILE_FOREST_FLOOR = 18
+    TILE_SWAMP = 19
     TILE_BRICK = 13
     
     def __init__(self, width: int, height: int, seed: int = None):
@@ -273,32 +278,37 @@ class EnhancedEntitySpawner:
                 
                 biome = biome_map[y][x]
                 
-                # Biome-specific object spawning with terrain validation
+                # Biome-specific object spawning with terrain validation and variants
                 spawn_chance = 0
-                object_type = "Tree"
+                object_variants = []
                 
                 if biome == 'FOREST':
-                    # Trees only on grass/dirt, higher density in forests
-                    if tiles[y][x] in [self.TILE_GRASS, self.TILE_DIRT]:
-                        spawn_chance = 0.25  # Reduced from 0.3 for better spacing
-                        object_type = "Tree"
+                    # Trees only on grass/dirt/forest_floor, higher density in forests
+                    if tiles[y][x] in [self.TILE_GRASS, self.TILE_DIRT, self.TILE_FOREST_FLOOR]:  # 18 = TILE_FOREST_FLOOR
+                        spawn_chance = 0.25  # Dense forest coverage
+                        object_variants = ["pine_tree", "oak_tree", "fallen_log"]
                 elif biome == 'PLAINS':
                     # Scattered trees only on grass/dirt
                     if tiles[y][x] in [self.TILE_GRASS, self.TILE_DIRT]:
-                        spawn_chance = 0.03  # Reduced from 0.05
-                        object_type = "Tree"
+                        spawn_chance = 0.03  # Sparse coverage
+                        object_variants = ["oak_tree", "Tree"]  # Mix of new and old
                 elif biome == 'DESERT':
-                    # Rocks on any terrain except water/walls
-                    if tiles[y][x] in [self.TILE_GRASS, self.TILE_DIRT, self.TILE_STONE]:
-                        spawn_chance = 0.06  # Reduced from 0.08
-                        object_type = "Rock"
+                    # Desert objects on sand/dirt/stone
+                    if tiles[y][x] in [self.TILE_SAND, self.TILE_DIRT, self.TILE_STONE]:  # 16 = TILE_SAND
+                        spawn_chance = 0.08  # Moderate coverage
+                        object_variants = ["cactus_saguaro", "cactus_barrel", "desert_rock"]
                 elif biome == 'SNOW':
-                    # Mixed objects with terrain restrictions
-                    if tiles[y][x] in [self.TILE_GRASS, self.TILE_DIRT]:
-                        spawn_chance = 0.08  # Reduced from 0.1
-                        object_type = random.choice(["Tree", "Rock"])
+                    # Winter objects with terrain restrictions
+                    if tiles[y][x] in [self.TILE_SNOW, self.TILE_STONE]:  # 17 = TILE_SNOW
+                        spawn_chance = 0.10  # Good coverage
+                        object_variants = ["snowy_pine", "ice_block", "frozen_rock"]
+                elif biome == 'SWAMP':
+                    # Swamp objects on swamp/water tiles
+                    if tiles[y][x] in [self.TILE_SWAMP, self.TILE_DIRT]:  # 19 = TILE_SWAMP
+                        spawn_chance = 0.12  # Dense swamp coverage
+                        object_variants = ["dead_tree", "swamp_log", "swamp_mushroom"]
                 
-                if random.random() < spawn_chance:
+                if random.random() < spawn_chance and object_variants:
                     # Import Entity class
                     try:
                         from ...entities import Entity
@@ -318,7 +328,11 @@ class EnhancedEntitySpawner:
                                     pass
                             Entity = MockEntity
                     
-                    obj = Entity(x, y, object_type, entity_type="object", 
+                    # Choose random variant from biome-appropriate options
+                    chosen_variant = random.choice(object_variants)
+                    
+                    # Create object with biome-specific sprite
+                    obj = Entity(x, y, chosen_variant, entity_type="object", 
                                blocks_movement=True, asset_loader=asset_loader)
                     objects.append(obj)
                     

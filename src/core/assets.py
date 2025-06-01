@@ -82,6 +82,19 @@ class AssetLoader:
             "swamp_troll": "swamp_troll.png",
             "tree": "tree.png",
             "rock": "rock.png",
+            # Biome-specific environmental objects
+            "cactus_saguaro": "cactus_saguaro.png",
+            "cactus_barrel": "cactus_barrel.png",
+            "desert_rock": "desert_rock.png",
+            "snowy_pine": "snowy_pine.png",
+            "ice_block": "ice_block.png",
+            "frozen_rock": "frozen_rock.png",
+            "dead_tree": "dead_tree.png",
+            "swamp_log": "swamp_log.png",
+            "swamp_mushroom": "swamp_mushroom.png",
+            "pine_tree": "pine_tree.png",
+            "oak_tree": "oak_tree.png",
+            "fallen_log": "fallen_log.png",
             "menu_background": "menu_background.png",  # Added menu background
             # Individual item sprites
             "iron_sword": "iron_sword.png",
@@ -201,6 +214,19 @@ class AssetLoader:
             "swamp_troll": (85, 107, 47),  # Dark olive green
             "tree": (34, 139, 34),
             "rock": (128, 128, 128),
+            # Biome-specific environmental objects
+            "cactus_saguaro": (34, 139, 34),  # Green cactus
+            "cactus_barrel": (107, 142, 35),  # Olive green cactus
+            "desert_rock": (210, 180, 140),  # Tan desert rock
+            "snowy_pine": (25, 100, 25),  # Dark green with snow
+            "ice_block": (173, 216, 230),  # Light blue ice
+            "frozen_rock": (176, 196, 222),  # Light steel blue
+            "dead_tree": (101, 67, 33),  # Saddle brown dead tree
+            "swamp_log": (85, 107, 47),  # Dark olive green log
+            "swamp_mushroom": (160, 82, 45),  # Saddle brown mushroom
+            "pine_tree": (34, 139, 34),  # Forest green pine
+            "oak_tree": (107, 142, 35),  # Olive green oak
+            "fallen_log": (139, 69, 19),  # Saddle brown fallen log
             # Item colors
             "iron_sword": (192, 192, 192),
             "steel_axe": (169, 169, 169),

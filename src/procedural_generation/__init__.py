@@ -14,13 +14,13 @@ Main Components:
 Usage:
     from procedural_generation import ProceduralWorldGenerator
     
-    generator = ProceduralWorldGenerator(width=200, height=200, seed=12345)
+    generator = ProceduralWorldGenerator(width=1000, height=1000, seed=12345)
     world_data = generator.generate_world(asset_loader)
     
     # Or use individual components:
     from procedural_generation import BiomeGenerator, SettlementGenerator
     
-    biome_gen = BiomeGenerator(200, 200, 12345)
+    biome_gen = BiomeGenerator(1000, 1000, 12345)
     biome_map = biome_gen.generate_biome_map()
 """
 

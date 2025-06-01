@@ -383,7 +383,7 @@ if __name__ == "__main__":
     template_path = "assets/maps/main_world.png"
     os.makedirs(os.path.dirname(template_path), exist_ok=True)
     
-    create_default_template(200, 200, template_path)
+    create_default_template(1000, 1000, template_path)
     
     # Test loading the template
     try:

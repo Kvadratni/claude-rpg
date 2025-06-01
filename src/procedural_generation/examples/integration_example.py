@@ -32,8 +32,8 @@ class MockLevel:
         self.level_name = level_name
         self.player = player
         self.asset_loader = asset_loader
-        self.width = 200
-        self.height = 200
+        self.width = 1000
+        self.height = 1000
         
         # World data
         self.tiles = None

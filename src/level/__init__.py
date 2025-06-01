@@ -49,8 +49,8 @@ class Level(
             self.player = player
             self.asset_loader = asset_loader
             self.game = game
-            self.width = 200  # Default size for procedural worlds
-            self.height = 200
+            self.width = 1000  # Large procedural world size
+            self.height = 1000
             
             # Initialize core systems without template loading
             from ..core.isometric import IsometricRenderer
