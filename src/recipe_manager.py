@@ -116,7 +116,7 @@ class GooseRecipeManager:
             
             # Set up environment
             env = os.environ.copy()
-            env["GOOSE_MODEL"] = "goose-claude-4-sonnet"  # Try the working model
+            env["GOOSE_MODEL"] = "goose-gpt-4-1"  # Use GPT-4.1 model
             print(f"🔧 [RecipeManager] Using model: {env.get('GOOSE_MODEL')}")
             
             # Let's try to actually run the subprocess with detailed logging
@@ -168,11 +168,7 @@ class GooseRecipeManager:
                 execution_time = time.time() - start_time
                 print(f"🔧 [RecipeManager] Subprocess completed in {execution_time:.2f}s with return code: {result.returncode}")
                 
-                # Give much more time for AI response to be written
-                print(f"🔧 [RecipeManager] Waiting 10 seconds for AI response to be written...")
-                time.sleep(10)
-                
-                # Read the output from the file
+                # Read the output from the file immediately
                 try:
                     with open(output_file_path, 'r') as f:
                         stdout = f.read()

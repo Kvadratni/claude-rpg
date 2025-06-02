@@ -135,7 +135,7 @@ class Game:
                 # CRITICAL: Handle AI chat events FIRST with highest priority
                 ai_event_handled = False
                 if hasattr(self.player, 'current_ai_chat') and self.player.current_ai_chat and self.player.current_ai_chat.is_active:
-                    print(f"🔧 Game.py handling AI chat event: {event.type}")
+                    print(f"Game.py handling AI chat event: {event.type}")
                     if event.type == pygame.KEYDOWN:
                         message = self.player.current_ai_chat.handle_input(event)
                         if message:

@@ -23,9 +23,9 @@ class GooseRecipeIntegration:
     def send_message(self, message: str, context: str = "") -> str:
         """Send message to AI and get response using session approach"""
         try:
-            # Set up environment with GPT-4o-mini as the chosen model
+            # Set up environment with GPT-4.1 as the chosen model
             env = os.environ.copy()
-            env["GOOSE_MODEL"] = "goose-gpt-4o-mini"
+            env["GOOSE_MODEL"] = "goose-gpt-4-1"
             
             # Create a comprehensive NPC prompt
             npc_prompt = self._create_npc_prompt(message, context)
@@ -208,14 +208,14 @@ class AIChatWindow:
         self.font = None
         self.small_font = None
         self.scroll_offset = 0
-        self.max_visible_lines = 8
+        self.max_visible_lines = 10  # Increased for better visibility
         
         # Initialize fonts
         self._init_fonts()
         
         # Chat window dimensions
         self.width = 600
-        self.height = 400
+        self.height = 450  # Increased height
         self.padding = 20
         
     def _init_fonts(self):
@@ -239,29 +239,35 @@ class AIChatWindow:
         """Handle keyboard input for chat. Returns message if Enter is pressed."""
         if not self.is_active:
             return None
-        
-        print(f"🔧 AIChatWindow.handle_input: event.type={event.type}, key={getattr(event, 'key', 'N/A')}")
             
         if event.type == pygame.KEYDOWN:
-            print(f"🔧 KEYDOWN event, key={event.key}, input_buffer='{self.input_buffer}'")
             if event.key == pygame.K_RETURN:
-                print(f"🔧 Enter pressed, input_buffer='{self.input_buffer}'")
                 if self.input_buffer.strip():
                     message = self.input_buffer.strip()
                     self.input_buffer = ""
-                    print(f"🔧 Returning message: '{message}'")
                     return message
-                else:
-                    print(f"🔧 Input buffer is empty, not sending message")
             elif event.key == pygame.K_BACKSPACE:
                 self.input_buffer = self.input_buffer[:-1]
-                print(f"🔧 Backspace, new buffer: '{self.input_buffer}'")
             elif event.key == pygame.K_ESCAPE:
-                print(f"🔧 Escape pressed, closing chat")
                 self.is_active = False
+            elif event.key == pygame.K_UP:
+                # Scroll up
+                if self.scroll_offset > 0:
+                    self.scroll_offset -= 1
+            elif event.key == pygame.K_DOWN:
+                # Scroll down
+                max_scroll = max(0, len(self.chat_history) - self.max_visible_lines)
+                if self.scroll_offset < max_scroll:
+                    self.scroll_offset += 1
+            elif event.key == pygame.K_PAGEUP:
+                # Page up
+                self.scroll_offset = max(0, self.scroll_offset - 3)
+            elif event.key == pygame.K_PAGEDOWN:
+                # Page down
+                max_scroll = max(0, len(self.chat_history) - self.max_visible_lines)
+                self.scroll_offset = min(max_scroll, self.scroll_offset + 3)
             elif hasattr(event, 'unicode') and event.unicode.isprintable():
                 self.input_buffer += event.unicode
-                print(f"🔧 Added '{event.unicode}', new buffer: '{self.input_buffer}'")
         
         return None
     
@@ -289,22 +295,42 @@ class AIChatWindow:
         title_text = self.font.render("AI Chat", True, (255, 255, 255))
         screen.blit(title_text, (x + self.padding, y + 10))
         
-        # Draw chat history
-        chat_y = y + 50
+        # Draw chat history area
+        chat_area_y = y + 50
+        chat_area_height = self.height - 120  # Leave space for title and input
+        
+        # Create a clipping rectangle for the chat area
+        chat_rect = pygame.Rect(x + self.padding, chat_area_y, self.width - self.padding * 2 - 20, chat_area_height)
+        
+        # Draw chat messages with proper spacing
         visible_messages = self.chat_history[self.scroll_offset:self.scroll_offset + self.max_visible_lines]
+        current_y = chat_area_y
+        line_height = 25  # Increased line height to prevent overlap
         
         for i, msg in enumerate(visible_messages):
+            if current_y + line_height > chat_area_y + chat_area_height:
+                break  # Don't draw beyond the chat area
+                
             sender_color = (100, 255, 100) if msg["sender"] == "Player" else (255, 255, 100)
             
             # Render sender name
             sender_text = self.small_font.render(f"{msg['sender']}:", True, sender_color)
-            screen.blit(sender_text, (x + self.padding, chat_y + i * 35))
+            screen.blit(sender_text, (x + self.padding, current_y))
             
-            # Render message (word wrap if needed)
-            message_lines = self._wrap_text(msg["message"], self.width - self.padding * 2 - 100)
+            # Render message with word wrapping
+            message_lines = self._wrap_text(msg["message"], self.width - self.padding * 2 - 120)
             for j, line in enumerate(message_lines):
+                if current_y + (j + 1) * 18 > chat_area_y + chat_area_height:
+                    break  # Don't draw beyond the chat area
                 msg_text = self.small_font.render(line, True, (255, 255, 255))
-                screen.blit(msg_text, (x + self.padding + 100, chat_y + i * 35 + j * 15))
+                screen.blit(msg_text, (x + self.padding + 100, current_y + j * 18))
+            
+            # Move to next message position
+            current_y += max(line_height, len(message_lines) * 18 + 5)
+        
+        # Draw scrollbar if needed
+        if len(self.chat_history) > self.max_visible_lines:
+            self._draw_scrollbar(screen, x + self.width - 15, chat_area_y, 10, chat_area_height)
         
         # Draw input area
         input_y = y + self.height - 60
@@ -312,13 +338,38 @@ class AIChatWindow:
         pygame.draw.rect(screen, (50, 50, 50), input_rect)
         pygame.draw.rect(screen, (255, 255, 255), input_rect, 1)
         
-        # Draw input text
-        input_text = self.font.render(self.input_buffer + "|", True, (255, 255, 255))
-        screen.blit(input_text, (x + self.padding + 5, input_y + 5))
+        # Draw input text with cursor
+        display_text = self.input_buffer + "|"
+        input_text = self.font.render(display_text, True, (255, 255, 255))
+        # Clip text if it's too long
+        if input_text.get_width() > input_rect.width - 10:
+            # Show only the end of the text that fits
+            text_surface = pygame.Surface((input_rect.width - 10, input_text.get_height()))
+            text_surface.fill((50, 50, 50))
+            text_surface.blit(input_text, (input_rect.width - 10 - input_text.get_width(), 0))
+            screen.blit(text_surface, (x + self.padding + 5, input_y + 5))
+        else:
+            screen.blit(input_text, (x + self.padding + 5, input_y + 5))
         
         # Draw instructions
-        instruction_text = self.small_font.render("Type message and press Enter. ESC to close.", True, (200, 200, 200))
+        instruction_text = self.small_font.render("Type message and press Enter. ESC to close. ↑↓ to scroll.", True, (200, 200, 200))
         screen.blit(instruction_text, (x + self.padding, y + self.height - 25))
+    
+    def _draw_scrollbar(self, screen: pygame.Surface, x: int, y: int, width: int, height: int):
+        """Draw a scrollbar for the chat window"""
+        # Draw scrollbar background
+        pygame.draw.rect(screen, (100, 100, 100), (x, y, width, height))
+        
+        # Calculate scrollbar thumb position and size
+        total_messages = len(self.chat_history)
+        visible_ratio = self.max_visible_lines / total_messages
+        thumb_height = max(20, int(height * visible_ratio))
+        
+        scroll_ratio = self.scroll_offset / max(1, total_messages - self.max_visible_lines)
+        thumb_y = y + int((height - thumb_height) * scroll_ratio)
+        
+        # Draw scrollbar thumb
+        pygame.draw.rect(screen, (200, 200, 200), (x, thumb_y, width, thumb_height))
     
     def _wrap_text(self, text: str, max_width: int) -> List[str]:
         """Wrap text to fit within max_width pixels"""
