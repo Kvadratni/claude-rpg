@@ -36,6 +36,7 @@ class NPC(Entity):
         if self.asset_loader:
             # Map NPC names to sprite assets
             sprite_mappings = {
+                # Existing NPCs
                 "Master Merchant": "npc_shopkeeper",
                 "Shopkeeper": "npc_shopkeeper", 
                 "Village Elder": "elder_npc",
@@ -52,7 +53,16 @@ class NPC(Entity):
                 "Forest Ranger": "forest_ranger",
                 "Master Herbalist": "master_herbalist",
                 "Mysterious Wizard": "mysterious_wizard",
-                "Old Hermit": "old_hermit"
+                "Old Hermit": "old_hermit",
+                
+                # New NPCs - using existing assets or generic fallback
+                "Desert Guide": "caravan_master",  # Similar desert theme
+                "Head Miner": "mine_foreman",      # Similar mining theme
+                "Master Fisher": "harbor_master",  # Similar water/harbor theme
+                "Trade Master": "npc_shopkeeper",  # Similar merchant theme
+                "Stable Master": "caravan_master", # Similar travel/transport theme
+                "Water Keeper": "harbor_master",   # Similar water theme
+                "Lodge Keeper": "innkeeper"        # Similar hospitality theme
             }
             
             sprite_name = sprite_mappings.get(self.name)
@@ -75,6 +85,7 @@ class NPC(Entity):
         
         # Different colors and features for different NPCs
         npc_styles = {
+            # Existing NPCs
             "Master Merchant": {"color": (255, 215, 0), "feature": "hat", "feature_color": (139, 69, 19)},  # Gold with brown hat
             "Shopkeeper": {"color": (255, 215, 0), "feature": "hat", "feature_color": (139, 69, 19)},
             "Village Elder": {"color": (128, 0, 128), "feature": "beard", "feature_color": (255, 255, 255)},  # Purple with white beard
@@ -92,6 +103,15 @@ class NPC(Entity):
             "Master Herbalist": {"color": (50, 205, 50), "feature": "hood", "feature_color": (34, 139, 34)},  # Lime green with forest green hood
             "Mysterious Wizard": {"color": (75, 0, 130), "feature": "hat", "feature_color": (25, 25, 112)},  # Indigo with midnight blue hat
             "Old Hermit": {"color": (160, 160, 160), "feature": "beard", "feature_color": (220, 220, 220)},  # Gray with light gray beard
+            
+            # New NPCs
+            "Desert Guide": {"color": (218, 165, 32), "feature": "turban", "feature_color": (184, 134, 11)},  # Goldenrod with darker turban
+            "Head Miner": {"color": (85, 85, 85), "feature": "helmet", "feature_color": (169, 169, 169)},  # Dark gray with light gray helmet
+            "Master Fisher": {"color": (0, 139, 139), "feature": "hat", "feature_color": (0, 100, 100)},  # Dark cyan with darker hat
+            "Trade Master": {"color": (255, 140, 0), "feature": "hat", "feature_color": (205, 102, 0)},  # Dark orange with darker hat
+            "Stable Master": {"color": (160, 82, 45), "feature": "hat", "feature_color": (139, 69, 19)},  # Saddle brown with brown hat
+            "Water Keeper": {"color": (30, 144, 255), "feature": "hood", "feature_color": (0, 100, 200)},  # Dodger blue with darker hood
+            "Lodge Keeper": {"color": (205, 92, 92), "feature": "apron", "feature_color": (255, 255, 255)}  # Indian red with white apron
         }
         
         # Get style for this NPC, default to generic style

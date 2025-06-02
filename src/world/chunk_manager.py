@@ -34,8 +34,8 @@ class ChunkManager:
         os.makedirs(self.world_dir, exist_ok=True)
         
         # Chunk loading parameters
-        self.load_radius = 2  # Load chunks within 2 chunk radius
-        self.unload_radius = 4  # Unload chunks beyond 4 chunk radius
+        self.load_radius = 1  # Load chunks within 1 chunk radius
+        self.unload_radius = 2  # Unload chunks beyond 2 chunk radius
         
         print(f"ChunkManager initialized for world '{world_name}' with seed {world_seed}")
     
