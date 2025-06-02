@@ -76,6 +76,9 @@ class ProceduralGenerationMixin:
         
         spawn_chunk_x, spawn_chunk_y = 0, 0  # Start at origin
         
+        # Track settlements found during generation
+        settlements_found = []
+        
         for chunk_y in range(spawn_chunk_y - generation_radius, spawn_chunk_y + generation_radius + 1):
             for chunk_x in range(spawn_chunk_x - generation_radius, spawn_chunk_x + generation_radius + 1):
                 print(f"Generating chunk ({chunk_x}, {chunk_y}) - {generated_chunks + 1}/{total_chunks}")
@@ -84,19 +87,68 @@ class ProceduralGenerationMixin:
                 chunk = self.chunk_manager.get_chunk(chunk_x, chunk_y)
                 generated_chunks += 1
                 
+                # Check if this chunk has a settlement by looking for NPCs
+                npc_entities = [e for e in chunk.entities if e['type'] == 'npc']
+                if npc_entities:
+                    settlement_info = {
+                        'chunk_x': chunk_x,
+                        'chunk_y': chunk_y,
+                        'npc_count': len(npc_entities),
+                        'npcs': npc_entities
+                    }
+                    settlements_found.append(settlement_info)
+                    print(f"  Found settlement in chunk ({chunk_x}, {chunk_y}) with {len(npc_entities)} NPCs")
+                
                 # Update progress
                 progress = (generated_chunks / total_chunks) * 100
                 if generated_chunks % 5 == 0 or generated_chunks == total_chunks:
                     print(f"World generation progress: {progress:.1f}% ({generated_chunks}/{total_chunks})")
         
         print(f"Pre-generated {total_chunks} chunks successfully!")
+        print(f"Found {len(settlements_found)} settlements during generation")
         
-        # Find a good spawn location in the center chunk
-        spawn_chunk = self.chunk_manager.get_chunk(0, 0)
-        if spawn_chunk:
-            spawn_x, spawn_y = self.find_safe_spawn_in_chunk(spawn_chunk)
+        # Determine spawn location - prefer first settlement found, but prioritize safer settlements
+        if settlements_found:
+            # Sort settlements by safety (prefer non-swamp settlements)
+            def settlement_safety_score(settlement):
+                # Get the first NPC to determine settlement type
+                first_npc = settlement['npcs'][0]['name'] if settlement['npcs'] else ''
+                if 'Swamp' in first_npc:
+                    return 1  # Lower priority for swamp settlements
+                elif 'Village' in first_npc or 'Merchant' in first_npc:
+                    return 3  # High priority for villages
+                else:
+                    return 2  # Medium priority for other settlements
+            
+            # Sort by safety score (highest first)
+            settlements_found.sort(key=settlement_safety_score, reverse=True)
+            
+            # Use the safest settlement found
+            first_settlement = settlements_found[0]
+            settlement_chunk_x = first_settlement['chunk_x']
+            settlement_chunk_y = first_settlement['chunk_y']
+            
+            print(f"Spawning player near safest settlement in chunk ({settlement_chunk_x}, {settlement_chunk_y})")
+            print(f"Settlement has NPCs: {[npc['name'] for npc in first_settlement['npcs']]}")
+            
+            # Get the settlement chunk
+            spawn_chunk = self.chunk_manager.get_chunk(settlement_chunk_x, settlement_chunk_y)
+            if spawn_chunk:
+                spawn_x, spawn_y = self.find_safe_spawn_in_chunk(spawn_chunk)
+            else:
+                # Fallback to center of settlement chunk
+                spawn_x = settlement_chunk_x * 64 + 32
+                spawn_y = settlement_chunk_y * 64 + 32
+            
+            print(f"Player spawn set to ({spawn_x}, {spawn_y}) near settlement with {first_settlement['npc_count']} NPCs")
         else:
-            spawn_x, spawn_y = 32, 32  # Fallback to center of chunk (0,0)
+            # No settlements found, use center chunk
+            print("No settlements found, spawning at center chunk (0, 0)")
+            spawn_chunk = self.chunk_manager.get_chunk(0, 0)
+            if spawn_chunk:
+                spawn_x, spawn_y = self.find_safe_spawn_in_chunk(spawn_chunk)
+            else:
+                spawn_x, spawn_y = 32, 32  # Fallback to center of chunk (0,0)
         
         # Store procedural info for save/load
         self.procedural_info = {
@@ -105,11 +157,15 @@ class ProceduralGenerationMixin:
             'world_name': world_name,
             'player_spawn': (spawn_x, spawn_y),
             'pre_generated': True,
-            'generation_radius': generation_radius
+            'generation_radius': generation_radius,
+            'settlements': settlements_found
         }
         
-        # Load initial entities from pre-generated chunks
-        self.load_entities_from_pregenerated_chunks()
+        # Load initial entities from pre-generated chunks around the actual spawn location
+        self.load_entities_from_pregenerated_chunks(spawn_x, spawn_y)
+        
+        # Initialize camera to center on spawn location
+        self.initialize_camera_for_spawn(spawn_x, spawn_y)
         
         print(f"Procedural world generation complete:")
         print(f"  Seed: {seed}")
@@ -125,44 +181,56 @@ class ProceduralGenerationMixin:
     
     def find_safe_spawn_in_chunk(self, chunk):
         """Find a safe spawn location within a chunk"""
-        # Look for any walkable area - be more flexible with biomes
+        print(f"Finding safe spawn in chunk ({chunk.chunk_x}, {chunk.chunk_y})")
+        
+        # Look for walkable areas, prioritizing safer biomes
+        best_spawn = None
+        fallback_spawn = None
+        
         for y in range(10, chunk.CHUNK_SIZE - 10):  # Avoid edges
             for x in range(10, chunk.CHUNK_SIZE - 10):
                 tile = chunk.get_tile(x, y)
                 biome = chunk.get_biome(x, y)
                 
-                # Look for safe spawn conditions - accept more biomes and tiles
-                walkable_tiles = [0, 1, 16, 17, 18]  # Grass, dirt, sand, snow, forest floor
-                safe_biomes = ['PLAINS', 'FOREST', 'DESERT', 'SNOW']  # Exclude swamp for spawn
+                # Check if tile is walkable
+                walkable_tiles = [0, 1, 16, 17, 18, 19]  # All walkable tile types
+                if tile not in walkable_tiles:
+                    continue
                 
-                if tile in walkable_tiles and biome in safe_biomes:
-                    # Convert to world coordinates
-                    world_x = chunk.chunk_x * chunk.CHUNK_SIZE + x
-                    world_y = chunk.chunk_y * chunk.CHUNK_SIZE + y
-                    return world_x, world_y
-        
-        # If no safe biome found, look for any walkable tile (including swamp)
-        for y in range(10, chunk.CHUNK_SIZE - 10):
-            for x in range(10, chunk.CHUNK_SIZE - 10):
-                tile = chunk.get_tile(x, y)
-                walkable_tiles = [0, 1, 16, 17, 18, 19]  # Include swamp
+                # Convert to world coordinates
+                world_x = chunk.chunk_x * chunk.CHUNK_SIZE + x
+                world_y = chunk.chunk_y * chunk.CHUNK_SIZE + y
                 
-                if tile in walkable_tiles:
-                    world_x = chunk.chunk_x * chunk.CHUNK_SIZE + x
-                    world_y = chunk.chunk_y * chunk.CHUNK_SIZE + y
+                # Prefer safer biomes for spawn
+                safe_biomes = ['PLAINS', 'FOREST', 'DESERT', 'SNOW']
+                if biome in safe_biomes:
+                    print(f"Found safe spawn at ({world_x}, {world_y}) in {biome} biome")
                     return world_x, world_y
+                
+                # Keep track of any walkable position as fallback
+                if fallback_spawn is None:
+                    fallback_spawn = (world_x, world_y)
+                    print(f"Fallback spawn candidate at ({world_x}, {world_y}) in {biome} biome")
         
-        # Fallback to chunk center
+        # Use fallback if no safe biome found
+        if fallback_spawn:
+            print(f"Using fallback spawn at {fallback_spawn}")
+            return fallback_spawn
+        
+        # Last resort: chunk center
         center_x = chunk.chunk_x * chunk.CHUNK_SIZE + chunk.CHUNK_SIZE // 2
         center_y = chunk.chunk_y * chunk.CHUNK_SIZE + chunk.CHUNK_SIZE // 2
+        print(f"Using chunk center as spawn: ({center_x}, {center_y})")
         return center_x, center_y
     
-    def load_entities_from_pregenerated_chunks(self):
+    def load_entities_from_pregenerated_chunks(self, spawn_x, spawn_y):
         """Load entities from chunks around player spawn - limited initial load"""
         print("Loading entities from chunks around spawn...")
         
-        # Only load entities from a small radius around spawn initially
-        spawn_chunk_x, spawn_chunk_y = 0, 0
+        # Convert spawn coordinates to chunk coordinates
+        spawn_chunk_x, spawn_chunk_y = self.chunk_manager.world_to_chunk_coords(spawn_x, spawn_y)
+        print(f"Spawn at ({spawn_x}, {spawn_y}) = chunk ({spawn_chunk_x}, {spawn_chunk_y})")
+        
         load_radius = 1  # Only load 3x3 chunks around spawn initially
         
         entity_counts = {'npcs': 0, 'enemies': 0, 'objects': 0, 'chests': 0, 'items': 0}
@@ -184,6 +252,7 @@ class ProceduralGenerationMixin:
                             npc_obj = self.create_npc_from_data(entity_data, world_x, world_y)
                             if npc_obj:
                                 self.npcs.append(npc_obj)
+                                print(f"  Loaded NPC: {entity_data.get('name', 'Unknown')} at ({world_x}, {world_y})")
                             entity_counts['npcs'] += 1
                             
                         elif entity_data['type'] == 'enemy':
@@ -216,6 +285,22 @@ class ProceduralGenerationMixin:
         print(f"  NPCs: {len(self.npcs)}")
         print(f"  Enemies: {len(self.enemies)}")
         print(f"  Objects: {len(self.objects)}")
+    
+    def initialize_camera_for_spawn(self, spawn_x, spawn_y):
+        """Initialize camera to center on spawn location"""
+        print(f"Initializing camera for spawn at ({spawn_x}, {spawn_y})")
+        
+        # Convert spawn position to isometric coordinates
+        player_iso_x, player_iso_y = self.iso_renderer.cart_to_iso(spawn_x, spawn_y)
+        
+        # Center camera on spawn location (use reasonable screen dimensions)
+        screen_width = 1200  # Default screen width
+        screen_height = 800  # Default screen height
+        
+        self.camera_x = player_iso_x - screen_width // 2
+        self.camera_y = player_iso_y - screen_height // 2
+        
+        print(f"Camera initialized to ({self.camera_x}, {self.camera_y})")
     
     def update_chunks_around_player(self):
         """Update loaded chunks based on player position"""
