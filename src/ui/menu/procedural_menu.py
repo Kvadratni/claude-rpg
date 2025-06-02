@@ -118,7 +118,7 @@ class ProceduralWorldMenu(BaseMenu):
         self.play_ui_sound("menu_confirm")
         
         # Start the game with procedural generation
-        self.game.new_game(use_procedural=True, seed=seed)
+        self.game.new_game(seed=seed)
     
     def go_back(self):
         """Return to main menu"""

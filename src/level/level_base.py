@@ -14,7 +14,6 @@ try:
     from ..door_pathfinder import DoorPathfinder
     from ..door_renderer import DoorRenderer
     from ..wall_renderer import WallRenderer
-    from ..template_level import integrate_template_generation
     from ..entities.spawning import SpawningMixin
 except ImportError:
     # Fallback for direct execution
@@ -24,7 +23,6 @@ except ImportError:
     from src.door_pathfinder import DoorPathfinder
     from src.door_renderer import DoorRenderer
     from src.wall_renderer import WallRenderer
-    from src.template_level import integrate_template_generation
     from src.entities.spawning import SpawningMixin
 
 
@@ -81,33 +79,12 @@ class LevelBase(SpawningMixin):
         self.camera_x = 0
         self.camera_y = 0
         
-        # Template generator (will be set if template is used)
-        self.template_generator = None
-        
         # Combat state tracking
         self.enemies_in_combat = set()  # Track which enemies are in combat
         self.combat_music_timer = 0     # Timer for combat music fade out
         
-        # Initialize template-based generation
-        self._initialize_template_generation()
-        
         # Generate heightmap and walkable grid if not already done
         self._initialize_level_data()
-    
-    def _initialize_template_generation(self):
-        """Initialize template-based level generation"""
-        template_path = "assets/maps/main_world.png"
-        if os.path.exists(template_path):
-            print("Using template-based map generation...")
-            success = integrate_template_generation(self, template_path)
-            if success:
-                print("Template-based generation successful!")
-            else:
-                print("Template generation failed, no fallback available")
-                raise RuntimeError("Template generation failed and no fallback is available")
-        else:
-            print("No template found, template is required")
-            raise RuntimeError("Template file not found and no fallback is available")
     
     def _initialize_level_data(self):
         """Initialize heightmap and walkable grid if not already done"""

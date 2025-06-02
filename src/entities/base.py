@@ -79,7 +79,7 @@ class Entity:
         # Add border
         pygame.draw.circle(self.sprite, (0, 0, 0), (size//2, size//2), size//2 - 2, 2)
     
-    def update(self, player_pos, level):
+    def update(self, level):
         """Update entity state"""
         pass
     

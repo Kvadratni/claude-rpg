@@ -67,71 +67,45 @@ class Game:
         # This would typically load sprites, sounds, etc.
         pass
     
-    def new_game(self, use_procedural=False, seed=None):
-        """Start a new game with optional procedural generation"""
-        if use_procedural:
-            # For procedural worlds, we'll determine spawn after world generation
-            level_name = f"Procedural World"
-            if seed:
-                level_name += f" (Seed: {seed})"
-            
-            # Create level first to get optimal spawn location
-            self.current_level = Level(
-                level_name, 
-                None,  # Player will be created after we know spawn location
-                self.asset_loader, 
-                self,
-                use_procedural=use_procedural,
-                seed=seed
-            )
-            
-            # Get optimal player spawn location from procedural generation
-            if hasattr(self.current_level, 'procedural_info') and 'player_spawn' in self.current_level.procedural_info:
-                start_x, start_y = self.current_level.procedural_info['player_spawn']
-            else:
-                start_x, start_y = 100, 100  # Fallback
-            
-            # Create player at optimal location
-            self.player = Player(start_x, start_y, self.asset_loader, self.game_log)
-            self.current_level.player = self.player
-            
+    def new_game(self, seed=None):
+        """Start a new game with procedural generation"""
+        # Always use procedural generation now
+        level_name = f"Procedural World"
+        if seed:
+            level_name += f" (Seed: {seed})"
+        
+        # Create level first to get optimal spawn location
+        self.current_level = Level(
+            level_name, 
+            None,  # Player will be created after we know spawn location
+            self.asset_loader, 
+            self,
+            seed=seed
+        )
+        
+        # Get optimal player spawn location from procedural generation
+        if hasattr(self.current_level, 'procedural_info') and 'player_spawn' in self.current_level.procedural_info:
+            start_x, start_y = self.current_level.procedural_info['player_spawn']
         else:
-            # For template worlds, use village center
-            start_x, start_y = 100, 102
-            level_name = "village"
-            
-            self.player = Player(start_x, start_y, self.asset_loader, self.game_log)
-            
-            # Create the level with template system
-            self.current_level = Level(
-                level_name, 
-                self.player, 
-                self.asset_loader, 
-                self,
-                use_procedural=False
-            )
+            start_x, start_y = 100, 100  # Fallback
+        
+        # Create player at optimal location
+        self.player = Player(start_x, start_y, self.asset_loader, self.game_log)
+        self.current_level.player = self.player
         
         # Initialize quest system
         from .quest_system import QuestManager
         self.quest_manager = QuestManager(self.player, self.game_log)
         
-        # Start tutorial quest for template worlds only
-        if not use_procedural:
-            self.quest_manager.start_quest("tutorial")
-        
         # Switch to playing state
         self.state = Game.STATE_PLAYING
         
-        # Log game start with appropriate context
-        if use_procedural:
-            self.game_log.add_message("Welcome to a procedurally generated world!", "system")
-            self.game_log.add_message("Explore and discover what awaits you...", "exploration")
-            if seed:
-                self.game_log.add_message(f"World seed: {seed}", "system")
-            self.game_log.add_message(f"You find yourself near a settlement...", "story")
-        else:
-            self.game_log.add_message("Welcome to Eldermoor Village!", "system")
-            self.game_log.add_message("The village elder seeks your help...", "story")
+        # Log game start
+        self.game_log.add_message("Welcome to a procedurally generated world!", "system")
+        self.game_log.add_message("Explore and discover what awaits you...", "exploration")
+        if seed:
+            self.game_log.add_message(f"World seed: {seed}", "system")
+        self.game_log.add_message(f"You find yourself near a settlement...", "story")
     
     def load_game(self, save_name):
         """Load a saved game with procedural world support"""
@@ -155,15 +129,21 @@ class Game:
                     self.player, 
                     self.asset_loader, 
                     self,
-                    use_procedural=True,
                     seed=seed
                 )
                 
                 self.game_log.add_message(f"Procedural world regenerated from seed: {seed}", "system")
             else:
-                # Load template-based level normally
-                self.current_level = Level.from_save_data(level_data, self.player, self.asset_loader, self)
-                self.game_log.add_message(f"Game loaded: {save_name}", "system")
+                # Convert old template saves to procedural worlds
+                print("Converting old template save to procedural world...")
+                self.current_level = Level(
+                    "Procedural World (Converted)",
+                    self.player, 
+                    self.asset_loader, 
+                    self,
+                    seed=None  # Random seed for converted worlds
+                )
+                self.game_log.add_message("Old save converted to procedural world", "system")
             
             self.state = Game.STATE_PLAYING
             return True

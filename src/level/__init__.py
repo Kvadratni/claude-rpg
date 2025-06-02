@@ -37,59 +37,51 @@ class Level(
     while providing a cleaner, more maintainable internal structure.
     """
     
-    def __init__(self, level_name, player, asset_loader, game=None, use_procedural=False, seed=None):
-        """Initialize the level with all functionality"""
+    def __init__(self, level_name, player, asset_loader, game=None, use_procedural=True, seed=None):
+        """Initialize the level with procedural generation (default)"""
         
-        if use_procedural:
-            # For procedural levels, initialize base without template generation
-            print(f"Creating procedural level: {level_name}")
-            
-            # Initialize the base class but skip template initialization
-            self.name = level_name
-            self.player = player
-            self.asset_loader = asset_loader
-            self.game = game
-            self.width = 1000  # Large procedural world size
-            self.height = 1000
-            
-            # Initialize core systems without template loading
-            from ..core.isometric import IsometricRenderer
-            from ..core.game_log import GameLog
-            from ..door_pathfinder import DoorPathfinder
-            from ..door_renderer import DoorRenderer
-            from ..wall_renderer import WallRenderer
-            
-            self.iso_renderer = IsometricRenderer(64, 32)
-            self.tile_width = self.iso_renderer.tile_width
-            self.tile_height = self.iso_renderer.tile_height
-            
-            self.door_renderer = DoorRenderer(asset_loader, self.iso_renderer)
-            self.door_pathfinder = DoorPathfinder(self)
-            self.wall_renderer = WallRenderer(self)
-            
-            self.camera_x = 0
-            self.camera_y = 0
-            self.template_generator = None
-            
-            # Combat state tracking
-            self.enemies_in_combat = set()
-            self.combat_music_timer = 0
-            
-            # Initialize empty entity lists
-            self.npcs = []
-            self.enemies = []
-            self.objects = []
-            self.items = []
-            self.chests = []  # Add chests list
-            
-            # Generate procedural world
-            self.generate_procedural_level(seed)
-            
-        else:
-            # Use existing template system
-            print(f"Creating template level: {level_name}")
-            # Initialize the base class normally
-            super().__init__(level_name, player, asset_loader, game)
+        # Always use procedural generation now
+        print(f"Creating procedural level: {level_name}")
+        
+        # Initialize the base class but skip template initialization
+        self.name = level_name
+        self.player = player
+        self.asset_loader = asset_loader
+        self.game = game
+        self.width = 1000  # Large procedural world size
+        self.height = 1000
+        
+        # Initialize core systems without template loading
+        from ..core.isometric import IsometricRenderer
+        from ..core.game_log import GameLog
+        from ..door_pathfinder import DoorPathfinder
+        from ..door_renderer import DoorRenderer
+        from ..wall_renderer import WallRenderer
+        
+        self.iso_renderer = IsometricRenderer(64, 32)
+        self.tile_width = self.iso_renderer.tile_width
+        self.tile_height = self.iso_renderer.tile_height
+        
+        self.door_renderer = DoorRenderer(asset_loader, self.iso_renderer)
+        self.door_pathfinder = DoorPathfinder(self)
+        self.wall_renderer = WallRenderer(self)
+        
+        self.camera_x = 0
+        self.camera_y = 0
+        
+        # Combat state tracking
+        self.enemies_in_combat = set()
+        self.combat_music_timer = 0
+        
+        # Initialize empty entity lists
+        self.npcs = []
+        self.enemies = []
+        self.objects = []
+        self.items = []
+        self.chests = []  # Add chests list
+        
+        # Generate procedural world
+        self.generate_procedural_level(seed)
         
         # Initialize HUD
         self.hud = HUD(self.game)

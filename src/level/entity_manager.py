@@ -43,7 +43,7 @@ class EntityManagerMixin:
         
         # Update NPCs
         for npc in self.npcs:
-            npc.update((self.player.x, self.player.y), self)
+            npc.update(self)
         
         # Update items
         for item in self.items:
