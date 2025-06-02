@@ -166,8 +166,8 @@ class WorldGenerator:
         settlement_seed = hash((self.world_seed, chunk.chunk_x, chunk.chunk_y, "buildings")) % (2**31)
         settlement_random = random.Random(settlement_seed)
         
-        # Place central stone area (smaller than original to leave room for buildings)
-        center_size = min(settlement_size) // 4
+        # Place central stone area (much smaller for 3x3 buildings)
+        center_size = min(settlement_size) // 6  # Even smaller center (was // 4)
         center_start_x = local_settlement_x + (settlement_size[0] - center_size) // 2
         center_start_y = local_settlement_y + (settlement_size[1] - center_size) // 2
         
@@ -312,8 +312,14 @@ class WorldGenerator:
         door_center_x = start_x + width // 2
         door_y = start_y + height - 1
         
-        # Create door (1 or 2 tiles wide depending on building size)
-        if width >= 6:
+        # For 3x3 buildings, use single door in center
+        # For larger buildings, use double doors
+        if width == 3:
+            # Single door for 3x3 buildings
+            if (0 <= door_center_x < Chunk.CHUNK_SIZE and 0 <= door_y < Chunk.CHUNK_SIZE and 
+                door_center_x > start_x and door_center_x < start_x + width - 1):
+                chunk.set_tile(door_center_x, door_y, 5)  # TILE_DOOR
+        elif width >= 6:
             # Double door for larger buildings
             door_x1 = door_center_x - 1
             door_x2 = door_center_x
@@ -326,7 +332,7 @@ class WorldGenerator:
                 door_x2 > start_x and door_x2 < start_x + width - 1):
                 chunk.set_tile(door_x2, door_y, 5)  # TILE_DOOR
         else:
-            # Single door for smaller buildings
+            # Single door for medium buildings
             if (0 <= door_center_x < Chunk.CHUNK_SIZE and 0 <= door_y < Chunk.CHUNK_SIZE and 
                 door_center_x > start_x and door_center_x < start_x + width - 1):
                 chunk.set_tile(door_center_x, door_y, 5)  # TILE_DOOR

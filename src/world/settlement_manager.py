@@ -13,65 +13,65 @@ class ChunkSettlementManager:
     Manages settlements across chunk-based infinite worlds
     """
     
-    # Settlement templates with increased spawn chances
+    # Settlement templates with uniform 3x3 buildings for better placement success
     SETTLEMENT_TEMPLATES = {
         'VILLAGE': {
-            'size': (25, 25),
+            'size': (20, 20),  # Slightly smaller settlement
             'buildings': [
-                {'name': 'General Store', 'size': (12, 8), 'npc': 'Master Merchant', 'has_shop': True},
-                {'name': 'Inn', 'size': (10, 8), 'npc': 'Innkeeper', 'has_shop': False},
-                {'name': 'Blacksmith', 'size': (8, 6), 'npc': 'Master Smith', 'has_shop': True},
-                {'name': 'Elder House', 'size': (10, 8), 'npc': 'Village Elder', 'has_shop': False},
-                {'name': 'Guard House', 'size': (8, 6), 'npc': 'Guard Captain', 'has_shop': False},
-                {'name': 'Temple', 'size': (12, 10), 'npc': 'High Priest', 'has_shop': False},
-                {'name': 'Market Stall', 'size': (6, 4), 'npc': 'Trader', 'has_shop': True}
+                {'name': 'General Store', 'size': (3, 3), 'npc': 'Master Merchant', 'has_shop': True},
+                {'name': 'Inn', 'size': (3, 3), 'npc': 'Innkeeper', 'has_shop': False},
+                {'name': 'Blacksmith', 'size': (3, 3), 'npc': 'Master Smith', 'has_shop': True},
+                {'name': 'Elder House', 'size': (3, 3), 'npc': 'Village Elder', 'has_shop': False},
+                {'name': 'Guard House', 'size': (3, 3), 'npc': 'Guard Captain', 'has_shop': False},
+                {'name': 'Temple', 'size': (3, 3), 'npc': 'High Priest', 'has_shop': False},
+                {'name': 'Market Stall', 'size': (3, 3), 'npc': 'Trader', 'has_shop': True}
             ],
             'biomes': ['PLAINS', 'FOREST'],
             'spawn_chance': 0.25,  # 25% chance per suitable chunk
             'min_distance': 5  # Minimum chunks between same type
         },
         'DESERT_OUTPOST': {
-            'size': (20, 20),
+            'size': (16, 16),  # Smaller settlement
             'buildings': [
-                {'name': 'Trading Post', 'size': (10, 8), 'npc': 'Caravan Master', 'has_shop': True},
-                {'name': 'Water Storage', 'size': (6, 6)},
-                {'name': 'Caravan Rest', 'size': (10, 6), 'npc': 'Desert Guide', 'has_shop': False},
-                {'name': 'Oasis Keeper', 'size': (8, 6), 'npc': 'Oasis Keeper', 'has_shop': True}
+                {'name': 'Trading Post', 'size': (3, 3), 'npc': 'Caravan Master', 'has_shop': True},
+                {'name': 'Water Storage', 'size': (3, 3)},  # No NPC, just storage
+                {'name': 'Caravan Rest', 'size': (3, 3), 'npc': 'Desert Guide', 'has_shop': False},
+                {'name': 'Oasis Keeper', 'size': (3, 3), 'npc': 'Oasis Keeper', 'has_shop': True}
             ],
             'biomes': ['DESERT'],
             'spawn_chance': 0.35,  # Higher chance due to rarity of desert
             'min_distance': 3
         },
         'SNOW_SETTLEMENT': {
-            'size': (18, 18),
+            'size': (14, 14),  # Smaller settlement
             'buildings': [
-                {'name': 'Ranger Station', 'size': (8, 6), 'npc': 'Forest Ranger', 'has_shop': False},
-                {'name': 'Herbalist Hut', 'size': (8, 6), 'npc': 'Master Herbalist', 'has_shop': True},
-                {'name': 'Warm Lodge', 'size': (10, 8), 'npc': 'Lodge Keeper', 'has_shop': False},
-                {'name': 'Hunter Cabin', 'size': (6, 6), 'npc': 'Hunter', 'has_shop': True}
+                {'name': 'Ranger Station', 'size': (3, 3), 'npc': 'Forest Ranger', 'has_shop': False},
+                {'name': 'Herbalist Hut', 'size': (3, 3), 'npc': 'Master Herbalist', 'has_shop': True},
+                {'name': 'Warm Lodge', 'size': (3, 3), 'npc': 'Lodge Keeper', 'has_shop': False},
+                {'name': 'Hunter Cabin', 'size': (3, 3), 'npc': 'Hunter', 'has_shop': True}
             ],
             'biomes': ['SNOW'],
             'spawn_chance': 0.30,
             'min_distance': 4
         },
         'SWAMP_VILLAGE': {
-            'size': (22, 22),
+            'size': (16, 16),  # Smaller settlement
             'buildings': [
-                {'name': 'Alchemist Hut', 'size': (10, 8), 'npc': 'Swamp Alchemist', 'has_shop': True},
-                {'name': 'Fisherman Dock', 'size': (12, 6), 'npc': 'Fisherman', 'has_shop': False},
-                {'name': 'Witch Hut', 'size': (8, 8), 'npc': 'Swamp Witch', 'has_shop': True},
-                {'name': 'Boat Builder', 'size': (10, 6), 'npc': 'Boat Builder', 'has_shop': False}
+                {'name': 'Alchemist Hut', 'size': (3, 3), 'npc': 'Swamp Alchemist', 'has_shop': True},
+                {'name': 'Fisherman Dock', 'size': (3, 3), 'npc': 'Fisherman', 'has_shop': False},
+                {'name': 'Witch Hut', 'size': (3, 3), 'npc': 'Swamp Witch', 'has_shop': True},
+                {'name': 'Boat Builder', 'size': (3, 3), 'npc': 'Boat Builder', 'has_shop': False}
             ],
             'biomes': ['SWAMP'],
             'spawn_chance': 0.20,
             'min_distance': 4
         },
         'FOREST_CAMP': {
-            'size': (16, 16),
+            'size': (12, 12),  # Smaller settlement
             'buildings': [
-                {'name': 'Woodcutter Lodge', 'size': (8, 6), 'npc': 'Master Woodcutter', 'has_shop': True},
-                {'name': 'Druid Circle', 'size': (10, 10), 'npc': 'Forest Druid', 'has_shop': False},
-                {'name': 'Scout Post', 'size': (6, 6), 'npc': 'Scout Leader', 'has_shop': False}
+                {'name': 'Woodcutter Lodge', 'size': (3, 3), 'npc': 'Master Woodcutter', 'has_shop': True},
+                {'name': 'Druid Circle', 'size': (3, 3), 'npc': 'Forest Druid', 'has_shop': False},
+                {'name': 'Scout Post', 'size': (3, 3), 'npc': 'Scout Leader', 'has_shop': False}
             ],
             'biomes': ['FOREST'],
             'spawn_chance': 0.18,
