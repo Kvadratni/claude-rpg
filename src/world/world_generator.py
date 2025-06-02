@@ -59,6 +59,9 @@ class WorldGenerator:
         if settlement_type:
             settlement_data = self.settlement_manager.generate_settlement_in_chunk(chunk_x, chunk_y, settlement_type)
             print(f"Generated {settlement_type} settlement in chunk ({chunk_x}, {chunk_y}) with {len(settlement_data.get('npcs', []))} NPCs")
+            
+            # FIXED: Actually place the settlement buildings on the chunk tiles
+            self._place_settlement_buildings_on_chunk(chunk, settlement_data)
         else:
             print(f"No settlement generated for chunk ({chunk_x}, {chunk_y}) - biomes: {biome_counts}")
         
@@ -136,3 +139,194 @@ class WorldGenerator:
     def get_chunk_seed(self, chunk_x: int, chunk_y: int) -> int:
         """Get deterministic seed for a specific chunk"""
         return hash((self.world_seed, chunk_x, chunk_y)) % (2**31)
+    
+    def _place_settlement_buildings_on_chunk(self, chunk: Chunk, settlement_data: Dict[str, Any]):
+        """
+        Actually place settlement buildings on the chunk tiles
+        
+        Args:
+            chunk: The chunk to modify
+            settlement_data: Settlement data from settlement manager
+        """
+        # Get chunk bounds
+        start_x, start_y, end_x, end_y = chunk.get_world_bounds()
+        
+        # Convert settlement world coordinates to local chunk coordinates
+        settlement_world_x = settlement_data['world_x']
+        settlement_world_y = settlement_data['world_y']
+        settlement_size = settlement_data['size']
+        
+        # Calculate local settlement position within chunk
+        local_settlement_x = settlement_world_x - start_x
+        local_settlement_y = settlement_world_y - start_y
+        
+        print(f"  Placing settlement buildings at local coords ({local_settlement_x}, {local_settlement_y}) in chunk ({chunk.chunk_x}, {chunk.chunk_y})")
+        
+        # Create settlement seed for deterministic building placement
+        settlement_seed = hash((self.world_seed, chunk.chunk_x, chunk.chunk_y, "buildings")) % (2**31)
+        settlement_random = random.Random(settlement_seed)
+        
+        # Place central stone area (smaller than original to leave room for buildings)
+        center_size = min(settlement_size) // 4
+        center_start_x = local_settlement_x + (settlement_size[0] - center_size) // 2
+        center_start_y = local_settlement_y + (settlement_size[1] - center_size) // 2
+        
+        # Place stone center
+        for y in range(center_start_y, center_start_y + center_size):
+            for x in range(center_start_x, center_start_x + center_size):
+                if 0 <= x < Chunk.CHUNK_SIZE and 0 <= y < Chunk.CHUNK_SIZE:
+                    chunk.set_tile(x, y, 2)  # TILE_STONE
+        
+        # Place buildings from settlement data
+        buildings = settlement_data.get('buildings', [])
+        placed_buildings = []
+        
+        print(f"    Attempting to place {len(buildings)} buildings...")
+        
+        for i, building in enumerate(buildings):
+            building_width, building_height = building['size']
+            building_name = building['name']
+            
+            print(f"      Building {i+1}/{len(buildings)}: {building_name} ({building_width}x{building_height})")
+            
+            placed = False
+            # Try to find a good spot for this building
+            for attempt in range(100):
+                # Random position within settlement bounds
+                margin = 1
+                max_x = settlement_size[0] - building_width - margin * 2
+                max_y = settlement_size[1] - building_height - margin * 2
+                
+                if max_x <= 0 or max_y <= 0:
+                    print(f"        Building too large for settlement! Skipping...")
+                    break
+                
+                bx = local_settlement_x + margin + settlement_random.randint(0, max_x)
+                by = local_settlement_y + margin + settlement_random.randint(0, max_y)
+                
+                # Check if building would overlap with center square
+                if self._building_overlaps_area(bx, by, building_width, building_height, 
+                                               center_start_x, center_start_y, center_size, center_size):
+                    continue
+                
+                # Check overlap with existing buildings
+                overlaps = False
+                for pb in placed_buildings:
+                    if self._building_overlaps_area(bx, by, building_width, building_height,
+                                                   pb['x'], pb['y'], pb['width'], pb['height']):
+                        overlaps = True
+                        break
+                
+                if overlaps:
+                    continue
+                
+                # Check if building fits within chunk bounds
+                if (bx < 0 or by < 0 or 
+                    bx + building_width >= Chunk.CHUNK_SIZE or 
+                    by + building_height >= Chunk.CHUNK_SIZE):
+                    continue
+                
+                # Place the building
+                self._create_building_on_chunk(chunk, bx, by, building_width, building_height, settlement_random)
+                
+                placed_buildings.append({
+                    'x': bx, 'y': by, 'width': building_width, 'height': building_height,
+                    'name': building['name']
+                })
+                
+                print(f"        Successfully placed {building_name} at local coords ({bx}, {by})")
+                placed = True
+                break
+            
+            if not placed:
+                print(f"        FAILED to place {building_name} after 100 attempts!")
+        
+        print(f"    Settlement building placement complete: {len(placed_buildings)}/{len(buildings)} buildings placed")
+    
+    def _building_overlaps_area(self, bx: int, by: int, bw: int, bh: int, 
+                               ax: int, ay: int, aw: int, ah: int) -> bool:
+        """Check if building overlaps with an area"""
+        margin = 1  # Small margin between buildings
+        return not (bx + bw + margin <= ax or ax + aw + margin <= bx or 
+                   by + bh + margin <= ay or ay + ah + margin <= by)
+    
+    def _create_building_on_chunk(self, chunk: Chunk, start_x: int, start_y: int, 
+                                 width: int, height: int, building_random: random.Random):
+        """
+        Create a building structure on the chunk tiles
+        
+        Args:
+            chunk: Chunk to modify
+            start_x, start_y: Building starting position (local chunk coordinates)
+            width, height: Building dimensions
+            building_random: Random generator for this building
+        """
+        # Building interior floor - use brick tiles
+        for y in range(start_y + 1, start_y + height - 1):
+            for x in range(start_x + 1, start_x + width - 1):
+                if 0 <= x < Chunk.CHUNK_SIZE and 0 <= y < Chunk.CHUNK_SIZE:
+                    chunk.set_tile(x, y, 13)  # TILE_BRICK
+        
+        # Building walls with proper corners
+        for y in range(start_y, start_y + height):
+            for x in range(start_x, start_x + width):
+                if 0 <= x < Chunk.CHUNK_SIZE and 0 <= y < Chunk.CHUNK_SIZE:
+                    # Skip interior
+                    if (x > start_x and x < start_x + width - 1 and 
+                        y > start_y and y < start_y + height - 1):
+                        continue
+                    
+                    # Determine wall type based on position
+                    is_top_edge = (y == start_y)
+                    is_bottom_edge = (y == start_y + height - 1)
+                    is_left_edge = (x == start_x)
+                    is_right_edge = (x == start_x + width - 1)
+                    
+                    # Set corner tiles first
+                    if is_top_edge and is_left_edge:
+                        chunk.set_tile(x, y, 6)  # TILE_WALL_CORNER_TL
+                    elif is_top_edge and is_right_edge:
+                        chunk.set_tile(x, y, 7)  # TILE_WALL_CORNER_TR
+                    elif is_bottom_edge and is_left_edge:
+                        chunk.set_tile(x, y, 8)  # TILE_WALL_CORNER_BL
+                    elif is_bottom_edge and is_right_edge:
+                        chunk.set_tile(x, y, 9)  # TILE_WALL_CORNER_BR
+                    # Then set edge walls
+                    elif is_top_edge or is_bottom_edge:
+                        # Horizontal walls with occasional windows
+                        if building_random.random() < 0.2:  # 20% chance for windows
+                            chunk.set_tile(x, y, 14)  # TILE_WALL_WINDOW_HORIZONTAL
+                        else:
+                            chunk.set_tile(x, y, 10)  # TILE_WALL_HORIZONTAL
+                    elif is_left_edge or is_right_edge:
+                        # Vertical walls with occasional windows
+                        if building_random.random() < 0.15:  # 15% chance for windows
+                            chunk.set_tile(x, y, 15)  # TILE_WALL_WINDOW_VERTICAL
+                        else:
+                            chunk.set_tile(x, y, 11)  # TILE_WALL_VERTICAL
+                    else:
+                        # Fallback to regular wall
+                        chunk.set_tile(x, y, 4)  # TILE_WALL
+        
+        # Add door(s) - replace bottom wall sections
+        door_center_x = start_x + width // 2
+        door_y = start_y + height - 1
+        
+        # Create door (1 or 2 tiles wide depending on building size)
+        if width >= 6:
+            # Double door for larger buildings
+            door_x1 = door_center_x - 1
+            door_x2 = door_center_x
+            
+            if (0 <= door_x1 < Chunk.CHUNK_SIZE and 0 <= door_y < Chunk.CHUNK_SIZE and 
+                door_x1 > start_x and door_x1 < start_x + width - 1):
+                chunk.set_tile(door_x1, door_y, 5)  # TILE_DOOR
+            
+            if (0 <= door_x2 < Chunk.CHUNK_SIZE and 0 <= door_y < Chunk.CHUNK_SIZE and 
+                door_x2 > start_x and door_x2 < start_x + width - 1):
+                chunk.set_tile(door_x2, door_y, 5)  # TILE_DOOR
+        else:
+            # Single door for smaller buildings
+            if (0 <= door_center_x < Chunk.CHUNK_SIZE and 0 <= door_y < Chunk.CHUNK_SIZE and 
+                door_center_x > start_x and door_center_x < start_x + width - 1):
+                chunk.set_tile(door_center_x, door_y, 5)  # TILE_DOOR
