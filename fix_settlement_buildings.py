@@ -1,4 +1,22 @@
+#!/usr/bin/env python3
 """
+Comprehensive Fix for Settlement Building and NPC Persistence Issues
+
+This script applies targeted fixes to resolve:
+1. Buildings not being placed (only stone centers appear)
+2. NPCs not being saved to chunks
+3. Settlement generation issues
+"""
+
+import os
+import shutil
+from pathlib import Path
+
+
+def create_fixed_world_generator():
+    """Create a fixed version of world_generator.py"""
+    
+    fixed_content = '''"""
 World generator that creates chunks on-demand - FIXED VERSION
 """
 
@@ -419,3 +437,71 @@ class WorldGenerator:
         
         print(f"            Building created with {tiles_placed} tiles")
         return tiles_placed
+'''
+    
+    return fixed_content
+
+
+def apply_fixes():
+    """Apply all fixes to resolve settlement building issues"""
+    print("🔧 APPLYING SETTLEMENT BUILDING FIXES")
+    print("=" * 50)
+    
+    # Backup original file
+    original_file = Path("src/world/world_generator.py")
+    backup_file = Path("src/world/world_generator.py.backup")
+    
+    if original_file.exists():
+        print(f"📋 Creating backup: {backup_file}")
+        shutil.copy2(original_file, backup_file)
+    
+    # Write fixed version
+    print(f"✍️  Writing fixed world generator...")
+    fixed_content = create_fixed_world_generator()
+    
+    with open(original_file, 'w') as f:
+        f.write(fixed_content)
+    
+    print(f"✅ Fixed world generator applied!")
+    
+    # Clean up old world saves to force regeneration
+    saves_dir = Path("saves/worlds")
+    if saves_dir.exists():
+        print(f"\n🧹 CLEANING OLD WORLDS (to force regeneration with fixes)")
+        
+        procedural_worlds = [d for d in saves_dir.iterdir() if d.is_dir() and d.name.startswith('procedural_')]
+        
+        if procedural_worlds:
+            print(f"Found {len(procedural_worlds)} procedural worlds to clean")
+            
+            # Keep only the 3 most recent worlds
+            procedural_worlds.sort(key=lambda d: d.stat().st_mtime, reverse=True)
+            worlds_to_keep = procedural_worlds[:3]
+            worlds_to_remove = procedural_worlds[3:]
+            
+            print(f"Keeping {len(worlds_to_keep)} most recent worlds:")
+            for world in worlds_to_keep:
+                print(f"  ✅ Keeping: {world.name}")
+            
+            if worlds_to_remove:
+                print(f"Removing {len(worlds_to_remove)} old worlds:")
+                for world in worlds_to_remove:
+                    print(f"  🗑️  Removing: {world.name}")
+                    shutil.rmtree(world)
+            else:
+                print("No old worlds to remove")
+        else:
+            print("No procedural worlds found")
+    
+    print(f"\n" + "=" * 50)
+    print("🎉 FIXES APPLIED SUCCESSFULLY!")
+    print("\n💡 NEXT STEPS:")
+    print("1. Start the game and create a new procedural world")
+    print("2. The new world should have proper settlement buildings with walls, doors, etc.")
+    print("3. NPCs should appear in settlements")
+    print("4. Buildings should persist when you save/reload the game")
+    print("\n🎮 Run the game with: ./launch_game.sh")
+
+
+if __name__ == "__main__":
+    apply_fixes()

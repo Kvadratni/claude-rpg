@@ -21,12 +21,16 @@ class MovementSystem:
         """Initialize movement system with reference to player"""
         self.player = player
         
+        # Movement modes
+        self.movement_mode = "mouse"  # "mouse" or "wasd"
+        
         # Movement state
         self.moving = False
         self.direction = 0  # 0=down, 1=left, 2=up, 3=right
         self.target_x = None  # For mouse movement
         self.target_y = None
         self.move_speed = 0.15  # Increased for smoother pathfinding movement
+        self.wasd_speed = 0.12  # Speed for WASD movement
         
         # Pathfinding
         self.path = []  # Current path to follow
@@ -40,6 +44,25 @@ class MovementSystem:
         # Audio
         self.footstep_timer = 0
         self.last_door_sound_tile = None
+    
+    def toggle_movement_mode(self):
+        """Toggle between mouse and WASD movement modes"""
+        if self.movement_mode == "mouse":
+            self.movement_mode = "wasd"
+            # Clear any existing path when switching to WASD
+            self.path = []
+            self.path_index = 0
+            self.target_x = None
+            self.target_y = None
+        else:
+            self.movement_mode = "mouse"
+        
+        # Log the change
+        if self.player.game_log:
+            mode_name = "WASD" if self.movement_mode == "wasd" else "Mouse Click"
+            self.player.game_log.add_message(f"Movement mode: {mode_name}", "system")
+        
+        return self.movement_mode
     
     def handle_input(self, keys, level=None):
         """Handle player input for movement"""
@@ -55,6 +78,74 @@ class MovementSystem:
         if self.player.current_dialogue and self.player.current_dialogue.show:
             return  # Don't allow movement while dialogue is open
         
+        # Handle movement based on current mode
+        if self.movement_mode == "wasd":
+            self._handle_wasd_movement(keys, level)
+        else:
+            self._handle_mouse_movement(keys, level)
+    
+    def _handle_wasd_movement(self, keys, level):
+        """Handle WASD movement"""
+        # Calculate movement direction
+        move_x = 0
+        move_y = 0
+        
+        if keys[pygame.K_w]:
+            move_y -= 1
+            self.direction = 2  # Up
+        if keys[pygame.K_s]:
+            move_y += 1
+            self.direction = 0  # Down
+        if keys[pygame.K_a]:
+            move_x -= 1
+            self.direction = 1  # Left
+        if keys[pygame.K_d]:
+            move_x += 1
+            self.direction = 3  # Right
+        
+        # Normalize diagonal movement
+        if move_x != 0 and move_y != 0:
+            move_x *= 0.707  # 1/sqrt(2)
+            move_y *= 0.707
+        
+        # Apply movement if any keys are pressed
+        if move_x != 0 or move_y != 0:
+            # Calculate new position
+            new_x = self.player.x + move_x * self.wasd_speed
+            new_y = self.player.y + move_y * self.wasd_speed
+            
+            # Check collision before moving
+            if level and level.check_collision(new_x, new_y, self.player.size):
+                # Try moving only horizontally
+                if not level.check_collision(self.player.x + move_x * self.wasd_speed, self.player.y, self.player.size):
+                    self.player.x += move_x * self.wasd_speed
+                    self.moving = True
+                # Try moving only vertically
+                elif not level.check_collision(self.player.x, self.player.y + move_y * self.wasd_speed, self.player.size):
+                    self.player.y += move_y * self.wasd_speed
+                    self.moving = True
+            else:
+                # Move normally
+                self.player.x = new_x
+                self.player.y = new_y
+                self.moving = True
+            
+            # Play footstep sounds while moving
+            if self.moving:
+                self.footstep_timer += 1
+                if self.footstep_timer >= 20:  # Play footstep every 20 frames
+                    self.footstep_timer = 0
+                    self._play_footstep_sound(level)
+        
+        # Update animation
+        if self.moving:
+            self.animation_timer += 1
+            if self.animation_timer >= self.animation_speed:
+                self.animation_timer = 0
+                self.animation_frame = (self.animation_frame + 1) % 4
+    
+    def _handle_mouse_movement(self, keys, level):
+        """Handle mouse-based pathfinding movement"""
         # Follow current path if we have one
         if self.path and self.path_index < len(self.path):
             target_x, target_y = self.path[self.path_index]
@@ -373,3 +464,25 @@ class MovementSystem:
                 # Draw path points
                 for point in path_points:
                     pygame.draw.circle(screen, (0, 255, 0), point, 3)
+    
+    def _play_footstep_sound(self, level):
+        """Play appropriate footstep sound based on current tile"""
+        audio = getattr(self.player.asset_loader, 'audio_manager', None) if self.player.asset_loader else None
+        if audio and level:
+            # Determine surface type based on current tile
+            tile_x = int(self.player.x)
+            tile_y = int(self.player.y)
+            if 0 <= tile_x < level.width and 0 <= tile_y < level.height:
+                # Use get_tile method for chunk-based levels, direct access for template levels
+                tile_type = None
+                if hasattr(level, 'get_tile') and callable(level.get_tile):
+                    tile_type = level.get_tile(tile_x, tile_y)
+                elif hasattr(level, 'tiles') and level.tiles and len(level.tiles) > tile_y and len(level.tiles[tile_y]) > tile_x:
+                    tile_type = level.tiles[tile_y][tile_x]
+                
+                if tile_type == level.TILE_STONE:
+                    audio.play_footstep("stone")
+                elif tile_type == level.TILE_WATER:
+                    audio.play_footstep("water")
+                else:
+                    audio.play_footstep("dirt")  # Default for grass/dirt

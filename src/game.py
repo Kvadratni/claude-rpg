@@ -233,6 +233,24 @@ class Game:
                     elif event.key == pygame.K_d and (event.mod & pygame.KMOD_META):
                         # Debug info with Cmd+D
                         self.show_debug_info()
+                    elif event.key == pygame.K_F5:
+                        # Toggle movement mode with F5
+                        if self.player and hasattr(self.player, 'movement_system'):
+                            # Get audio manager
+                            audio = getattr(self.asset_loader, 'audio_manager', None)
+                            if audio:
+                                audio.play_ui_sound("click")
+                            
+                            # Toggle movement mode
+                            new_mode = self.player.movement_system.toggle_movement_mode()
+                            mode_name = "WASD" if new_mode == "wasd" else "Mouse Click"
+                            self.game_log.add_message(f"Movement mode switched to: {mode_name}", "system")
+                            
+                            # Show helpful message
+                            if new_mode == "wasd":
+                                self.game_log.add_message("Use WASD keys to move around", "system")
+                            else:
+                                self.game_log.add_message("Click to move and interact", "system")
                 else:
                     self.current_level.handle_event(event)
             elif self.state == Game.STATE_PAUSED:

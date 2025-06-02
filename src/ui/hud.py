@@ -47,6 +47,7 @@ class HUD:
         self.render_player_stats(ui_panel)
         self.render_equipment_slots(ui_panel, screen_width)
         self.render_xp_bar(ui_panel, screen_width)
+        self.render_movement_mode_indicator(ui_panel, screen_width)
         
         # Blit the UI panel to the screen
         screen.blit(ui_panel, (0, screen_height - ui_height))
@@ -206,3 +207,32 @@ class HUD:
         xp_surface = self.small_font.render(xp_text, True, self.colors['text_color'])
         xp_rect = xp_surface.get_rect(center=(xp_bar_x + xp_bar_width // 2, xp_bar_y + xp_bar_height // 2))
         surface.blit(xp_surface, xp_rect)
+    
+    def render_movement_mode_indicator(self, surface, screen_width):
+        """Render movement mode indicator in the top-right corner"""
+        if hasattr(self.player, 'movement_system') and self.player.movement_system:
+            mode = self.player.movement_system.movement_mode
+            mode_text = "WASD" if mode == "wasd" else "Mouse"
+            
+            # Create indicator background
+            indicator_width = 80
+            indicator_height = 25
+            indicator_x = screen_width - indicator_width - 10
+            indicator_y = 30
+            
+            # Background with border
+            indicator_rect = pygame.Rect(indicator_x, indicator_y, indicator_width, indicator_height)
+            pygame.draw.rect(surface, (50, 50, 50), indicator_rect)
+            pygame.draw.rect(surface, self.colors['panel_border'], indicator_rect, 2)
+            
+            # Mode text
+            mode_color = (100, 255, 100) if mode == "wasd" else (100, 150, 255)
+            mode_surface = self.small_font.render(mode_text, True, mode_color)
+            mode_rect = mode_surface.get_rect(center=indicator_rect.center)
+            surface.blit(mode_surface, mode_rect)
+            
+            # F5 hint text below
+            hint_text = "F5"
+            hint_surface = pygame.font.Font(None, 16).render(hint_text, True, (150, 150, 150))
+            hint_rect = hint_surface.get_rect(center=(indicator_rect.centerx, indicator_rect.bottom + 10))
+            surface.blit(hint_surface, hint_rect)
