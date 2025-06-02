@@ -100,6 +100,10 @@ class Level(
     
     def update(self):
         """Main update loop - coordinates all subsystems"""
+        # Update chunks around player for procedural worlds
+        if hasattr(self, 'update_chunks_around_player'):
+            self.update_chunks_around_player()
+        
         # Handle player input
         keys = pygame.key.get_pressed()
         self.player.handle_input(keys, self)  # Pass level to handle_input

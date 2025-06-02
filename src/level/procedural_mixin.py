@@ -1,37 +1,41 @@
 """
 Procedural Generation Mixin for Level System
-Adds procedural world generation capability to the refactored Level architecture
+Adds chunk-based procedural world generation capability to the refactored Level architecture
 """
 
 import random
-from ..procedural_generation import ProceduralWorldGenerator
+from ..world.chunk_manager import ChunkManager
 
 
 class ProceduralGenerationMixin:
     """
-    Mixin to add procedural generation capability to Level class
+    Mixin to add chunk-based procedural generation capability to Level class
     Integrates with the existing mixin-based Level architecture
     """
     
     def generate_procedural_level(self, seed=None):
         """
-        Generate a procedural level using the modular system
+        Initialize a chunk-based procedural level
         
         Args:
             seed: Random seed for deterministic generation
         """
-        print(f"Generating procedural level with seed: {seed}")
+        if seed is None:
+            seed = random.randint(1, 1000000)
+            
+        print(f"Initializing chunk-based procedural level with seed: {seed}")
         
-        # Create the procedural generator
-        generator = ProceduralWorldGenerator(self.width, self.height, seed)
+        # Initialize chunk manager for this world
+        world_name = f"procedural_{seed}"
+        self.chunk_manager = ChunkManager(seed, world_name)
         
-        # Generate the complete world
-        world_data = generator.generate_world(self.asset_loader)
+        # Set up infinite world dimensions (chunks will be loaded as needed)
+        # But set reasonable bounds for systems that need them
+        self.width = 1000  # Large but finite for compatibility
+        self.height = 1000
+        self.is_infinite_world = True  # Flag to indicate this is chunk-based
         
-        # Replace template-generated data with procedural data
-        self.tiles = world_data['tiles']
-        
-        # Clear existing entities before adding procedural ones
+        # Initialize empty entity lists (entities will come from chunks)
         if hasattr(self, 'npcs'):
             self.npcs.clear()
         else:
@@ -57,46 +61,157 @@ class ProceduralGenerationMixin:
         else:
             self.chests = []
         
-        # Add procedural entities
-        self.npcs.extend(world_data['npcs'])
-        self.enemies.extend(world_data['enemies'])
-        self.objects.extend(world_data['objects'])
-        self.chests.extend(world_data['chests'])  # Chests go to chests list
+        # Initialize empty tiles array (will be populated from chunks)
+        self.tiles = []
         
-        # Update walkable grid
-        self.walkable = world_data['walkable_grid']
+        # Initialize walkable grid (will be updated as chunks load)
+        # Create a basic walkable grid that defaults to walkable
+        self.walkable = [[1 for _ in range(self.width)] for _ in range(self.height)]
         
         # Store procedural info for save/load
         self.procedural_info = {
             'is_procedural': True,
-            'seed': world_data['seed'],
-            'settlements': world_data['settlements'],
-            'safe_zones': world_data['safe_zones'],
-            'player_spawn': world_data.get('player_spawn', (self.width // 2, self.height // 2))
+            'seed': seed,
+            'world_name': world_name,
+            'player_spawn': (0, 0)  # Will be updated when we find a good spawn
         }
         
-        # Regenerate heightmap for new tiles
-        if hasattr(self, 'generate_heightmap'):
-            self.heightmap = self.generate_heightmap()
+        # Find a good spawn location
+        spawn_chunk = self.chunk_manager.get_chunk(0, 0)  # Start at origin
+        if spawn_chunk:
+            # Find a safe spawn location in the chunk
+            spawn_x, spawn_y = self.find_safe_spawn_in_chunk(spawn_chunk)
+            self.procedural_info['player_spawn'] = (spawn_x, spawn_y)
+            print(f"Player spawn set to: ({spawn_x}, {spawn_y})")
         
-        # Update tile sprites for new tiles
-        if hasattr(self, 'create_tile_sprites'):
-            self.create_tile_sprites()
-        
-        # Log generation results
-        stats = generator.get_world_stats()
-        print(f"Procedural world generated:")
-        print(f"  Seed: {world_data['seed']}")
-        print(f"  Settlements: {len(world_data['settlements'])}")
-        print(f"  NPCs: {len(world_data['npcs'])}")
-        print(f"  Enemies: {len(world_data['enemies'])}")
-        print(f"  Objects: {len(world_data['objects'])}")
-        print(f"  Chests: {len(world_data['chests'])}")
+        print(f"Chunk-based procedural world initialized:")
+        print(f"  Seed: {seed}")
+        print(f"  World name: {world_name}")
+        print(f"  Spawn location: {self.procedural_info['player_spawn']}")
         
         # Add message to game log if available
         if hasattr(self, 'game') and self.game and hasattr(self.game, 'game_log'):
-            self.game.game_log.add_message(f"Procedural world generated (Seed: {world_data['seed']})", "system")
-            self.game.game_log.add_message(f"Discovered {len(world_data['settlements'])} settlements", "exploration")
+            self.game.game_log.add_message(f"Procedural world initialized (Seed: {seed})", "system")
+            self.game.game_log.add_message("World will generate as you explore...", "exploration")
+    
+    def find_safe_spawn_in_chunk(self, chunk):
+        """Find a safe spawn location within a chunk"""
+        # Look for a grass or plains area
+        for y in range(10, chunk.CHUNK_SIZE - 10):  # Avoid edges
+            for x in range(10, chunk.CHUNK_SIZE - 10):
+                tile = chunk.get_tile(x, y)
+                biome = chunk.get_biome(x, y)
+                
+                # Look for safe spawn conditions
+                if tile in [0, 1] and biome in ['PLAINS', 'FOREST']:  # Grass or dirt in safe biomes
+                    # Convert to world coordinates
+                    world_x = chunk.chunk_x * chunk.CHUNK_SIZE + x
+                    world_y = chunk.chunk_y * chunk.CHUNK_SIZE + y
+                    return world_x, world_y
+        
+        # Fallback to chunk center
+        center_x = chunk.chunk_x * chunk.CHUNK_SIZE + chunk.CHUNK_SIZE // 2
+        center_y = chunk.chunk_y * chunk.CHUNK_SIZE + chunk.CHUNK_SIZE // 2
+        return center_x, center_y
+    
+    def update_chunks_around_player(self):
+        """Update loaded chunks based on player position"""
+        if hasattr(self, 'chunk_manager') and hasattr(self, 'player'):
+            self.chunk_manager.update_loaded_chunks(self.player.x, self.player.y)
+            
+            # Update entities from currently loaded chunks
+            self.update_entities_from_chunks()
+    
+    def update_entities_from_chunks(self):
+        """Update entity lists from currently loaded chunks"""
+        if not hasattr(self, 'chunk_manager'):
+            return
+            
+        # Clear current entity lists
+        self.npcs.clear()
+        self.enemies.clear()
+        self.objects.clear()
+        self.items.clear()
+        self.chests.clear()
+        
+        # Get entities from all loaded chunks
+        for chunk in self.chunk_manager.get_loaded_chunks():
+            chunk_world_x = chunk.chunk_x * chunk.CHUNK_SIZE
+            chunk_world_y = chunk.chunk_y * chunk.CHUNK_SIZE
+            
+            for entity_data in chunk.entities:
+                # Convert entity data to appropriate objects
+                world_x = entity_data['x'] + chunk_world_x
+                world_y = entity_data['y'] + chunk_world_y
+                
+                if entity_data['type'] == 'npc':
+                    # Create NPC object (you may need to adjust this based on your NPC class)
+                    npc_obj = self.create_npc_from_data(entity_data, world_x, world_y)
+                    if npc_obj:
+                        self.npcs.append(npc_obj)
+                        
+                elif entity_data['type'] == 'enemy':
+                    # Create Enemy object
+                    enemy_obj = self.create_enemy_from_data(entity_data, world_x, world_y)
+                    if enemy_obj:
+                        self.enemies.append(enemy_obj)
+                        
+                elif entity_data['type'] == 'object':
+                    # Create Object
+                    obj = self.create_object_from_data(entity_data, world_x, world_y)
+                    if obj:
+                        self.objects.append(obj)
+    
+    def create_npc_from_data(self, entity_data, world_x, world_y):
+        """Create NPC object from entity data - implement based on your NPC class"""
+        # This is a placeholder - you'll need to implement based on your actual NPC class
+        return None
+    
+    def create_enemy_from_data(self, entity_data, world_x, world_y):
+        """Create Enemy object from entity data - implement based on your Enemy class"""
+        # This is a placeholder - you'll need to implement based on your actual Enemy class
+        return None
+    
+    def create_object_from_data(self, entity_data, world_x, world_y):
+        """Create Object from entity data - implement based on your Object class"""
+        # This is a placeholder - you'll need to implement based on your actual Object class
+        return None
+    
+    def get_tile(self, x, y):
+        """Get tile at world coordinates using chunk system"""
+        if hasattr(self, 'chunk_manager'):
+            try:
+                return self.chunk_manager.get_tile(int(x), int(y))
+            except Exception as e:
+                print(f"Error getting tile at ({x}, {y}): {e}")
+                return 0  # Default to grass
+        return 0  # Default to grass
+    
+    def get_biome(self, x, y):
+        """Get biome at world coordinates using chunk system"""
+        if hasattr(self, 'chunk_manager'):
+            try:
+                return self.chunk_manager.get_biome(int(x), int(y))
+            except Exception as e:
+                print(f"Error getting biome at ({x}, {y}): {e}")
+                return 'PLAINS'  # Default biome
+        return 'PLAINS'  # Default biome
+    
+    def is_position_walkable_chunk(self, x, y):
+        """Check if position is walkable using chunk system"""
+        if hasattr(self, 'chunk_manager'):
+            try:
+                tile = self.chunk_manager.get_tile(int(x), int(y))
+                if tile is None:
+                    return True  # Default to walkable for unloaded areas
+                # Check if tile is walkable
+                walkable_tiles = [self.TILE_GRASS, self.TILE_DIRT, self.TILE_STONE, self.TILE_DOOR, self.TILE_BRICK, 
+                                self.TILE_SAND, self.TILE_SNOW, self.TILE_FOREST_FLOOR]
+                return tile in walkable_tiles
+            except Exception as e:
+                print(f"Error checking walkability at ({x}, {y}): {e}")
+                return True  # Default to walkable
+        return True
     
     def is_procedural_level(self):
         """

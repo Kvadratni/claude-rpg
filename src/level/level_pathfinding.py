@@ -122,7 +122,8 @@ class PathfindingMixin:
                 move_cost = base_cost * (1.0 + influence_penalty)
                 
                 # Heavily favor doors to force pathfinding through them
-                if self.tiles[next_y][next_x] == self.TILE_DOOR:
+                next_tile = self.get_tile(next_x, next_y) if hasattr(self, 'get_tile') else self.tiles[next_y][next_x]
+                if next_tile == self.TILE_DOOR:
                     move_cost *= 0.1  # 90% cost reduction for doors
                 elif walkability > 0.9:
                     move_cost *= 0.8  # Prefer open areas

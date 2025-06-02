@@ -127,10 +127,11 @@ class LevelBase(SpawningMixin):
                 height = 0
                 
                 # Walls are higher
-                if self.tiles[y][x] == self.TILE_WALL:
+                tile_type = self.get_tile(x, y) if hasattr(self, 'get_tile') else self.tiles[y][x]
+                if tile_type == self.TILE_WALL:
                     height = 1
                 # Water is lower
-                elif self.tiles[y][x] == self.TILE_WATER:
+                elif tile_type == self.TILE_WATER:
                     height = -0.5
                 # Add some random height variations
                 elif random.random() < 0.1:
@@ -149,7 +150,7 @@ class LevelBase(SpawningMixin):
             row = []
             for x in range(self.width):
                 # Start with basic tile walkability
-                tile_type = self.tiles[y][x]
+                tile_type = self.get_tile(x, y) if hasattr(self, 'get_tile') else self.tiles[y][x]
                 tile_walkable = tile_type in [self.TILE_GRASS, self.TILE_DIRT, self.TILE_STONE, self.TILE_DOOR, self.TILE_BRICK]
                 
                 if not tile_walkable:

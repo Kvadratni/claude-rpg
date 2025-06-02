@@ -31,9 +31,9 @@ def verify_npc_assets():
     # Check sprite mappings from NPC class
     print("\nChecking sprite mappings...")
     
-    # Manually define the mappings from the NPC class
+    # Check sprite mappings from NPC class - UPDATED WITH NEW SPRITES
     sprite_mappings = {
-        # Existing NPCs
+        # Existing NPCs with dedicated assets
         "Master Merchant": "npc_shopkeeper",
         "Shopkeeper": "npc_shopkeeper", 
         "Village Elder": "elder_npc",
@@ -52,14 +52,14 @@ def verify_npc_assets():
         "Mysterious Wizard": "mysterious_wizard",
         "Old Hermit": "old_hermit",
         
-        # New NPCs - using existing assets or generic fallback
-        "Desert Guide": "caravan_master",  # Similar desert theme
-        "Head Miner": "mine_foreman",      # Similar mining theme
-        "Master Fisher": "harbor_master",  # Similar water/harbor theme
-        "Trade Master": "npc_shopkeeper",  # Similar merchant theme
-        "Stable Master": "caravan_master", # Similar travel/transport theme
-        "Water Keeper": "harbor_master",   # Similar water theme
-        "Lodge Keeper": "innkeeper"        # Similar hospitality theme
+        # New NPCs - NOW WITH DEDICATED SPRITES!
+        "Desert Guide": "desert_guide",      # NEW dedicated sprite
+        "Head Miner": "head_miner",          # NEW dedicated sprite
+        "Master Fisher": "master_fisher",    # NEW dedicated sprite
+        "Trade Master": "trade_master",      # NEW dedicated sprite
+        "Stable Master": "stable_master",    # NEW dedicated sprite
+        "Water Keeper": "water_keeper",      # NEW dedicated sprite
+        "Lodge Keeper": "lodge_keeper"       # NEW dedicated sprite
     }
     
     # Check available assets

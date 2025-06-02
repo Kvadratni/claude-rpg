@@ -123,7 +123,7 @@ class EventHandlingMixin:
                     self.TILE_FOREST_FLOOR: "Forest Floor",
                     self.TILE_SWAMP: "Swamp"
                 }
-                tile_type = self.tiles[tile_y][tile_x]
+                tile_type = self.get_tile(tile_x, tile_y) if hasattr(self, 'get_tile') else self.tiles[tile_y][tile_x]
                 tile_name = tile_names.get(tile_type, "Unknown")
                 walkable_value = self.walkable[tile_y][tile_x]
                 if walkable_value <= 0:

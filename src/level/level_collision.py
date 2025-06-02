@@ -177,7 +177,7 @@ class CollisionMixin:
             return False
         
         # Special handling for doors - be more lenient around door tiles
-        current_tile = self.tiles[y][x]
+        current_tile = self.get_tile(x, y) if hasattr(self, 'get_tile') else self.tiles[y][x]
         is_door_area = current_tile == self.TILE_DOOR
         
         # Also check adjacent tiles for doors
@@ -186,7 +186,8 @@ class CollisionMixin:
                 for dy in [-1, 0, 1]:
                     check_x, check_y = x + dx, y + dy
                     if (0 <= check_x < self.width and 0 <= check_y < self.height):
-                        if self.tiles[check_y][check_x] == self.TILE_DOOR:
+                        check_tile = self.get_tile(check_x, check_y) if hasattr(self, 'get_tile') else self.tiles[check_y][check_x]
+                        if check_tile == self.TILE_DOOR:
                             is_door_area = True
                             break
                 if is_door_area:
@@ -245,7 +246,8 @@ class CollisionMixin:
                         check_tile_x = tile_x + dx_check
                         check_tile_y = tile_y + dy_check
                         if (0 <= check_tile_x < self.width and 0 <= check_tile_y < self.height):
-                            if self.tiles[check_tile_y][check_tile_x] == self.TILE_DOOR:
+                            check_tile = self.get_tile(check_tile_x, check_tile_y) if hasattr(self, 'get_tile') else self.tiles[check_tile_y][check_tile_x]
+                            if check_tile == self.TILE_DOOR:
                                 is_near_door = True
                                 break
                     if is_near_door:
