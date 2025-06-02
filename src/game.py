@@ -230,6 +230,9 @@ class Game:
                     elif event.key == pygame.K_f and (event.mod & pygame.KMOD_META) and (event.mod & pygame.KMOD_SHIFT):
                         # Toggle fullscreen with Cmd+Shift+F (Meta is Cmd on Mac)
                         self.toggle_fullscreen()
+                    elif event.key == pygame.K_d and (event.mod & pygame.KMOD_META):
+                        # Debug info with Cmd+D
+                        self.show_debug_info()
                 else:
                     self.current_level.handle_event(event)
             elif self.state == Game.STATE_PAUSED:
@@ -270,6 +273,37 @@ class Game:
             self.settings.apply_audio_settings(self.asset_loader.audio_manager)
         
         print(f"Settings applied: {new_width}x{new_height}, Fullscreen: {fullscreen}")
+    
+    def show_debug_info(self):
+        """Show debug information about the current game state"""
+        if self.current_level and self.player:
+            print("\n=== DEBUG INFO ===")
+            print(f"Player position: ({self.player.x:.1f}, {self.player.y:.1f})")
+            
+            if hasattr(self.current_level, 'is_procedural_level') and self.current_level.is_procedural_level():
+                seed = self.current_level.get_procedural_seed()
+                print(f"Procedural world seed: {seed}")
+                
+                if hasattr(self.current_level, 'chunk_manager'):
+                    chunk_x, chunk_y = self.current_level.chunk_manager.world_to_chunk_coords(self.player.x, self.player.y)
+                    print(f"Player chunk: ({chunk_x}, {chunk_y})")
+                    
+                    # Get current chunk and check for entities
+                    chunk = self.current_level.chunk_manager.get_chunk(chunk_x, chunk_y)
+                    if chunk:
+                        print(f"Current chunk has {len(chunk.entities)} entities")
+                        for entity_data in chunk.entities:
+                            print(f"  - {entity_data['type']}: {entity_data.get('name', 'Unknown')} at ({entity_data['x']}, {entity_data['y']})")
+            
+            print(f"Loaded entities:")
+            print(f"  NPCs: {len(self.current_level.npcs)}")
+            for npc in self.current_level.npcs:
+                print(f"    - {npc.name} at ({npc.x:.1f}, {npc.y:.1f})")
+            print(f"  Enemies: {len(self.current_level.enemies)}")
+            print(f"  Objects: {len(self.current_level.objects)}")
+            print("==================\n")
+            
+            self.game_log.add_message("Debug info printed to console", "system")
     
     def update(self):
         """Update game logic"""

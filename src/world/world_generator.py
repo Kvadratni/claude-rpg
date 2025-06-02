@@ -58,7 +58,9 @@ class WorldGenerator:
         settlement_data = None
         if settlement_type:
             settlement_data = self.settlement_manager.generate_settlement_in_chunk(chunk_x, chunk_y, settlement_type)
-            print(f"Generated {settlement_type} settlement in chunk ({chunk_x}, {chunk_y})")
+            print(f"Generated {settlement_type} settlement in chunk ({chunk_x}, {chunk_y}) with {len(settlement_data.get('npcs', []))} NPCs")
+        else:
+            print(f"No settlement generated for chunk ({chunk_x}, {chunk_y}) - biomes: {biome_counts}")
         
         # Generate entities for this chunk
         entity_spawner = EnhancedEntitySpawner(Chunk.CHUNK_SIZE, Chunk.CHUNK_SIZE, chunk_seed)
@@ -93,7 +95,7 @@ class WorldGenerator:
             # Generate enemies for this chunk (reduced density)
             enemies = entity_spawner.spawn_enemies(chunk.tiles, chunk.biomes, safe_zones, None)
             
-            for enemy in enemies[:5]:  # Limit to 5 enemies per chunk
+            for enemy in enemies[:10]:  # Increased from 5 to 10 enemies per chunk
                 entity_data = {
                     'type': 'enemy',
                     'name': enemy.name if hasattr(enemy, 'name') else 'Enemy',
@@ -107,6 +109,7 @@ class WorldGenerator:
                 
             # Add settlement NPCs if this chunk has a settlement
             if settlement_data:
+                print(f"Adding {len(settlement_data['npcs'])} NPCs from settlement to chunk ({chunk_x}, {chunk_y})")
                 for npc_data in settlement_data['npcs']:
                     npc_entity = {
                         'type': 'npc',
@@ -118,6 +121,9 @@ class WorldGenerator:
                         'id': f"npc_{npc_data['name'].lower().replace(' ', '_')}_{chunk_x}_{chunk_y}"
                     }
                     chunk.add_entity(npc_entity)
+                    print(f"  Added NPC: {npc_data['name']} at local coords ({npc_entity['x']}, {npc_entity['y']})")
+            else:
+                print(f"No settlement data for chunk ({chunk_x}, {chunk_y}) - no NPCs to add")
                 
         except Exception as e:
             print(f"Warning: Entity generation failed for chunk ({chunk_x}, {chunk_y}): {e}")

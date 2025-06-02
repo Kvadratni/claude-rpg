@@ -230,21 +230,40 @@ class ProceduralGenerationMixin:
             
             self.entity_update_counter += 1
             
-            # Update entities every 60 frames (roughly once per second at 60 FPS)
-            if self.entity_update_counter >= 60:
+            # Update entities every 300 frames (roughly once per 5 seconds at 60 FPS) - less aggressive
+            if self.entity_update_counter >= 300:
                 self.entity_update_counter = 0
-                self.update_entities_from_chunks()
+                # Only update if player has moved significantly
+                if not hasattr(self, 'last_entity_update_pos'):
+                    self.last_entity_update_pos = (self.player.x, self.player.y)
+                    self.update_entities_from_chunks()
+                else:
+                    last_x, last_y = self.last_entity_update_pos
+                    distance_moved = ((self.player.x - last_x) ** 2 + (self.player.y - last_y) ** 2) ** 0.5
+                    if distance_moved > 32:  # Only update if player moved more than half a chunk
+                        self.last_entity_update_pos = (self.player.x, self.player.y)
+                        self.update_entities_from_chunks()
     
     def update_entities_from_chunks(self):
         """Update entity lists from currently loaded chunks around player"""
         if not hasattr(self, 'chunk_manager'):
             return
         
+        print("Updating entities from chunks...")
+        
         # Get player chunk coordinates
         player_chunk_x, player_chunk_y = self.chunk_manager.world_to_chunk_coords(self.player.x, self.player.y)
+        print(f"Player at chunk ({player_chunk_x}, {player_chunk_y}), world pos ({self.player.x:.1f}, {self.player.y:.1f})")
         
         # Only load entities from chunks within a reasonable radius
         entity_load_radius = 2  # Load entities from 5x5 chunks around player
+        
+        # Store current entity counts before clearing
+        old_counts = {
+            'npcs': len(self.npcs),
+            'enemies': len(self.enemies), 
+            'objects': len(self.objects)
+        }
         
         # Clear current entity lists
         self.npcs.clear()
@@ -254,12 +273,18 @@ class ProceduralGenerationMixin:
         self.chests.clear()
         
         # Load entities from chunks around player
+        total_entities_found = 0
         for chunk_y in range(player_chunk_y - entity_load_radius, player_chunk_y + entity_load_radius + 1):
             for chunk_x in range(player_chunk_x - entity_load_radius, player_chunk_x + entity_load_radius + 1):
                 chunk = self.chunk_manager.get_chunk(chunk_x, chunk_y)
                 if chunk:
                     chunk_world_x = chunk.chunk_x * chunk.CHUNK_SIZE
                     chunk_world_y = chunk.chunk_y * chunk.CHUNK_SIZE
+                    
+                    chunk_entities = len(chunk.entities)
+                    total_entities_found += chunk_entities
+                    if chunk_entities > 0:
+                        print(f"  Chunk ({chunk_x}, {chunk_y}) has {chunk_entities} entities")
                     
                     for entity_data in chunk.entities:
                         # Convert entity data to world coordinates
@@ -276,6 +301,7 @@ class ProceduralGenerationMixin:
                             npc_obj = self.create_npc_from_data(entity_data, world_x, world_y)
                             if npc_obj:
                                 self.npcs.append(npc_obj)
+                                print(f"    Loaded NPC: {entity_data.get('name', 'Unknown')} at ({world_x:.1f}, {world_y:.1f})")
                                 
                         elif entity_data['type'] == 'enemy':
                             # Create Enemy object
@@ -288,6 +314,17 @@ class ProceduralGenerationMixin:
                             obj = self.create_object_from_data(entity_data, world_x, world_y)
                             if obj:
                                 self.objects.append(obj)
+        
+        new_counts = {
+            'npcs': len(self.npcs),
+            'enemies': len(self.enemies), 
+            'objects': len(self.objects)
+        }
+        
+        print(f"Entity update complete:")
+        print(f"  Total entities found in chunks: {total_entities_found}")
+        for entity_type in ['npcs', 'enemies', 'objects']:
+            print(f"  {entity_type}: {old_counts[entity_type]} -> {new_counts[entity_type]}")
     
     def create_npc_from_data(self, entity_data, world_x, world_y):
         """Create NPC object from entity data"""

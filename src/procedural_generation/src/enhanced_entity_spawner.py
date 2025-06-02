@@ -209,7 +209,7 @@ class EnhancedEntitySpawner:
         
         # Calculate enemy density
         total_area = self.width * self.height
-        target_enemies = int(total_area * 0.001)  # 0.1% of tiles have enemies
+        target_enemies = int(total_area * 0.003)  # Increased from 0.001 to 0.003 - 0.3% of tiles have enemies
         
         attempts = 0
         max_attempts = target_enemies * 20  # Increased attempts for better placement
@@ -298,27 +298,27 @@ class EnhancedEntitySpawner:
                 if biome == 'FOREST':
                     # Trees only on grass/dirt/forest_floor, higher density in forests
                     if tiles[y][x] in [self.TILE_GRASS, self.TILE_DIRT, self.TILE_FOREST_FLOOR]:  # 18 = TILE_FOREST_FLOOR
-                        spawn_chance = 0.25  # Dense forest coverage
+                        spawn_chance = 0.06  # Reduced from 0.25 - More reasonable forest coverage
                         object_variants = ["pine_tree", "oak_tree", "fallen_log"]
                 elif biome == 'PLAINS':
                     # Scattered trees only on grass/dirt
                     if tiles[y][x] in [self.TILE_GRASS, self.TILE_DIRT]:
-                        spawn_chance = 0.03  # Sparse coverage
+                        spawn_chance = 0.015  # Reduced from 0.03 - Sparse coverage
                         object_variants = ["oak_tree", "Tree"]  # Mix of new and old
                 elif biome == 'DESERT':
                     # Desert objects on sand/dirt/stone
                     if tiles[y][x] in [self.TILE_SAND, self.TILE_DIRT, self.TILE_STONE]:  # 16 = TILE_SAND
-                        spawn_chance = 0.08  # Moderate coverage
+                        spawn_chance = 0.03  # Reduced from 0.08 - Moderate coverage
                         object_variants = ["cactus_saguaro", "cactus_barrel", "desert_rock"]
                 elif biome == 'SNOW':
                     # Winter objects with terrain restrictions
                     if tiles[y][x] in [self.TILE_SNOW, self.TILE_STONE]:  # 17 = TILE_SNOW
-                        spawn_chance = 0.10  # Good coverage
+                        spawn_chance = 0.04  # Reduced from 0.10 - Good coverage
                         object_variants = ["snowy_pine", "ice_block", "frozen_rock"]
                 elif biome == 'SWAMP':
                     # Swamp objects on swamp/water tiles
                     if tiles[y][x] in [self.TILE_SWAMP, self.TILE_DIRT]:  # 19 = TILE_SWAMP
-                        spawn_chance = 0.12  # Dense swamp coverage
+                        spawn_chance = 0.05  # Reduced from 0.12 - Dense swamp coverage
                         object_variants = ["dead_tree", "swamp_log", "swamp_mushroom"]
                 
                 if random.random() < spawn_chance and object_variants:
