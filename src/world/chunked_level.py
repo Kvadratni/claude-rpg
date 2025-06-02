@@ -65,8 +65,12 @@ class ChunkedLevel(LevelBase):
             self.player.x, self.player.y, radius=100
         )
         
-        # Clear existing objects (they'll be repopulated from chunks)
+        # Clear existing objects and NPCs (they'll be repopulated from chunks)
         self.objects = []
+        if not hasattr(self, 'npcs'):
+            self.npcs = []
+        else:
+            self.npcs.clear()
         
         # Convert chunk entities back to game entities
         for entity_data in entities:
@@ -84,6 +88,25 @@ class ChunkedLevel(LevelBase):
                     self.objects.append(obj)
                 except Exception as e:
                     print(f"Warning: Failed to create object entity: {e}")
+            
+            elif entity_data['type'] == 'npc':
+                try:
+                    from ..entities.npc import NPC
+                    npc = NPC(
+                        entity_data['world_x'],
+                        entity_data['world_y'], 
+                        entity_data['name'],
+                        asset_loader=self.asset_loader
+                    )
+                    # Set additional NPC properties
+                    if 'building' in entity_data:
+                        npc.building = entity_data['building']
+                    if 'has_shop' in entity_data:
+                        npc.has_shop = entity_data['has_shop']
+                    
+                    self.npcs.append(npc)
+                except Exception as e:
+                    print(f"Warning: Failed to create NPC entity: {e}")
     
     def get_walkable(self, x: int, y: int) -> float:
         """Get walkability at world coordinates"""

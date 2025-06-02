@@ -490,12 +490,26 @@ class EnhancedEntitySpawner:
     
     # Keep existing NPC and boss spawning methods (they already work well)
     def spawn_npcs(self, settlements: List[Dict], asset_loader: Any) -> List[Any]:
-        """Spawn NPCs in settlements (existing implementation)"""
+        """Spawn NPCs in settlements with enhanced debugging"""
         npcs = []
         
-        for settlement in settlements:
-            for building in settlement.get('buildings', []):
-                if 'npc' in building and building['npc']:
+        print(f"Starting NPC spawning for {len(settlements)} settlements...")
+        
+        for settlement_idx, settlement in enumerate(settlements):
+            settlement_name = settlement.get('name', 'Unknown')
+            print(f"  Settlement {settlement_idx + 1}: {settlement_name}")
+            
+            buildings = settlement.get('buildings', [])
+            print(f"    Buildings in settlement: {len(buildings)}")
+            
+            for building_idx, building in enumerate(buildings):
+                building_name = building.get('name', 'Unknown Building')
+                npc_name = building.get('npc')
+                
+                print(f"      Building {building_idx + 1}: {building_name}")
+                print(f"        Has NPC: {npc_name is not None}")
+                
+                if npc_name:
                     # Find interior position for NPC
                     bx, by = building['x'], building['y']
                     bw, bh = building['width'], building['height']
@@ -505,22 +519,43 @@ class EnhancedEntitySpawner:
                     npc_y = by + bh // 2
                     
                     # Create NPC with appropriate dialog
-                    npc_name = building['npc']
                     has_shop = building.get('has_shop', False)
                     
                     # Get appropriate dialog for NPC type
                     dialog = self.get_npc_dialog(npc_name)
                     
+                    print(f"        Creating NPC: {npc_name} at ({npc_x}, {npc_y}), has_shop: {has_shop}")
+                    
                     # Import NPC class
                     try:
                         from ...entities import NPC
-                    except ImportError:
+                        
+                        npc = NPC(npc_x, npc_y, npc_name, dialog=dialog, 
+                                 asset_loader=asset_loader, has_shop=has_shop)
+                        npcs.append(npc)
+                        
+                        # Mark NPC position as occupied
+                        self.mark_position_occupied(npc_x, npc_y)
+                        
+                        print(f"        ✓ Successfully spawned {npc_name}")
+                        
+                    except ImportError as e:
+                        print(f"        ✗ Failed to import NPC class: {e}")
                         try:
                             import sys
                             import os
                             sys.path.append(os.path.dirname(os.path.dirname(os.path.dirname(__file__))))
                             from entities import NPC
-                        except ImportError:
+                            
+                            npc = NPC(npc_x, npc_y, npc_name, dialog=dialog, 
+                                     asset_loader=asset_loader, has_shop=has_shop)
+                            npcs.append(npc)
+                            self.mark_position_occupied(npc_x, npc_y)
+                            print(f"        ✓ Successfully spawned {npc_name} (fallback import)")
+                            
+                        except ImportError as e2:
+                            print(f"        ✗ Fallback import also failed: {e2}")
+                            # Create mock NPC for testing
                             class MockNPC:
                                 def __init__(self, *args, **kwargs):
                                     self.x = args[0] if args else 0
@@ -528,17 +563,19 @@ class EnhancedEntitySpawner:
                                     self.name = args[2] if len(args) > 2 else "NPC"
                                 def update(self, level):
                                     pass
-                            NPC = MockNPC
+                            
+                            npc = MockNPC(npc_x, npc_y, npc_name)
+                            npcs.append(npc)
+                            print(f"        ⚠ Created mock NPC {npc_name} for testing")
                     
-                    npc = NPC(npc_x, npc_y, npc_name, dialog=dialog, 
-                             asset_loader=asset_loader, has_shop=has_shop)
-                    npcs.append(npc)
-                    
-                    # Mark NPC position as occupied
-                    self.mark_position_occupied(npc_x, npc_y)
-                    
-                    print(f"Spawned {npc_name} at ({npc_x}, {npc_y})")
+                    except Exception as e:
+                        print(f"        ✗ Unexpected error creating NPC {npc_name}: {e}")
+                        import traceback
+                        traceback.print_exc()
+                else:
+                    print(f"        No NPC assigned to this building")
         
+        print(f"NPC spawning complete: {len(npcs)} NPCs created")
         return npcs
     
     def spawn_bosses(self, tiles: List[List[int]], biome_map: List[List[str]], 
@@ -646,6 +683,52 @@ class EnhancedEntitySpawner:
                 "I brew potions from rare herbs.",
                 "Nature provides all we need for healing.",
                 "My remedies are the finest you'll find."
+            ],
+            # New NPCs
+            'Desert Guide': [
+                "The desert is harsh but I know its ways.",
+                "Sandstorms can bury entire caravans.",
+                "Follow the stars and you'll find your path."
+            ],
+            'Lodge Keeper': [
+                "Welcome to our warm lodge!",
+                "The cold winds can be deadly out there.",
+                "Stay as long as you need to recover."
+            ],
+            'Trade Master': [
+                "All roads lead to profit, my friend.",
+                "I deal in goods from every corner of the realm.",
+                "What do you have to trade today?"
+            ],
+            'Stable Master': [
+                "These are the finest mounts in the land.",
+                "A good horse can save your life.",
+                "Take care of them and they'll take care of you."
+            ],
+            'Mine Foreman': [
+                "The mines run deep and dangerous.",
+                "We've struck rich veins of ore lately.",
+                "The deeper we dig, the stranger things get."
+            ],
+            'Head Miner': [
+                "Hard work and strong backs built this camp.",
+                "The mountain holds treasures beyond imagination.",
+                "But it also holds dangers we don't speak of."
+            ],
+            'Harbor Master': [
+                "The waters provide for our village.",
+                "Strange currents have been stirring lately.",
+                "The fish know things we don't."
+            ],
+            'Master Fisher': [
+                "I've sailed these waters for thirty years.",
+                "The deep holds secrets older than memory.",
+                "Respect the water and it will feed you."
+            ],
+            'Water Keeper': [
+                "Water is life in the desert.",
+                "Every drop is precious here.",
+                "I guard our most valuable resource."
             ]
         }
         

@@ -13,39 +13,71 @@ class SettlementGenerator:
     Generates settlements using templates with collision detection
     """
     
-    # Settlement templates
+    # Settlement templates - FIXED: Larger settlements and smaller buildings
     SETTLEMENT_TEMPLATES = {
         'VILLAGE': {
-            'size': (25, 25),
+            'size': (35, 35),  # Increased from 25x25
             'buildings': [
-                {'name': 'General Store', 'size': (12, 8), 'npc': 'Master Merchant', 'has_shop': True},
-                {'name': 'Inn', 'size': (10, 8), 'npc': 'Innkeeper', 'has_shop': False},
-                {'name': 'Blacksmith', 'size': (8, 6), 'npc': 'Master Smith', 'has_shop': True},
-                {'name': 'Elder House', 'size': (10, 8), 'npc': 'Village Elder', 'has_shop': False},
-                {'name': 'Guard House', 'size': (8, 6), 'npc': 'Guard Captain', 'has_shop': False}
+                {'name': 'General Store', 'size': (8, 6), 'npc': 'Master Merchant', 'has_shop': True},  # Reduced from 12x8
+                {'name': 'Inn', 'size': (8, 6), 'npc': 'Innkeeper', 'has_shop': False},  # Reduced from 10x8
+                {'name': 'Blacksmith', 'size': (6, 5), 'npc': 'Master Smith', 'has_shop': True},  # Reduced from 8x6
+                {'name': 'Elder House', 'size': (7, 6), 'npc': 'Village Elder', 'has_shop': False},  # Reduced from 10x8
+                {'name': 'Guard House', 'size': (6, 5), 'npc': 'Guard Captain', 'has_shop': False}  # Reduced from 8x6
             ],
             'biomes': ['PLAINS', 'FOREST'],
             'safe_radius': 20
         },
         'DESERT_OUTPOST': {
-            'size': (20, 20),
+            'size': (28, 28),  # Increased from 20x20
             'buildings': [
-                {'name': 'Trading Post', 'size': (10, 8), 'npc': 'Caravan Master', 'has_shop': True},
-                {'name': 'Water Storage', 'size': (6, 6)},
-                {'name': 'Caravan Rest', 'size': (10, 6)}
+                {'name': 'Trading Post', 'size': (7, 6), 'npc': 'Caravan Master', 'has_shop': True},  # Reduced from 10x8
+                {'name': 'Water Storage', 'size': (5, 5), 'npc': 'Water Keeper', 'has_shop': False},  # Added NPC
+                {'name': 'Caravan Rest', 'size': (8, 5), 'npc': 'Desert Guide', 'has_shop': False}  # Reduced from 10x6
             ],
             'biomes': ['DESERT'],
             'safe_radius': 15
         },
         'SNOW_SETTLEMENT': {
-            'size': (18, 18),
+            'size': (25, 25),  # Increased from 18x18
             'buildings': [
-                {'name': 'Ranger Station', 'size': (8, 6), 'npc': 'Forest Ranger', 'has_shop': False},
-                {'name': 'Herbalist Hut', 'size': (8, 6), 'npc': 'Master Herbalist', 'has_shop': True},
-                {'name': 'Warm Lodge', 'size': (10, 8)}
+                {'name': 'Ranger Station', 'size': (6, 5), 'npc': 'Forest Ranger', 'has_shop': False},  # Reduced from 8x6
+                {'name': 'Herbalist Hut', 'size': (6, 5), 'npc': 'Master Herbalist', 'has_shop': True},  # Reduced from 8x6
+                {'name': 'Warm Lodge', 'size': (7, 6), 'npc': 'Lodge Keeper', 'has_shop': False}  # Reduced from 10x8
             ],
             'biomes': ['SNOW'],
             'safe_radius': 15
+        },
+        'TRADING_POST': {
+            'size': (22, 22),  # Increased from 15x15
+            'buildings': [
+                {'name': 'Trade Hall', 'size': (7, 5), 'npc': 'Trade Master', 'has_shop': True},  # Reduced from 10x6
+                {'name': 'Storage', 'size': (5, 5)},  # Reduced from 6x6
+                {'name': 'Stable', 'size': (6, 5), 'npc': 'Stable Master', 'has_shop': False}  # Reduced from 8x6
+            ],
+            'biomes': ['PLAINS', 'FOREST', 'DESERT'],
+            'safe_radius': 12
+        },
+        'MINING_CAMP': {
+            'size': (30, 30),  # Increased from 20x20
+            'buildings': [
+                {'name': 'Mine Office', 'size': (6, 5), 'npc': 'Mine Foreman', 'has_shop': True},  # Reduced from 8x6
+                {'name': 'Miners Lodge', 'size': (7, 6), 'npc': 'Head Miner', 'has_shop': False},  # Reduced from 10x8
+                {'name': 'Tool Shed', 'size': (5, 4)},  # Reduced from 6x6
+                {'name': 'Ore Storage', 'size': (6, 5)}  # Reduced from 8x6
+            ],
+            'biomes': ['SNOW', 'DESERT'],
+            'safe_radius': 15
+        },
+        'FISHING_VILLAGE': {
+            'size': (30, 30),  # Increased from 22x22
+            'buildings': [
+                {'name': 'Fish Market', 'size': (7, 6), 'npc': 'Harbor Master', 'has_shop': True},  # Reduced from 10x8
+                {'name': 'Fisherman Hut', 'size': (6, 5), 'npc': 'Master Fisher', 'has_shop': False},  # Reduced from 8x6
+                {'name': 'Boat House', 'size': (8, 5)},  # Reduced from 12x6
+                {'name': 'Net Storage', 'size': (5, 4)}  # Reduced from 6x6
+            ],
+            'biomes': ['PLAINS', 'FOREST'],  # Near water areas
+            'safe_radius': 18
         }
     }
     
@@ -84,13 +116,47 @@ class SettlementGenerator:
         """
         settlements = []
         
-        # Try to place one settlement of each type
-        for template_name, template_config in self.SETTLEMENT_TEMPLATES.items():
-            settlement = self.try_place_settlement(template_name, template_config, tiles, biome_map)
-            if settlement:
-                settlements.append(settlement)
+        # Try to place multiple settlements of each type for better coverage
+        settlement_targets = {
+            'VILLAGE': 2,        # Place 2 villages
+            'DESERT_OUTPOST': 2, # Place 2 desert outposts  
+            'SNOW_SETTLEMENT': 2, # Place 2 snow settlements
+            'TRADING_POST': 3,   # Place 3 trading posts (smaller, more common)
+            'MINING_CAMP': 1,    # Place 1 mining camp
+            'FISHING_VILLAGE': 1 # Place 1 fishing village
+        }
         
-        print(f"Placed {len(settlements)} settlements")
+        for template_name, template_config in self.SETTLEMENT_TEMPLATES.items():
+            target_count = settlement_targets.get(template_name, 1)
+            placed_count = 0
+            
+            print(f"Attempting to place {target_count} {template_name} settlements...")
+            
+            # Try to place multiple settlements of this type
+            for attempt in range(target_count * 3):  # 3x attempts per target
+                settlement = self.try_place_settlement(template_name, template_config, tiles, biome_map)
+                if settlement:
+                    settlements.append(settlement)
+                    placed_count += 1
+                    print(f"  Successfully placed {template_name} #{placed_count} at ({settlement['x']}, {settlement['y']})")
+                    
+                    if placed_count >= target_count:
+                        break
+                else:
+                    print(f"  Failed to place {template_name} (attempt {attempt + 1})")
+            
+            print(f"  Final result: {placed_count}/{target_count} {template_name} settlements placed")
+        
+        print(f"Total settlements placed: {len(settlements)}")
+        
+        # Debug: Count expected NPCs
+        total_expected_npcs = 0
+        for settlement in settlements:
+            npc_count = sum(1 for building in settlement.get('buildings', []) if building.get('npc'))
+            total_expected_npcs += npc_count
+            print(f"  {settlement['name']} at ({settlement['x']}, {settlement['y']}): {npc_count} NPCs expected")
+        
+        print(f"Total NPCs expected from all settlements: {total_expected_npcs}")
         return settlements
     
     def try_place_settlement(self, template_name: str, template_config: Dict, 
@@ -203,7 +269,7 @@ class SettlementGenerator:
     def place_settlement_buildings(self, tiles: List[List[int]], start_x: int, start_y: int, 
                                  template_config: Dict) -> List[Dict]:
         """
-        Place buildings for a settlement with improved placement logic
+        Place buildings for a settlement with improved placement logic and debugging
         
         Args:
             tiles: 2D list of tile types
@@ -216,7 +282,7 @@ class SettlementGenerator:
         settlement_width, settlement_height = template_config['size']
         
         # Create smaller stone square in center to leave more room for buildings
-        center_size = min(settlement_width, settlement_height) // 3  # Reduced from // 2
+        center_size = min(settlement_width, settlement_height) // 4  # Reduced from // 3 to make even smaller
         center_start_x = start_x + (settlement_width - center_size) // 2
         center_start_y = start_y + (settlement_height - center_size) // 2
         
@@ -229,24 +295,44 @@ class SettlementGenerator:
         buildings = template_config['buildings']
         placed_buildings = []
         
-        for building in buildings:
+        print(f"    Attempting to place {len(buildings)} buildings in settlement...")
+        
+        for i, building in enumerate(buildings):
             building_width, building_height = building['size']
+            building_name = building['name']
+            has_npc = 'npc' in building and building['npc']
             
+            print(f"      Building {i+1}/{len(buildings)}: {building_name} ({building_width}x{building_height}) - NPC: {has_npc}")
+            
+            placed = False
             # Try to find a good spot for this building with more attempts
-            for attempt in range(50):  # Increased from 20
-                # Random position within settlement bounds with better margins
-                margin = 1  # Reduced margin
-                bx = start_x + margin + random.randint(0, settlement_width - building_width - margin * 2)
-                by = start_y + margin + random.randint(0, settlement_height - building_height - margin * 2)
+            for attempt in range(100):  # Increased attempts significantly
+                # Random position within settlement bounds with minimal margins
+                margin = 0  # No margin - use full settlement area
+                max_x = settlement_width - building_width - margin * 2
+                max_y = settlement_height - building_height - margin * 2
+                
+                if max_x <= 0 or max_y <= 0:
+                    print(f"        Building too large for settlement! Skipping...")
+                    break
+                
+                bx = start_x + margin + random.randint(0, max_x)
+                by = start_y + margin + random.randint(0, max_y)
                 
                 # Check if building would overlap with center square (with smaller margin)
                 if self.building_overlaps_area_relaxed(bx, by, building_width, building_height, 
                                                      center_start_x, center_start_y, center_size, center_size):
                     continue
                 
-                if any(self.building_overlaps_area_relaxed(bx, by, building_width, building_height,
-                                                         pb['x'], pb['y'], pb['width'], pb['height'])
-                       for pb in placed_buildings):
+                # Check overlap with existing buildings
+                overlaps = False
+                for pb in placed_buildings:
+                    if self.building_overlaps_area_relaxed(bx, by, building_width, building_height,
+                                                         pb['x'], pb['y'], pb['width'], pb['height']):
+                        overlaps = True
+                        break
+                
+                if overlaps:
                     continue
                 
                 # Place the building
@@ -257,7 +343,17 @@ class SettlementGenerator:
                     'name': building['name'], 'npc': building.get('npc'),
                     'has_shop': building.get('has_shop', False)
                 })
+                
+                print(f"        Successfully placed {building_name} at ({bx}, {by})")
+                placed = True
                 break
+            
+            if not placed:
+                print(f"        FAILED to place {building_name} after 100 attempts!")
+        
+        print(f"    Settlement building placement complete: {len(placed_buildings)}/{len(buildings)} buildings placed")
+        npc_buildings = sum(1 for b in placed_buildings if b.get('npc'))
+        print(f"    Buildings with NPCs: {npc_buildings}")
         
         return placed_buildings
     
@@ -372,7 +468,7 @@ class SettlementGenerator:
     def building_overlaps_area_relaxed(self, bx: int, by: int, bw: int, bh: int, 
                                      ax: int, ay: int, aw: int, ah: int) -> bool:
         """
-        Check if building overlaps with an area (with smaller margin)
+        Check if building overlaps with an area (with very small margin for more lenient placement)
         
         Args:
             bx, by, bw, bh: Building position and dimensions
@@ -381,7 +477,7 @@ class SettlementGenerator:
         Returns:
             True if overlap detected
         """
-        margin = 1  # Reduced from 2
+        margin = 0  # No margin - allow buildings to be adjacent
         return not (bx + bw + margin <= ax or ax + aw + margin <= bx or 
                    by + bh + margin <= ay or ay + ah + margin <= by)
     

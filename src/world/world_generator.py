@@ -7,6 +7,7 @@ from typing import List, Dict, Any
 from ..procedural_generation.src.biome_generator import BiomeGenerator
 from ..procedural_generation.src.enhanced_entity_spawner import EnhancedEntitySpawner
 from .chunk import Chunk
+from .settlement_manager import ChunkSettlementManager
 
 
 class WorldGenerator:
@@ -22,6 +23,7 @@ class WorldGenerator:
             world_seed: Seed for the entire world
         """
         self.world_seed = world_seed
+        self.settlement_manager = ChunkSettlementManager(world_seed)
         random.seed(world_seed)
         
     def generate_chunk(self, chunk_x: int, chunk_y: int) -> Chunk:
@@ -45,14 +47,33 @@ class WorldGenerator:
         chunk.biomes = biome_gen.generate_biome_map()
         chunk.tiles = biome_gen.generate_tiles(chunk.biomes)
         
+        # Check if this chunk should have a settlement
+        biome_counts = {}
+        for y in range(Chunk.CHUNK_SIZE):
+            for x in range(Chunk.CHUNK_SIZE):
+                biome = chunk.biomes[y][x]
+                biome_counts[biome] = biome_counts.get(biome, 0) + 1
+        
+        settlement_type = self.settlement_manager.should_generate_settlement(chunk_x, chunk_y, biome_counts)
+        settlement_data = None
+        if settlement_type:
+            settlement_data = self.settlement_manager.generate_settlement_in_chunk(chunk_x, chunk_y, settlement_type)
+            print(f"Generated {settlement_type} settlement in chunk ({chunk_x}, {chunk_y})")
+        
         # Generate entities for this chunk
         entity_spawner = EnhancedEntitySpawner(Chunk.CHUNK_SIZE, Chunk.CHUNK_SIZE, chunk_seed)
         
         # Convert world coordinates for entity spawning
         start_x, start_y, end_x, end_y = chunk.get_world_bounds()
         
-        # Generate entities (simplified - no settlements in individual chunks)
-        safe_zones = []  # No settlement safe zones in individual chunks
+        # Create safe zones around settlements
+        safe_zones = []
+        if settlement_data:
+            # Create safe zone around settlement (relative to chunk coordinates)
+            local_x = settlement_data['world_x'] - start_x
+            local_y = settlement_data['world_y'] - start_y
+            safe_radius = max(settlement_data['size']) // 2 + 5
+            safe_zones.append((local_x, local_y, safe_radius))
         
         try:
             # Generate objects for this chunk
@@ -83,6 +104,20 @@ class WorldGenerator:
                     'id': f"{enemy.name}_{enemy.x}_{enemy.y}" if hasattr(enemy, 'name') and hasattr(enemy, 'x') and hasattr(enemy, 'y') else f"enemy_{len(chunk.entities)}"
                 }
                 chunk.add_entity(entity_data)
+                
+            # Add settlement NPCs if this chunk has a settlement
+            if settlement_data:
+                for npc_data in settlement_data['npcs']:
+                    npc_entity = {
+                        'type': 'npc',
+                        'name': npc_data['name'],
+                        'building': npc_data['building'],
+                        'has_shop': npc_data['has_shop'],
+                        'x': npc_data['x'] - start_x,  # Convert to local chunk coordinates
+                        'y': npc_data['y'] - start_y,
+                        'id': f"npc_{npc_data['name'].lower().replace(' ', '_')}_{chunk_x}_{chunk_y}"
+                    }
+                    chunk.add_entity(npc_entity)
                 
         except Exception as e:
             print(f"Warning: Entity generation failed for chunk ({chunk_x}, {chunk_y}): {e}")
