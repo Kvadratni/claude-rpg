@@ -8,7 +8,7 @@ import random
 from .base import Entity
 
 class NPC(Entity):
-    """Non-player character with optional AI support"""
+    """Non-player character"""
     
     def __init__(self, x, y, name, dialog=None, shop_items=None, asset_loader=None, has_shop=False):
         super().__init__(x, y, name, "npc")
@@ -19,13 +19,6 @@ class NPC(Entity):
         self.has_shop = has_shop
         self.shop = None
         
-        # AI Integration
-        self.ai_integration = None
-        self.chat_window = None
-        self.is_ai_enabled = False
-        self.player_ref = None
-        self.game_context = None
-        
         # Create shop if this NPC is a shopkeeper
         if self.has_shop:
             from ..ui.shop import Shop
@@ -34,86 +27,6 @@ class NPC(Entity):
         
         # Create NPC sprite
         self.create_npc_sprite()
-    
-    def enable_ai(self, player_ref, game_context):
-        """Enable AI for this NPC"""
-        print(f"🔧 [NPC] enable_ai called for {self.name}")
-        try:
-            from ..ai_integration import EnhancedGooseRecipeIntegration, AIChatWindow
-            print(f"🔧 [NPC] Successfully imported AI classes")
-            
-            self.ai_integration = EnhancedGooseRecipeIntegration(self.name)
-            print(f"🔧 [NPC] Created EnhancedGooseRecipeIntegration for {self.name}")
-            
-            self.chat_window = AIChatWindow(self.asset_loader)
-            print(f"🔧 [NPC] Created AIChatWindow")
-            
-            self.player_ref = player_ref
-            self.game_context = game_context
-            self.is_ai_enabled = True
-            print(f"✅ [NPC] AI enabled for {self.name}")
-        except ImportError as e:
-            print(f"❌ [NPC] Failed to enable AI for {self.name}: {e}")
-            import traceback
-            traceback.print_exc()
-            self.is_ai_enabled = False
-    
-    def start_ai_chat(self):
-        """Start AI conversation"""
-        print(f"🔧 start_ai_chat called for {self.name}")
-        print(f"🔧 is_ai_enabled: {self.is_ai_enabled}")
-        print(f"🔧 chat_window exists: {self.chat_window is not None}")
-        
-        if self.is_ai_enabled and self.chat_window:
-            print(f"🔧 Activating chat window for {self.name}")
-            self.chat_window.is_active = True
-            self.chat_window.add_message("System", f"Started conversation with {self.name}")
-            
-            # Store the chat window in the player for rendering (like regular dialogue)
-            if self.player_ref and hasattr(self.player_ref, 'current_ai_chat'):
-                self.player_ref.current_ai_chat = self.chat_window
-                print(f"🔧 Stored chat window in player.current_ai_chat")
-            
-            # Send initial context to AI
-            if self.game_context:
-                print(f"🔧 Sending initial greeting to AI")
-                context = self.game_context.get_context()
-                initial_greeting = self.ai_integration.send_message("Hello", context)
-                self.chat_window.add_message(self.name, initial_greeting)
-                print(f"🔧 AI responded: {initial_greeting}")
-            else:
-                print(f"⚠️  No game_context available")
-        else:
-            print(f"⚠️  Cannot start AI chat - is_ai_enabled: {self.is_ai_enabled}, chat_window: {self.chat_window is not None}")
-    
-    def handle_ai_input(self, event):
-        """Handle input for AI chat"""
-        if not self.is_ai_enabled or not self.chat_window:
-            return False
-            
-        if self.chat_window.is_active:
-            message = self.chat_window.handle_input(event)
-            if message:
-                # Add player message to chat
-                self.chat_window.add_message("Player", message)
-                
-                # Get AI response
-                context = self.game_context.get_context() if self.game_context else ""
-                ai_response = self.ai_integration.send_message(message, context)
-                self.chat_window.add_message(self.name, ai_response)
-            
-            return True  # Event was handled
-        
-        return False
-    
-    def render_ai_chat(self, screen):
-        """Render AI chat window if active"""
-        if self.is_ai_enabled and self.chat_window:
-            if self.chat_window.is_active:
-                print(f"🔧 Rendering AI chat for {self.name}")
-            self.chat_window.render(screen)
-        elif self.is_ai_enabled:
-            print(f"⚠️  AI enabled but no chat_window for {self.name}")
     
     def create_npc_sprite(self):
         """Create NPC sprite with support for all new NPC types"""
@@ -218,11 +131,6 @@ class NPC(Entity):
     
     def interact(self, player):
         """Interact with the NPC"""
-        print(f"🔧 [NPC] interact() called for {self.name}")
-        print(f"🔧 [NPC] has ai_ready attribute: {hasattr(self, 'ai_ready')}")
-        print(f"🔧 [NPC] ai_ready value: {getattr(self, 'ai_ready', 'NOT SET')}")
-        print(f"🔧 [NPC] is_ai_enabled: {self.is_ai_enabled}")
-        
         # Get audio manager
         audio = getattr(self.asset_loader, 'audio_manager', None) if self.asset_loader else None
         
@@ -233,22 +141,8 @@ class NPC(Entity):
             else:
                 audio.play_ui_sound("button_click")  # Generic NPC talk sound
         
-        # Check if this NPC is AI-ready and enable AI on first interaction
-        if hasattr(self, 'ai_ready') and self.ai_ready and not self.is_ai_enabled:
-            print(f"🔧 [NPC] NPC is AI-ready and not yet enabled, calling enable_ai_on_interaction")
-            self.enable_ai_on_interaction(player)
-        
-        # Check if AI is enabled - if so, start AI chat instead of regular dialog
-        if self.is_ai_enabled:
-            print(f"🔧 [NPC] AI is enabled, starting AI chat")
-            self.start_ai_chat()
-            return
-        else:
-            print(f"🔧 [NPC] AI not enabled, using regular dialog")
-        
         # Handle shop interaction
         if self.has_shop and self.shop:
-            print(f"🔧 [NPC] Opening shop for {self.name}")
             self.shop.open_shop()
             if player.game_log:
                 player.game_log.add_message(f"{self.name}: Welcome to my shop!", "dialog")
@@ -257,7 +151,6 @@ class NPC(Entity):
             if hasattr(player, 'game') and hasattr(player.game, 'quest_manager'):
                 player.game.quest_manager.update_quest_progress("talk", self.name)
         else:
-            print(f"🔧 [NPC] Opening regular dialog for {self.name}")
             # Open dialogue window instead of just logging messages
             if self.dialog:
                 from ..ui.dialogue import DialogueWindow
@@ -290,44 +183,6 @@ class NPC(Entity):
                 if player.game_log:
                     player.game_log.add_message(f"{self.name} has items for sale!", "dialog")
     
-
-    def enable_ai_on_interaction(self, player):
-        """Enable AI when player first interacts with an AI-ready NPC"""
-        print(f"🔧 [NPC] enable_ai_on_interaction called for {self.name}")
-        print(f"🔧 [NPC] ai_ready: {getattr(self, 'ai_ready', 'NOT SET')}")
-        print(f"🔧 [NPC] is_ai_enabled: {self.is_ai_enabled}")
-        
-        try:
-            from ..ai_integration import GameContext
-            print(f"🔧 [NPC] Successfully imported GameContext")
-            
-            # Get the current level from the player's game
-            current_level = None
-            if hasattr(player, 'game') and hasattr(player.game, 'current_level'):
-                current_level = player.game.current_level
-                print(f"🔧 [NPC] Got current_level: {type(current_level)}")
-            else:
-                print(f"⚠️  [NPC] Could not get current_level from player")
-            
-            # Create game context
-            game_context = GameContext(player, current_level)
-            print(f"🔧 [NPC] Created GameContext")
-            
-            # Enable AI for this NPC
-            self.enable_ai(player, game_context)
-            print(f"🔧 [NPC] Called enable_ai")
-            
-            if player.game_log:
-                player.game_log.add_message(f"🤖 {self.name} is now AI-powered!", "system")
-                print(f"🔧 [NPC] Added AI-powered message to game log")
-            
-        except Exception as e:
-            print(f"⚠️  [NPC] Failed to enable AI for {self.name}: {e}")
-            import traceback
-            traceback.print_exc()
-            # Fall back to regular dialog
-            self.ai_ready = False
-
     def get_save_data(self):
         """Get data for saving"""
         data = super().get_save_data()
@@ -335,8 +190,7 @@ class NPC(Entity):
             "dialog": self.dialog,
             "shop_items": self.shop_items,
             "dialog_index": self.dialog_index,
-            "has_shop": self.has_shop,
-            "is_ai_enabled": self.is_ai_enabled
+            "has_shop": self.has_shop
         })
         return data
     
@@ -346,5 +200,6 @@ class NPC(Entity):
         npc = cls(data["x"], data["y"], data["name"], data["dialog"], data["shop_items"], 
                  asset_loader, data.get("has_shop", False))
         npc.dialog_index = data["dialog_index"]
-        npc.is_ai_enabled = data.get("is_ai_enabled", False)
         return npc
+
+

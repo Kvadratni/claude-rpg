@@ -1,0 +1,63 @@
+{
+  "recipe_name": "joke-of-the-day",
+  "iterations": 1,
+  "timeout": 45,
+  "timestamp": "2025-06-02 10:01:36",
+  "models": {
+    "goose-claude-4-sonnet": {
+      "success_count": 1,
+      "total_time": 9.48194932937622,
+      "average_time": 9.48194932937622,
+      "min_time": 9.48194932937622,
+      "max_time": 9.48194932937622,
+      "responses": [
+        "- /var/folders/64/04g_zwg12llfmmp1g7hj3rr40000gn/T/joke-of-the-day/recipe.yaml\nrecipe_dir (built-in): /var/folders/64/04g_zwg12llfmmp1g7hj3rr40000gn/T/joke-of-the-day\n**Monday, June 2nd, 2025 - National Rocky Road Day**\nWhy did the rocky road ice cream go to therapy?\nBecause it had too many nuts and was having a rocky relationship with the freezer! It kept saying, \"I'm just trying to stay cool, but everyone thinks I'm nuts, and these marshmallows are making me feel all mixed up inside!\"\n\ud83c\udf66\ud83e\udd5c"
+      ],
+      "errors": []
+    },
+    "goose-gpt-4o": {
+      "success_count": 1,
+      "total_time": 3.445444107055664,
+      "average_time": 3.445444107055664,
+      "min_time": 3.445444107055664,
+      "max_time": 3.445444107055664,
+      "responses": [
+        "- /var/folders/64/04g_zwg12llfmmp1g7hj3rr40000gn/T/joke-of-the-day/recipe.yaml\nrecipe_dir (built-in): /var/folders/64/04g_zwg12llfmmp1g7hj3rr40000gn/T/joke-of-the-day\nToday is June 2, 2025 \u2014 National Rotisserie Chicken Day! \ud83d\udc14\ud83d\udd25\nWhy did the chicken sit on the rotisserie?\nBecause it wanted to get roasted... but not by the comedians!"
+      ],
+      "errors": []
+    },
+    "goose-gpt-4o-mini": {
+      "success_count": 1,
+      "total_time": 1.9240028858184814,
+      "average_time": 1.9240028858184814,
+      "min_time": 1.9240028858184814,
+      "max_time": 1.9240028858184814,
+      "responses": [
+        "- /var/folders/64/04g_zwg12llfmmp1g7hj3rr40000gn/T/joke-of-the-day/recipe.yaml\nrecipe_dir (built-in): /var/folders/64/04g_zwg12llfmmp1g7hj3rr40000gn/T/joke-of-the-day"
+      ],
+      "errors": []
+    },
+    "goose-claude-3-5-sonnet": {
+      "success_count": 1,
+      "total_time": 9.180734872817993,
+      "average_time": 9.180734872817993,
+      "min_time": 9.180734872817993,
+      "max_time": 9.180734872817993,
+      "responses": [
+        "- /var/folders/64/04g_zwg12llfmmp1g7hj3rr40000gn/T/joke-of-the-day/recipe.yaml\nrecipe_dir (built-in): /var/folders/64/04g_zwg12llfmmp1g7hj3rr40000gn/T/joke-of-the-day\nLet me check if there are any special observances for June 2nd...\nAccording to various sources, June 2nd is National Rocky Road Day!\nHere's a Rocky Road themed joke:\nWhy did the Rocky Road ice cream go to therapy?\nBecause it had too many *nuts* to deal with, and life was getting a bit *rocky*!\n*(This joke combines the rocky road ice cream ingredients - chocolate, nuts, and marshmallows - with a play on words about life being \"rocky\" and having \"nuts\" to deal with, perfect for National Rocky Road Day!)*"
+      ],
+      "errors": []
+    },
+    "goose-claude-3-haiku": {
+      "success_count": 1,
+      "total_time": 1.9761672019958496,
+      "average_time": 1.9761672019958496,
+      "min_time": 1.9761672019958496,
+      "max_time": 1.9761672019958496,
+      "responses": [
+        "- /var/folders/64/04g_zwg12llfmmp1g7hj3rr40000gn/T/joke-of-the-day/recipe.yaml\nrecipe_dir (built-in): /var/folders/64/04g_zwg12llfmmp1g7hj3rr40000gn/T/joke-of-the-day"
+      ],
+      "errors": []
+    }
+  }
+}

@@ -55,6 +55,10 @@ class MovementSystem:
         if self.player.current_dialogue and self.player.current_dialogue.show:
             return  # Don't allow movement while dialogue is open
         
+        # Check if AI chat window is open - if so, disable movement
+        if hasattr(self.player, 'current_ai_chat') and self.player.current_ai_chat and self.player.current_ai_chat.is_active:
+            return  # Don't allow movement while AI chat is open
+        
         # Follow current path if we have one
         if self.path and self.path_index < len(self.path):
             target_x, target_y = self.path[self.path_index]
@@ -175,6 +179,10 @@ class MovementSystem:
         # Check if dialogue window is open - if so, disable mouse movement
         if self.player.current_dialogue and self.player.current_dialogue.show:
             return  # Don't allow movement while dialogue is open
+        
+        # Check if AI chat window is open - if so, disable mouse movement
+        if hasattr(self.player, 'current_ai_chat') and self.player.current_ai_chat and self.player.current_ai_chat.is_active:
+            return  # Don't allow movement while AI chat is open
         
         # Get audio manager
         audio = getattr(self.player.asset_loader, 'audio_manager', None) if self.player.asset_loader else None

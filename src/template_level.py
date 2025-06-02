@@ -225,8 +225,44 @@ class TemplateBasedLevel:
                 
                 print(f"Spawned {npc_info['name']} at ({x}, {y})")
         
+
+        # Enable AI for key NPCs
+        self.enable_ai_for_npcs(npcs)
+        
         return npcs
     
+
+    def enable_ai_for_npcs(self, npcs):
+        """Enable AI for specific NPCs"""
+        print(f"🔧 Enabling AI for NPCs... Found {len(npcs)} NPCs")
+        try:
+            # List of NPCs that should have AI capabilities
+            ai_enabled_npcs = [
+                "Village Elder",
+                "Master Merchant", 
+                "Guard Captain",
+                "High Priest",
+                "Mysterious Wizard"
+            ]
+            
+            for npc in npcs:
+                print(f"🔍 Checking NPC: {npc.name}")
+                if npc.name in ai_enabled_npcs:
+                    # Mark NPC as AI-ready (we'll enable it when player interacts)
+                    npc.ai_ready = True
+                    print(f"🤖 {npc.name} marked as AI-ready")
+                else:
+                    npc.ai_ready = False
+                    print(f"📝 {npc.name} marked as regular NPC")
+                    
+        except Exception as e:
+            print(f"⚠️  Could not enable AI for NPCs: {e}")
+            import traceback
+            traceback.print_exc()
+            # Mark all NPCs as not AI-ready if there's an error
+            for npc in npcs:
+                npc.ai_ready = False
+
     def spawn_enemies(self, asset_loader) -> List[Enemy]:
         """Spawn enemies at designated template locations"""
         enemies = []

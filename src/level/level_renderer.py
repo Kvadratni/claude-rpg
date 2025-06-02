@@ -83,6 +83,11 @@ class LevelRendererMixin:
         # Render dialogue window on top of everything
         if self.player.current_dialogue and self.player.current_dialogue.show:
             self.player.current_dialogue.render(screen)
+        
+        # Render AI chat window on top of everything
+        if hasattr(self.player, 'current_ai_chat') and self.player.current_ai_chat and self.player.current_ai_chat.is_active:
+            print(f"🔧 Rendering AI chat from level_renderer")
+            self.player.current_ai_chat.render(screen)
     
     def render_tile_at_position(self, surface, x, y):
         """Render a single tile with new flat surface wall system"""
