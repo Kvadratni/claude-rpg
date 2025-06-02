@@ -37,10 +37,11 @@ class LevelRendererMixin:
         center_y = int(self.player.y)
         
         # Calculate tile range - render visible area (optimized for chunked worlds)
-        start_x = max(0, center_x - visible_width)
-        end_x = center_x + visible_width  # Don't limit by world size for chunked worlds
-        start_y = max(0, center_y - visible_height)
-        end_y = center_y + visible_height  # Don't limit by world size for chunked worlds
+        # FIXED: Don't use max(0, ...) for chunked worlds that can have negative coordinates
+        start_x = center_x - visible_width
+        end_x = center_x + visible_width
+        start_y = center_y - visible_height
+        end_y = center_y + visible_height
         
         # Render tiles in proper isometric order (back to front)
         # This ensures proper depth sorting for buildings
@@ -113,15 +114,15 @@ class LevelRendererMixin:
         
         # ALWAYS render floor tile first (even under walls)
         floor_sprite = None
-        if self.wall_renderer.is_wall_tile(tile_type):
+        if hasattr(self, 'wall_renderer') and self.wall_renderer.is_wall_tile(tile_type):
             # Render appropriate floor tile underneath walls
             if tile_type == self.TILE_DOOR:
-                floor_sprite = self.tile_sprites[self.TILE_STONE]  # Stone under doors
+                floor_sprite = self.tile_sprites.get(self.TILE_STONE)  # Stone under doors
             else:
-                floor_sprite = self.tile_sprites[self.TILE_BRICK]  # Brick under walls (interior)
+                floor_sprite = self.tile_sprites.get(self.TILE_BRICK)  # Brick under walls (interior)
         else:
-            # Normal floor tiles
-            floor_sprite = self.tile_sprites[tile_type]
+            # Normal floor tiles - use .get() to avoid KeyError
+            floor_sprite = self.tile_sprites.get(tile_type)
         
         if floor_sprite:
             floor_rect = floor_sprite.get_rect()
@@ -129,7 +130,7 @@ class LevelRendererMixin:
             surface.blit(floor_sprite, floor_rect)
         
         # Now render walls using flat surfaces
-        if self.wall_renderer.is_wall_tile(tile_type):
+        if hasattr(self, 'wall_renderer') and self.wall_renderer.is_wall_tile(tile_type):
             self.wall_renderer.render_flat_wall(surface, screen_x, screen_y, tile_type, x, y)
-        elif tile_type == self.TILE_DOOR:
+        elif tile_type == self.TILE_DOOR and hasattr(self, 'door_renderer'):
             self.door_renderer.render_door_tile(surface, screen_x, screen_y, tile_type, self, self.tile_width, self.tile_height)

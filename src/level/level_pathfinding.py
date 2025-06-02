@@ -36,14 +36,23 @@ class PathfindingMixin:
         end_grid_x = int(end_x)
         end_grid_y = int(end_y)
         
-        # Check if start and end are valid
-        if not (0 <= start_grid_x < self.width and 0 <= start_grid_y < self.height):
-            return []
-        if not (0 <= end_grid_x < self.width and 0 <= end_grid_y < self.height):
-            return []
+        # For chunk-based worlds, use different bounds checking
+        if hasattr(self, 'is_infinite_world') and self.is_infinite_world:
+            # For infinite worlds, we don't have fixed bounds - just check if chunks can be loaded
+            # We'll limit the search to a reasonable area around the start point
+            max_search_distance = 50  # tiles
+            if (abs(end_grid_x - start_grid_x) > max_search_distance or 
+                abs(end_grid_y - start_grid_y) > max_search_distance):
+                return []  # Too far for pathfinding
+        else:
+            # Check if start and end are valid for traditional worlds
+            if not (0 <= start_grid_x < self.width and 0 <= start_grid_y < self.height):
+                return []
+            if not (0 <= end_grid_x < self.width and 0 <= end_grid_y < self.height):
+                return []
         
-        # If end position is not walkable, find nearest walkable position
-        if self.walkable[end_grid_y][end_grid_x] <= 0:
+        # Check if end position is walkable
+        if not self.is_position_walkable_for_pathfinding(end_grid_x, end_grid_y, entity_size):
             end_grid_x, end_grid_y = self.find_nearest_walkable(end_grid_x, end_grid_y, entity_size)
             if end_grid_x is None:
                 return []  # No walkable position found
@@ -104,28 +113,35 @@ class PathfindingMixin:
                 if (next_x, next_y) in visited:
                     continue
                 
-                # Check bounds
-                if not (0 <= next_x < self.width and 0 <= next_y < self.height):
+                # For chunk-based worlds, check reasonable bounds
+                if hasattr(self, 'is_infinite_world') and self.is_infinite_world:
+                    # Limit search to reasonable area around start point
+                    if (abs(next_x - start_grid_x) > max_search_distance or 
+                        abs(next_y - start_grid_y) > max_search_distance):
+                        continue
+                else:
+                    # Check bounds for traditional worlds
+                    if not (0 <= next_x < self.width and 0 <= next_y < self.height):
+                        continue
+                
+                # Check if position is walkable
+                if not self.is_position_walkable_for_pathfinding(next_x, next_y, entity_size):
                     continue
                 
-                # Enhanced walkability check with influence scoring
-                walkability = self.walkable[next_y][next_x]
-                if walkability <= 0:
-                    continue  # Completely blocked
-                
-                # Calculate movement cost with influence penalty
+                # Calculate movement cost
                 is_diagonal = abs(next_x - current_x) == 1 and abs(next_y - current_y) == 1
                 base_cost = 1.414 if is_diagonal else 1.0
                 
-                # Apply walkability penalty for restricted areas
-                influence_penalty = (1.0 - walkability) * 2.0  # 0-2x penalty for restricted areas
+                # Get walkability score
+                walkability_score = self.get_walkability_score(next_x, next_y)
+                influence_penalty = (1.0 - walkability_score) * 2.0
                 move_cost = base_cost * (1.0 + influence_penalty)
                 
-                # Heavily favor doors to force pathfinding through them
-                next_tile = self.get_tile(next_x, next_y) if hasattr(self, 'get_tile') else self.tiles[next_y][next_x]
-                if next_tile == self.TILE_DOOR:
+                # Favor doors and open areas
+                next_tile = self.get_tile(next_x, next_y)
+                if next_tile == getattr(self, 'TILE_DOOR', 5):
                     move_cost *= 0.1  # 90% cost reduction for doors
-                elif walkability > 0.9:
+                elif walkability_score > 0.9:
                     move_cost *= 0.8  # Prefer open areas
                 
                 tentative_g_score = g_score.get((current_x, current_y), float('inf')) + move_cost
@@ -138,6 +154,66 @@ class PathfindingMixin:
                     heapq.heappush(open_set, (f_score[(next_x, next_y)], next_x, next_y))
         
         return []  # No path found
+    
+    def is_position_walkable_for_pathfinding(self, x, y, entity_size=0.4):
+        """Check if a position is walkable for pathfinding - works with both chunk and traditional worlds"""
+        # For chunk-based worlds, use chunk-based walkability checking
+        if hasattr(self, 'is_infinite_world') and self.is_infinite_world:
+            if hasattr(self, 'is_position_walkable_chunk'):
+                return self.is_position_walkable_chunk(x, y)
+            else:
+                # Fallback: check if we can get a tile and if it's walkable
+                tile = self.get_tile(x, y)
+                if tile is None:
+                    return True  # Assume unloaded chunks are walkable
+                walkable_tiles = [0, 1, 2, 5, 13, 16, 17, 18, 19]  # Common walkable tile types
+                return tile in walkable_tiles
+        else:
+            # Traditional world bounds checking
+            if not (0 <= x < self.width and 0 <= y < self.height):
+                return False
+            
+            if self.walkable[y][x] <= 0:
+                return False
+            
+            # Check for objects that block movement
+            center_x = x + 0.5
+            center_y = y + 0.5
+            
+            for obj in self.objects:
+                if obj.blocks_movement:
+                    dist_x = center_x - obj.x
+                    dist_y = center_y - obj.y
+                    distance = math.sqrt(dist_x * dist_x + dist_y * dist_y)
+                    
+                    collision_distance = entity_size + 0.4
+                    if distance < collision_distance:
+                        return False
+            
+            return True
+    
+    def get_walkability_score(self, x, y):
+        """Get walkability score for a position - works with both chunk and traditional worlds"""
+        # For chunk-based worlds, return a simple score based on tile type
+        if hasattr(self, 'is_infinite_world') and self.is_infinite_world:
+            tile = self.get_tile(x, y)
+            if tile is None:
+                return 0.8  # Moderate score for unloaded chunks
+            
+            # Score based on tile type
+            if tile == getattr(self, 'TILE_DOOR', 5):
+                return 1.0  # Doors are fully walkable
+            elif tile in [0, 1, 16, 17, 18, 19]:  # Common walkable tiles
+                return 0.9  # High walkability
+            elif tile in [2, 13]:  # Stone, brick
+                return 0.8  # Good walkability
+            else:
+                return 0.1  # Low walkability for unknown tiles
+        else:
+            # Traditional world walkability
+            if not (0 <= x < self.width and 0 <= y < self.height):
+                return 0.0
+            return self.walkable[y][x]
     
     def calculate_sub_tile_position(self, grid_x, grid_y, entity_size):
         """Calculate optimal sub-tile position for smoother movement"""
@@ -458,8 +534,7 @@ class PathfindingMixin:
     def find_nearest_walkable(self, x, y, entity_size=0.4, max_radius=5):
         """Find the nearest walkable position to the given coordinates"""
         # Check the position itself first
-        if (0 <= x < self.width and 0 <= y < self.height and 
-            self.walkable[y][x] > 0):
+        if self.is_position_walkable_for_pathfinding(x, y, entity_size):
             return x, y
         
         # Search in expanding circles
@@ -471,8 +546,7 @@ class PathfindingMixin:
                         check_x = x + dx
                         check_y = y + dy
                         
-                        if (0 <= check_x < self.width and 0 <= check_y < self.height and
-                            self.walkable[check_y][check_x] > 0):
+                        if self.is_position_walkable_for_pathfinding(check_x, check_y, entity_size):
                             return check_x, check_y
         
         return None, None  # No walkable position found
