@@ -135,7 +135,7 @@ class GooseRecipeManager:
             safe_message = user_message.replace("'", "\\'").replace('"', '\\"')
             safe_context = context.replace("'", "\\'").replace('"', '\\"')
             
-            cmd_str = f"goose run --recipe '{recipe_file}' --params 'message={safe_message}' --params 'context={safe_context}' --no-session"
+            cmd_str = f"goose run --recipe '{recipe_file}' --params 'message={safe_message}' --params 'context={safe_context}' --interactive"
             
             print(f"🔧 [RecipeManager] Command to execute: {cmd_str}")
             print(f"🔧 [RecipeManager] Working directory: {os.getcwd()}")
@@ -246,7 +246,9 @@ class GooseRecipeManager:
             r'model:',
             r'logging to',
             r'context:',
-            r'message:'
+            r'message:',
+            r'Goose is running',
+            r'Enter your instructions'
         ]
         
         # Look for the actual AI response content
