@@ -11,6 +11,21 @@ class DoorPathfinder:
     def __init__(self, level):
         self.level = level
     
+    def get_tile_safe(self, x, y):
+        """Safely get tile at coordinates, works with both chunk-based and template-based worlds"""
+        if not (0 <= x < self.level.width and 0 <= y < self.level.height):
+            return None
+            
+        # Use get_tile method if available (for chunk-based worlds)
+        if hasattr(self.level, 'get_tile'):
+            return self.level.get_tile(x, y)
+        else:
+            # Fallback for template-based worlds
+            if (hasattr(self.level, 'tiles') and self.level.tiles and 
+                len(self.level.tiles) > y and len(self.level.tiles[0]) > x):
+                return self.level.tiles[y][x]
+            return None
+    
     def analyze_door_context(self, tile_x, tile_y, world_x, world_y):
         """Analyze the door context around a position for better collision handling"""
         context = {
@@ -30,7 +45,8 @@ class DoorPathfinder:
                 check_y = tile_y + dy
                 
                 if (0 <= check_x < self.level.width and 0 <= check_y < self.level.height):
-                    if self.level.tiles[check_y][check_x] == self.level.TILE_DOOR:
+                    tile_type = self.get_tile_safe(check_x, check_y)
+                    if tile_type == self.level.TILE_DOOR:
                         door_distance = math.sqrt(dx*dx + dy*dy)
                         doors_found.append({
                             'pos': (check_x, check_y),
@@ -54,7 +70,8 @@ class DoorPathfinder:
                 for dx, dy in [(-1, 0), (1, 0), (0, -1), (0, 1)]:
                     adj_x, adj_y = door_x + dx, door_y + dy
                     if (0 <= adj_x < self.level.width and 0 <= adj_y < self.level.height):
-                        if self.level.tiles[adj_y][adj_x] == self.level.TILE_DOOR:
+                        tile_type = self.get_tile_safe(adj_x, adj_y)
+                        if tile_type == self.level.TILE_DOOR:
                             adjacent_doors += 1
                 
                 context['is_double_door'] = adjacent_doors > 0
@@ -137,8 +154,8 @@ class DoorPathfinder:
             y = start[1] + dy * t
             
             tile_x, tile_y = int(x), int(y)
-            if (0 <= tile_x < self.level.width and 0 <= tile_y < self.level.height and
-                self.level.tiles[tile_y][tile_x] == self.level.TILE_DOOR):
+            tile_type = self.get_tile_safe(tile_x, tile_y)
+            if tile_type == self.level.TILE_DOOR:
                 
                 door_pos = (tile_x + 0.5, tile_y + 0.5)
                 
@@ -271,8 +288,8 @@ class DoorPathfinder:
             y = start[1] + dy * t
             
             tile_x, tile_y = int(x), int(y)
-            if (0 <= tile_x < self.level.width and 0 <= tile_y < self.level.height and
-                self.level.tiles[tile_y][tile_x] == self.level.TILE_DOOR):
+            tile_type = self.get_tile_safe(tile_x, tile_y)
+            if tile_type == self.level.TILE_DOOR:
                 door_pos = (tile_x + 0.5, tile_y + 0.5)
                 if door_pos not in doors:
                     doors.append(door_pos)
@@ -326,15 +343,21 @@ class DoorPathfinder:
         vertical_walls = 0
         
         # Check north and south
-        if (door_y > 0 and self.level.wall_renderer.is_wall_tile(self.level.tiles[door_y - 1][door_x])):
+        north_tile = self.get_tile_safe(door_x, door_y - 1)
+        if north_tile and self.level.wall_renderer.is_wall_tile(north_tile):
             horizontal_walls += 1
-        if (door_y < self.level.height - 1 and self.level.wall_renderer.is_wall_tile(self.level.tiles[door_y + 1][door_x])):
+            
+        south_tile = self.get_tile_safe(door_x, door_y + 1)
+        if south_tile and self.level.wall_renderer.is_wall_tile(south_tile):
             horizontal_walls += 1
         
         # Check east and west
-        if (door_x > 0 and self.level.wall_renderer.is_wall_tile(self.level.tiles[door_y][door_x - 1])):
+        west_tile = self.get_tile_safe(door_x - 1, door_y)
+        if west_tile and self.level.wall_renderer.is_wall_tile(west_tile):
             vertical_walls += 1
-        if (door_x < self.level.width - 1 and self.level.wall_renderer.is_wall_tile(self.level.tiles[door_y][door_x + 1])):
+            
+        east_tile = self.get_tile_safe(door_x + 1, door_y)
+        if east_tile and self.level.wall_renderer.is_wall_tile(east_tile):
             vertical_walls += 1
         
         # If more walls on horizontal sides, door is horizontal

@@ -166,11 +166,9 @@ class BiomeGenerator:
                 row.append(tile_type)
             tiles.append(row)
         
-        # Add borders (walls)
-        for y in range(self.height):
-            for x in range(self.width):
-                if x == 0 or x == self.width - 1 or y == 0 or y == self.height - 1:
-                    tiles[y][x] = 4  # TILE_WALL
+        # Don't add borders for chunk-based worlds - chunks should connect seamlessly
+        # However, we still need walls for buildings and structures
+        # The settlement system will add walls where needed
         
         return tiles
     

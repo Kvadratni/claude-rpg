@@ -86,8 +86,24 @@ class LevelRendererMixin:
     
     def render_tile_at_position(self, surface, x, y):
         """Render a single tile with new flat surface wall system"""
-        tile_type = self.get_tile(x, y) if hasattr(self, 'get_tile') else self.tiles[y][x]
-        height = self.heightmap[y][x] if hasattr(self, 'heightmap') and self.heightmap else 0
+        # Use get_tile method if available (for chunk-based worlds), otherwise fall back to tiles array
+        if hasattr(self, 'get_tile'):
+            tile_type = self.get_tile(x, y)
+            if tile_type is None:
+                return  # Don't render unloaded chunks
+        else:
+            # Bounds check for traditional tile arrays
+            if not hasattr(self, 'tiles') or not self.tiles or len(self.tiles) == 0:
+                return  # No tiles array available or empty
+            if not (0 <= y < len(self.tiles) and 0 <= x < len(self.tiles[0])):
+                return
+            tile_type = self.tiles[y][x]
+        
+        # Get height with bounds checking
+        height = 0
+        if hasattr(self, 'heightmap') and self.heightmap:
+            if 0 <= y < len(self.heightmap) and 0 <= x < len(self.heightmap[0]):
+                height = self.heightmap[y][x]
         
         # Calculate screen position using proper isometric conversion
         screen_x, screen_y = self.iso_renderer.world_to_screen(x, y, self.camera_x, self.camera_y)

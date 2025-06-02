@@ -72,16 +72,23 @@ class MovementSystem:
                 target_tile_y = int(target_y)
                 
                 # Check if we're entering a door tile
-                if (0 <= target_tile_x < level.width and 0 <= target_tile_y < level.height and
-                    level.tiles[target_tile_y][target_tile_x] == level.TILE_DOOR and
-                    (current_tile_x != target_tile_x or current_tile_y != target_tile_y)):
+                if (0 <= target_tile_x < level.width and 0 <= target_tile_y < level.height):
+                    # Use get_tile method for chunk-based levels, direct access for template levels
+                    target_tile_type = None
+                    if hasattr(level, 'get_tile') and callable(level.get_tile):
+                        target_tile_type = level.get_tile(target_tile_x, target_tile_y)
+                    elif hasattr(level, 'tiles') and level.tiles and len(level.tiles) > target_tile_y and len(level.tiles[target_tile_y]) > target_tile_x:
+                        target_tile_type = level.tiles[target_tile_y][target_tile_x]
                     
-                    # Play door sound occasionally (not every frame)
-                    if not self.last_door_sound_tile or self.last_door_sound_tile != (target_tile_x, target_tile_y):
-                        audio = getattr(self.player.asset_loader, 'audio_manager', None) if self.player.asset_loader else None
-                        if audio:
-                            audio.play_sound("environment", "door_open_1")
-                        self.last_door_sound_tile = (target_tile_x, target_tile_y)
+                    if (target_tile_type == level.TILE_DOOR and
+                        (current_tile_x != target_tile_x or current_tile_y != target_tile_y)):
+                        
+                        # Play door sound occasionally (not every frame)
+                        if not self.last_door_sound_tile or self.last_door_sound_tile != (target_tile_x, target_tile_y):
+                            audio = getattr(self.player.asset_loader, 'audio_manager', None) if self.player.asset_loader else None
+                            if audio:
+                                audio.play_sound("environment", "door_open_1")
+                            self.last_door_sound_tile = (target_tile_x, target_tile_y)
             
             # If we're close enough to the current path point, move to next
             if distance < 0.6:  # Increased from 0.2 for smoother pathfinding
@@ -127,7 +134,13 @@ class MovementSystem:
                             tile_x = int(self.player.x)
                             tile_y = int(self.player.y)
                             if 0 <= tile_x < level.width and 0 <= tile_y < level.height:
-                                tile_type = level.tiles[tile_y][tile_x]
+                                # Use get_tile method for chunk-based levels, direct access for template levels
+                                tile_type = None
+                                if hasattr(level, 'get_tile') and callable(level.get_tile):
+                                    tile_type = level.get_tile(tile_x, tile_y)
+                                elif hasattr(level, 'tiles') and level.tiles and len(level.tiles) > tile_y and len(level.tiles[tile_y]) > tile_x:
+                                    tile_type = level.tiles[tile_y][tile_x]
+                                
                                 if tile_type == level.TILE_STONE:
                                     audio.play_footstep("stone")
                                 elif tile_type == level.TILE_WATER:

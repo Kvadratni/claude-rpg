@@ -508,7 +508,17 @@ class WallRenderer:
         if not (0 <= x < self.width and 0 <= y < self.height):
             return True  # Treat out-of-bounds as walls
         
-        return self.is_wall_tile(self.tiles[y][x])
+        # Use get_tile method if available (for chunk-based worlds)
+        if hasattr(self.level, 'get_tile'):
+            tile_type = self.level.get_tile(x, y)
+            if tile_type is None:
+                return False  # Unloaded chunks are not walls
+            return self.is_wall_tile(tile_type)
+        else:
+            # Fallback to tiles array for template-based worlds
+            if hasattr(self.level, 'tiles') and self.level.tiles and len(self.level.tiles) > 0:
+                return self.is_wall_tile(self.tiles[y][x])
+            return False
 
     def is_wall_tile(self, tile_type):
         """Check if a tile type is any kind of wall"""
@@ -525,8 +535,18 @@ class WallRenderer:
         if x < 0 or x >= self.width or y < 0 or y >= self.height:
             return True  # Treat out of bounds as walls
         
-        tile = self.tiles[y][x]
-        return self.is_wall_tile(tile) or tile == self.TILE_DOOR
+        # Use get_tile method if available (for chunk-based worlds)
+        if hasattr(self.level, 'get_tile'):
+            tile_type = self.level.get_tile(x, y)
+            if tile_type is None:
+                return False  # Unloaded chunks are not walls
+            return self.is_wall_tile(tile_type) or tile_type == self.TILE_DOOR
+        else:
+            # Fallback to tiles array for template-based worlds
+            if hasattr(self.level, 'tiles') and self.level.tiles and len(self.level.tiles) > 0:
+                tile = self.tiles[y][x]
+                return self.is_wall_tile(tile) or tile == self.TILE_DOOR
+            return False
 
 
     def apply_tint_to_surface(self, surface, tint_color, intensity=1.0):

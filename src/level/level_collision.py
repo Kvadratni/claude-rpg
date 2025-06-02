@@ -10,6 +10,10 @@ class CollisionMixin:
     
     def check_collision(self, x, y, size=0.4, exclude_entity=None):
         """Check collision with level geometry and entities - improved precision with enhanced door handling"""
+        # For chunk-based procedural worlds, use different collision logic
+        if hasattr(self, 'is_infinite_world') and self.is_infinite_world:
+            return self.check_collision_chunk_based(x, y, size, exclude_entity)
+        
         # Check if the position is within level bounds with proper margin
         margin = size + 0.1
         if x < margin or x >= self.width - margin or y < margin or y >= self.height - margin:

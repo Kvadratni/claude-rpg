@@ -13,10 +13,9 @@ class LevelDataMixin:
     
     def get_save_data(self):
         """Get data for saving"""
-        return {
+        save_data = {
             "name": self.name,
-            "tiles": self.tiles,
-            "heightmap": self.heightmap,
+            "heightmap": getattr(self, 'heightmap', []),
             "enemies": [enemy.get_save_data() for enemy in self.enemies],
             "npcs": [npc.get_save_data() for npc in self.npcs],
             "items": [item.get_save_data() for item in self.items],
@@ -26,6 +25,18 @@ class LevelDataMixin:
             "camera_y": self.camera_y
             # Note: Combat state is not saved as it should reset on load
         }
+        
+        # Handle tiles array (only for template-based levels)
+        if hasattr(self, 'tiles') and self.tiles:
+            save_data["tiles"] = self.tiles
+        else:
+            save_data["tiles"] = []  # Empty for procedural worlds
+        
+        # Add procedural world info if applicable
+        if hasattr(self, 'procedural_info'):
+            save_data["procedural_info"] = self.procedural_info
+        
+        return save_data
     
     @classmethod
     def from_save_data(cls, data, player, asset_loader, game=None):
