@@ -180,9 +180,9 @@ class AITestWorld:
 - `src/level/level_renderer.py` - Render AI chat windows
 
 ## Launch Script Reminder
-**ALWAYS TEST WITH**: `./launch_game.sh` or `uv run claude-rpg`
+**ALWAYS TEST WITH**: `./launch_game.sh` or `uv run goose-rpg`
 
-Many debugging issues were caused by running the game incorrectly, leading to import errors and missing dependencies. The launch script ensures proper environment setup.
+Many debugging issues were caused by running the game incorrectly, leading to import errors and missing dependencies. The launch script ensures proper environment setup and points to the correct project directory.
 
 ## Minimal Implementation Steps
 1. Create `src/ai_integration.py` with the three core classes
