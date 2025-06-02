@@ -269,8 +269,6 @@ class AIChatWindow:
         """Render the chat window"""
         if not self.is_active:
             return
-        
-        print(f"🔧 AIChatWindow.render() called - is_active: {self.is_active}")
             
         screen_width, screen_height = screen.get_size()
         

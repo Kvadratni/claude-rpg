@@ -1,0 +1,12 @@
+Loading recipe: Village Elder NPC
+Description: AI recipe for Village Elder NPC - wise keeper of ancient knowledge and quest giver
+Parameters used to load this recipe:
+   context: test
+   recipe_dir (built-in): /Users/mnovich/Development/claude-rpg-goose-npcs/recipes
+   message: test
+
+running without session | provider: databricks model: goose-claude-4-sonnet
+    working directory: /Users/mnovich/Development/claude-rpg-goose-npcs
+[38;2;222;222;222m*[0m[38;2;222;222;222mThe ancient Village Elder looks up from his weathered tome, his eyes gleaming with the wisdom of countless years as he regards you with quiet authority.[0m[38;2;222;222;222m*[0m
+
+[38;2;222;222;222m"Ah, young traveler, do you come seeking knowledge of our village's ancient ways, or perhaps guidance in these troubled times when shadows grow long across our lands?"[0m

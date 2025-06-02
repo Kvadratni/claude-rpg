@@ -109,8 +109,6 @@ class NPC(Entity):
     def render_ai_chat(self, screen):
         """Render AI chat window if active"""
         if self.is_ai_enabled and self.chat_window:
-            if self.chat_window.is_active:
-                print(f"🔧 Rendering AI chat for {self.name}")
             self.chat_window.render(screen)
         elif self.is_ai_enabled:
             print(f"⚠️  AI enabled but no chat_window for {self.name}")

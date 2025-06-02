@@ -38,7 +38,11 @@ class GooseRecipeManager:
                 
                 recipe_name = recipe_data.get('title', '').lower().replace(' ', '_').replace('_npc', '')
                 if recipe_name:
-                    self.recipes[recipe_name] = recipe_data
+                    # Store both the recipe data and the file path
+                    self.recipes[recipe_name] = {
+                        'data': recipe_data,
+                        'file_path': recipe_path
+                    }
                     print(f"✅ [RecipeManager] Loaded recipe: {recipe_name} from {filename}")
                 else:
                     print(f"⚠️  [RecipeManager] Recipe file {filename} missing title field")
@@ -100,36 +104,23 @@ class GooseRecipeManager:
         print(f"🔧 [RecipeManager] Running recipe '{recipe_name}' with message: '{user_message[:50]}...'")
         print(f"🔧 [RecipeManager] Context: '{context}'")
         
-        recipe = self.get_recipe(recipe_name)
-        if not recipe:
+        recipe_info = self.get_recipe(recipe_name)
+        if not recipe_info:
             print(f"❌ [RecipeManager] Recipe '{recipe_name}' not found")
             return f"*{recipe_name} looks confused*"
         
         try:
-            # Use goose run with the recipe file directly
-            recipe_file = None
-            print(f"🔧 [RecipeManager] Searching for recipe file for '{recipe_name}'")
-            
-            for filename in os.listdir(self.recipes_dir):
-                if filename.endswith('.yaml') or filename.endswith('.yml'):
-                    recipe_path = os.path.join(self.recipes_dir, filename)
-                    with open(recipe_path, 'r') as f:
-                        recipe_data = yaml.safe_load(f)
-                    
-                    title = recipe_data.get('title', '').lower().replace(' ', '_').replace('_npc', '')
-                    if title == recipe_name:
-                        recipe_file = recipe_path
-                        print(f"✅ [RecipeManager] Found recipe file: {recipe_file}")
-                        break
-            
-            if not recipe_file:
-                print(f"❌ [RecipeManager] Recipe file not found for '{recipe_name}'")
-                return f"*{recipe_name} seems distracted*"
+            # Get the recipe file path directly from loaded data
+            recipe_file = recipe_info['file_path']
+            print(f"✅ [RecipeManager] Found recipe file: {recipe_file}")
             
             # Set up environment
             env = os.environ.copy()
-            env["GOOSE_MODEL"] = "goose-gpt-4o-mini"
+            env["GOOSE_MODEL"] = "goose-claude-4-sonnet"  # Try the working model
             print(f"🔧 [RecipeManager] Using model: {env.get('GOOSE_MODEL')}")
+            
+            # Let's try to actually run the subprocess with detailed logging
+            print(f"🔧 [RecipeManager] Attempting to run Goose CLI subprocess...")
             
             # Run goose with the recipe and capture output to a file
             import tempfile
@@ -138,69 +129,101 @@ class GooseRecipeManager:
             with tempfile.NamedTemporaryFile(mode='w+', suffix='.txt', delete=False) as output_file:
                 output_file_path = output_file.name
             
-            cmd_str = f"goose run --recipe {recipe_file} --params 'message={user_message}' --params 'context={context}' --no-session > {output_file_path} 2>&1 &"
+            print(f"🔧 [RecipeManager] Created temp output file: {output_file_path}")
             
-            print(f"🔧 [RecipeManager] Executing command: {cmd_str}")
+            # Escape quotes in the message and context for shell safety
+            safe_message = user_message.replace("'", "\\'").replace('"', '\\"')
+            safe_context = context.replace("'", "\\'").replace('"', '\\"')
             
-            # Run the command in background
-            subprocess.run(cmd_str, env=env, shell=True)
+            cmd_str = f"goose run --recipe '{recipe_file}' --params 'message={safe_message}' --params 'context={safe_context}' --no-session"
             
-            # Wait for the process to complete and output to be written
-            max_wait = 60  # Maximum wait time in seconds
-            wait_time = 0
+            print(f"🔧 [RecipeManager] Command to execute: {cmd_str}")
+            print(f"🔧 [RecipeManager] Working directory: {os.getcwd()}")
+            print(f"🔧 [RecipeManager] Environment GOOSE_MODEL: {env.get('GOOSE_MODEL')}")
             
-            while wait_time < max_wait:
-                time.sleep(2)
-                wait_time += 2
+            # Test if goose command is available
+            try:
+                test_result = subprocess.run("which goose", shell=True, capture_output=True, text=True)
+                if test_result.returncode == 0:
+                    print(f"🔧 [RecipeManager] Goose CLI found at: {test_result.stdout.strip()}")
+                else:
+                    print(f"❌ [RecipeManager] Goose CLI not found in PATH")
+                    return f"*{recipe_name} seems distracted - Goose CLI not available*"
+            except Exception as e:
+                print(f"❌ [RecipeManager] Error checking Goose CLI: {e}")
+                return f"*{recipe_name} seems confused*"
+            
+            # Run the command and capture output
+            print(f"🔧 [RecipeManager] Starting subprocess execution...")
+            start_time = time.time()
+            
+            try:
+                result = subprocess.run(
+                    f"{cmd_str} > '{output_file_path}' 2>&1",
+                    env=env,
+                    shell=True,
+                    timeout=60  # Increased timeout significantly
+                )
                 
-                # Check if file has content and if it looks complete
+                execution_time = time.time() - start_time
+                print(f"🔧 [RecipeManager] Subprocess completed in {execution_time:.2f}s with return code: {result.returncode}")
+                
+                # Give much more time for AI response to be written
+                print(f"🔧 [RecipeManager] Waiting 10 seconds for AI response to be written...")
+                time.sleep(10)
+                
+                # Read the output from the file
                 try:
                     with open(output_file_path, 'r') as f:
-                        content = f.read()
+                        stdout = f.read()
                     
-                    # If we have content and it doesn't end with a system message, it might be complete
-                    if content and len(content) > 500:  # More than just the loading message
-                        # Check if it has an AI response (look for content after "working directory:")
-                        if "working directory:" in content:
-                            lines_after_wd = content.split("working directory:")[-1].strip()
-                            if lines_after_wd and len(lines_after_wd) > 50:
-                                print(f"🔧 [RecipeManager] Found complete response after {wait_time}s")
-                                break
-                except:
-                    pass
+                    print(f"🔧 [RecipeManager] Output file size: {len(stdout)} characters")
+                    print(f"🔧 [RecipeManager] First 200 chars of output: {stdout[:200]}")
+                    print(f"🔧 [RecipeManager] Last 200 chars of output: {stdout[-200:]}")
+                    
+                    if len(stdout) > 500:
+                        print(f"🔧 [RecipeManager] Output looks substantial, attempting to parse...")
+                        response = self._parse_goose_output(stdout)
+                        if response and len(response.strip()) > 10:
+                            print(f"✅ [RecipeManager] Successfully parsed AI response: '{response[:100]}...'")
+                            cleaned_response = self._clean_response(response, recipe_name)
+                            return cleaned_response
+                        else:
+                            print(f"⚠️  [RecipeManager] Parsed response was empty or too short")
+                    else:
+                        print(f"⚠️  [RecipeManager] Output too short, likely incomplete")
+                    
+                except Exception as e:
+                    print(f"❌ [RecipeManager] Error reading output file: {e}")
+                
+            except subprocess.TimeoutExpired:
+                print(f"⏰ [RecipeManager] Subprocess timed out after 30 seconds")
+                return f"*{recipe_name} takes a long moment to consider your words*"
+            except Exception as e:
+                print(f"❌ [RecipeManager] Subprocess execution error: {e}")
+                return f"*{recipe_name} seems momentarily distracted*"
             
-            # Read the final output from the file
-            try:
-                with open(output_file_path, 'r') as f:
-                    stdout = f.read()
-                returncode = 0  # Assume success if we got here
-                
-                print(f"🔧 [RecipeManager] Command completed, waited {wait_time}s")
-                print(f"🔧 [RecipeManager] stdout length: {len(stdout)}")
-                
             finally:
                 # Clean up the temporary file
                 try:
-                    os.unlink(output_file_path)
-                except:
-                    pass
+                    if os.path.exists(output_file_path):
+                        os.unlink(output_file_path)
+                        print(f"🔧 [RecipeManager] Cleaned up temp file: {output_file_path}")
+                except Exception as e:
+                    print(f"⚠️  [RecipeManager] Could not clean up temp file: {e}")
             
-            if returncode == 0:
-                print(f"🔧 [RecipeManager] Raw output length: {len(stdout)} chars")
-                response = self._parse_goose_output(stdout)
-                print(f"🔧 [RecipeManager] Parsed response: '{response[:100]}...'")
-                cleaned_response = self._clean_response(response, recipe_name)
-                print(f"✅ [RecipeManager] Final response: '{cleaned_response}'")
-                return cleaned_response
-            else:
-                print(f"❌ [RecipeManager] Goose error for recipe '{recipe_name}': return code {returncode}")
-                return f"*{recipe_name} takes a moment to think*"
-                    
-        except subprocess.TimeoutExpired:
-            print(f"⏰ [RecipeManager] Timeout expired for recipe '{recipe_name}'")
-            return f"*{recipe_name} takes a long moment to consider your words*"
+            # If we get here, the subprocess didn't produce a usable response
+            print(f"🔧 [RecipeManager] Subprocess completed but no usable AI response found")
+            print(f"🔧 [RecipeManager] Using fallback response due to subprocess output issue")
+            fallback_response = f"Greetings, traveler. I am {recipe_name.replace('_', ' ').title()}."
+            print(f"✅ [RecipeManager] Fallback response: '{fallback_response}'")
+            return fallback_response
+            
         except Exception as e:
             print(f"❌ [RecipeManager] Recipe execution error for '{recipe_name}': {e}")
+            import traceback
+            print(f"🔧 [RecipeManager] Full traceback:")
+            traceback.print_exc()
             return f"*{recipe_name} seems momentarily distracted*"
     
     def _parse_goose_output(self, output: str) -> str:
