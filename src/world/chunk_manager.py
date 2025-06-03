@@ -172,6 +172,16 @@ class ChunkManager:
         
         return entities
     
+    def remove_entity_from_chunks(self, entity_id: str, world_x: float, world_y: float):
+        """Remove an entity from the appropriate chunk"""
+        chunk_x, chunk_y = self.world_to_chunk_coords(world_x, world_y)
+        chunk = self.get_chunk(chunk_x, chunk_y)
+        
+        if chunk:
+            chunk.remove_entity(entity_id)
+            chunk.save_to_file(self.world_dir)  # Save immediately
+            print(f"Removed entity {entity_id} from chunk ({chunk_x}, {chunk_y})")
+    
     def save_all_chunks(self):
         """Save all loaded chunks to disk"""
         for chunk in self.loaded_chunks.values():

@@ -61,6 +61,15 @@ class EntityManagerMixin:
             quest_manager.update_quest_progress("kill", enemy.name)
             quest_manager.update_quest_progress("kill", "any")  # For generic kill quests
         
+        # Remove enemy from chunk data if this is a chunked level
+        if hasattr(self, 'chunk_manager'):
+            # Try to use entity_id first, fall back to generating one from position and name
+            entity_id = getattr(enemy, 'entity_id', None)
+            if not entity_id:
+                entity_id = f"{enemy.name}_{int(enemy.x)}_{int(enemy.y)}"
+            
+            self.chunk_manager.remove_entity_from_chunks(entity_id, enemy.x, enemy.y)
+        
         self.enemies.remove(enemy)
         self.player.gain_experience(enemy.experience)
         

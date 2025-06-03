@@ -65,12 +65,17 @@ class ChunkedLevel(LevelBase):
             self.player.x, self.player.y, radius=100
         )
         
-        # Clear existing objects and NPCs (they'll be repopulated from chunks)
+        # Clear existing objects, NPCs, and enemies (they'll be repopulated from chunks)
         self.objects = []
         if not hasattr(self, 'npcs'):
             self.npcs = []
         else:
             self.npcs.clear()
+        
+        if not hasattr(self, 'enemies'):
+            self.enemies = []
+        else:
+            self.enemies.clear()
         
         # Convert chunk entities back to game entities
         for entity_data in entities:
@@ -107,6 +112,28 @@ class ChunkedLevel(LevelBase):
                     self.npcs.append(npc)
                 except Exception as e:
                     print(f"Warning: Failed to create NPC entity: {e}")
+            
+            elif entity_data['type'] == 'enemy':
+                try:
+                    from ..entities.enemy import Enemy
+                    enemy = Enemy(
+                        entity_data['world_x'],
+                        entity_data['world_y'],
+                        entity_data['name'],
+                        asset_loader=self.asset_loader
+                    )
+                    # Set additional enemy properties from saved data
+                    if 'health' in entity_data:
+                        enemy.health = entity_data['health']
+                        enemy.max_health = entity_data.get('max_health', entity_data['health'])
+                    if 'damage' in entity_data:
+                        enemy.damage = entity_data['damage']
+                    if 'id' in entity_data:
+                        enemy.entity_id = entity_data['id']
+                    
+                    self.enemies.append(enemy)
+                except Exception as e:
+                    print(f"Warning: Failed to create enemy entity: {e}")
     
     def get_walkable(self, x: int, y: int) -> float:
         """Get walkability at world coordinates"""
