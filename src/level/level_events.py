@@ -245,7 +245,7 @@ class EventHandlingMixin:
                         # Attack if have stamina
                         stamina_cost = self.player.combat_system.get_weapon_stamina_cost()
                         if self.player.stamina >= stamina_cost:
-                            self.player.combat_system.attack([enemy])
+                            self.player.combat_system.attack([enemy], self)
                             if self.player.game_log:
                                 self.player.game_log.add_message(f"Attacking {enemy.name}!", "combat")
                         else:

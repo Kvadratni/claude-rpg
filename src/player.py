@@ -39,7 +39,7 @@ class Player:
         
         # Combat stats
         self.attack_damage = 25
-        self.attack_range = 1.2  # Slightly more than 1 tile for forgiving melee attacks
+        self.attack_range = 1.5  # More forgiving melee attack range
         self.defense = 5
         
         # Inventory
@@ -261,9 +261,9 @@ class Player:
         """Get stamina cost based on equipped weapon"""
         return self.combat_system.get_weapon_stamina_cost()
     
-    def attack(self, enemies):
+    def attack(self, enemies, level=None):
         """Attack nearby enemies or use ranged attack"""
-        self.combat_system.attack(enemies)
+        self.combat_system.attack(enemies, level)
     
     def take_damage(self, damage):
         """Take damage"""

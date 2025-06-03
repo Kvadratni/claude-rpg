@@ -216,7 +216,7 @@ class MovementSystem:
                 # Attack enemy
                 stamina_cost = self.player.combat_system.get_weapon_stamina_cost()
                 if self.player.stamina >= stamina_cost:
-                    self.player.combat_system.attack([entity])
+                    self.player.combat_system.attack([entity], level)
                     if self.player.game_log:
                         self.player.game_log.add_message(f"Attacking {entity.name}!", "combat")
                 else:
