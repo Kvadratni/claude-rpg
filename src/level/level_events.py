@@ -48,6 +48,14 @@ class EventHandlingMixin:
     
     def handle_click(self, pos):
         """Handle mouse click at position"""
+        # Check if clicking on game log scroll arrows first
+        if hasattr(self, 'game') and hasattr(self.game, 'game_log'):
+            if self.game.game_log.handle_click(pos):
+                return  # Game log consumed the click
+        elif hasattr(self, 'player') and hasattr(self.player, 'game_log'):
+            if self.player.game_log.handle_click(pos):
+                return  # Game log consumed the click
+        
         # Check if clicking on inventory button
         if hasattr(self, 'inventory_button_rect') and self.inventory_button_rect.collidepoint(pos):
             # Toggle inventory

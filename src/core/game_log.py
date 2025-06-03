@@ -18,6 +18,11 @@ class GameLog:
         self.scroll_offset = 0  # How many messages to scroll up from the bottom
         self.max_scroll_offset = 0  # Maximum scroll offset based on message count
         
+        # Scroll arrow buttons
+        self.scroll_up_rect = None
+        self.scroll_down_rect = None
+        self.arrow_size = 16
+        
         # Colors
         self.colors = {
             "default": (255, 255, 255),
@@ -78,6 +83,14 @@ class GameLog:
             return True
         return False
     
+    def handle_click(self, pos):
+        """Handle mouse clicks on scroll arrows"""
+        if self.scroll_up_rect and self.scroll_up_rect.collidepoint(pos):
+            return self.scroll_up()
+        elif self.scroll_down_rect and self.scroll_down_rect.collidepoint(pos):
+            return self.scroll_down()
+        return False
+    
     def handle_scroll(self, scroll_direction):
         """Handle scroll wheel input"""
         if scroll_direction > 0:  # Scroll up
@@ -105,11 +118,11 @@ class GameLog:
         self.messages = [msg for msg in self.messages if msg["alpha"] > 0]
     
     def render(self, screen):
-        """Render the message log UI"""
+        """Render the message log UI with scroll arrows"""
         screen_width = screen.get_width()
         screen_height = screen.get_height()
         
-        # Log panel dimensions
+        # Log panel dimensions (make room for scroll arrows)
         panel_width = screen_width - 20
         panel_height = (self.visible_messages * self.message_height) + 20
         panel_x = 10
@@ -129,12 +142,44 @@ class GameLog:
         title_surface = self.small_font.render(title_text, True, (200, 200, 200))
         log_surface.blit(title_surface, (5, 2))
         
-        # Show scroll hint
+        # Draw scroll arrows if there are more messages than visible
         if len(self.messages) > self.visible_messages:
-            hint_text = "Scroll wheel to navigate"
+            # Calculate arrow positions
+            arrow_x = panel_width - 30
+            up_arrow_y = 2
+            down_arrow_y = panel_height - self.arrow_size - 2
+            
+            # Update arrow rects for click detection (in screen coordinates)
+            self.scroll_up_rect = pygame.Rect(panel_x + arrow_x, panel_y + up_arrow_y, self.arrow_size, self.arrow_size)
+            self.scroll_down_rect = pygame.Rect(panel_x + arrow_x, panel_y + down_arrow_y, self.arrow_size, self.arrow_size)
+            
+            # Draw up arrow (triangle pointing up)
+            up_color = (255, 255, 255) if self.scroll_offset < self.max_scroll_offset else (100, 100, 100)
+            up_points = [
+                (arrow_x + self.arrow_size // 2, up_arrow_y + 2),  # Top point
+                (arrow_x + 2, up_arrow_y + self.arrow_size - 2),   # Bottom left
+                (arrow_x + self.arrow_size - 2, up_arrow_y + self.arrow_size - 2)  # Bottom right
+            ]
+            pygame.draw.polygon(log_surface, up_color, up_points)
+            
+            # Draw down arrow (triangle pointing down)
+            down_color = (255, 255, 255) if self.scroll_offset > 0 else (100, 100, 100)
+            down_points = [
+                (arrow_x + 2, down_arrow_y + 2),  # Top left
+                (arrow_x + self.arrow_size - 2, down_arrow_y + 2),  # Top right
+                (arrow_x + self.arrow_size // 2, down_arrow_y + self.arrow_size - 2)  # Bottom point
+            ]
+            pygame.draw.polygon(log_surface, down_color, down_points)
+            
+            # Show scroll hint
+            hint_text = "Scroll or click arrows"
             hint_surface = self.small_font.render(hint_text, True, (150, 150, 150))
             hint_width = hint_surface.get_width()
-            log_surface.blit(hint_surface, (panel_width - hint_width - 5, 2))
+            log_surface.blit(hint_surface, (panel_width - hint_width - 50, 2))
+        else:
+            # No scroll arrows needed
+            self.scroll_up_rect = None
+            self.scroll_down_rect = None
         
         # Calculate which messages to show based on scroll offset
         if len(self.messages) <= self.visible_messages:
@@ -159,11 +204,12 @@ class GameLog:
             else:
                 text_surface = self.font.render(message["text"], True, color)
             
-            # Truncate long messages
-            if text_surface.get_width() > panel_width - 10:
+            # Truncate long messages (leave room for scroll arrows)
+            max_width = panel_width - 60 if len(self.messages) > self.visible_messages else panel_width - 10
+            if text_surface.get_width() > max_width:
                 # Find a good truncation point
                 truncated_text = message["text"]
-                while self.font.size(truncated_text + "...")[0] > panel_width - 10:
+                while self.font.size(truncated_text + "...")[0] > max_width:
                     truncated_text = truncated_text[:-1]
                 text_surface = self.font.render(truncated_text + "...", True, color)
             
