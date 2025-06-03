@@ -6,12 +6,20 @@ This directory contains Goose recipe files that power the AI NPCs in the RPG gam
 
 ### Core NPCs
 
-- **`village_elder.yaml`** - Wise village leader and quest giver
+- **`village_elder.yaml`** - Wise village leader and guide for adventurers
 - **`master_merchant.yaml`** - Skilled trader and shopkeeper  
 - **`guard_captain.yaml`** - Village protector and security expert
-- **`tavern_keeper.yaml`** - Friendly innkeeper and information broker
-- **`blacksmith.yaml`** - Master craftsman and weapon/armor expert
+- **`tavern_keeper.yaml`** - Friendly tavern owner and information source
+- **`blacksmith.yaml`** - Village craftsman and weapon/armor expert
 - **`healer.yaml`** - Compassionate medical expert and potion maker
+
+### Specialized NPCs
+
+- **`innkeeper.yaml`** - Welcoming host and provider of rest
+- **`master_smith.yaml`** - Legendary craftsman with advanced skills
+- **`forest_ranger.yaml`** - Wilderness expert and nature guardian
+- **`master_herbalist.yaml`** - Expert in plants, potions, and natural magic
+- **`caravan_master.yaml`** - Experienced trader and travel coordinator
 
 ## Recipe Structure
 
@@ -90,11 +98,17 @@ The recipes are automatically loaded by the `RecipeBasedGooseIntegration` class 
 
 Each recipe should define:
 
-- **Role Characteristics**: What the NPC does and their position
-- **Personality Traits**: How they behave and interact
+- **Role Characteristics**: What the NPC does and their position in the world
+- **Personality Traits**: How they behave and interact with others
 - **Knowledge Areas**: What they know about and can discuss
-- **Response Guidelines**: Formatting and behavior rules
+- **Response Guidelines**: Natural conversation style and behavior rules
 - **Sample Interactions**: Examples of typical conversations
+
+### Language Style
+- Use **natural fantasy English** - avoid overly formal or archaic language
+- Keep responses conversational and engaging
+- Stay true to each character's personality and role
+- Maintain fantasy setting without being pretentious
 
 ## Performance Notes
 
