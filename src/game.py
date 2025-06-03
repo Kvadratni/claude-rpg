@@ -354,22 +354,27 @@ class Game:
         }
         
         try:
-            # Force remove chunk from memory
+            # CRITICAL: Save current entity states to chunk before refreshing
             chunk_key = (chunk_x, chunk_y)
             if chunk_key in chunk_manager.loaded_chunks:
-                # Save current chunk first
-                old_chunk = chunk_manager.loaded_chunks[chunk_key]
-                old_chunk.save_to_file(chunk_manager.world_dir)
+                current_chunk = chunk_manager.loaded_chunks[chunk_key]
                 
-                # Remove from memory to force regeneration
+                # Update chunk with current entity states
+                self._update_chunk_with_current_entities(current_chunk, chunk_x, chunk_y)
+                
+                # Save the updated chunk
+                current_chunk.save_to_file(chunk_manager.world_dir)
+                self.game_log.add_message(f"  💾 Saved current entity states to chunk", "system")
+                
+                # Remove from memory to force reload
                 del chunk_manager.loaded_chunks[chunk_key]
-                self.game_log.add_message(f"  💾 Saved and unloaded chunk ({chunk_x}, {chunk_y})", "system")
+                self.game_log.add_message(f"  🗑️ Unloaded chunk from memory", "system")
             
-            # Force regenerate the chunk
-            new_chunk = chunk_manager.get_chunk(chunk_x, chunk_y)
-            self.game_log.add_message(f"  🌍 Regenerated chunk with {len(new_chunk.entities)} entities", "system")
+            # Force reload the chunk (with saved entity states)
+            reloaded_chunk = chunk_manager.get_chunk(chunk_x, chunk_y)
+            self.game_log.add_message(f"  🔄 Reloaded chunk with {len(reloaded_chunk.entities)} entities", "system")
             
-            # Update entities from the refreshed chunk
+            # Update entities from the reloaded chunk
             self.current_level.update_entities_from_chunks()
             
             # Report new entity counts
@@ -391,7 +396,7 @@ class Game:
                     self.game_log.add_message(f"    {entity_type.capitalize()}: {old_count} (no change)", "system")
             
             # Check for settlements
-            npcs_in_chunk = [e for e in new_chunk.entities if e['type'] == 'npc']
+            npcs_in_chunk = [e for e in reloaded_chunk.entities if e['type'] == 'npc']
             if npcs_in_chunk:
                 self.game_log.add_message(f"  🏘️ Settlement detected with {len(npcs_in_chunk)} NPCs", "system")
                 for npc_data in npcs_in_chunk:
@@ -406,6 +411,70 @@ class Game:
             print(f"Chunk refresh error: {e}")
             import traceback
             traceback.print_exc()
+    
+    def _update_chunk_with_current_entities(self, chunk, chunk_x, chunk_y):
+        """Update chunk data with current entity states"""
+        # Get chunk bounds
+        start_x, start_y, end_x, end_y = chunk.get_world_bounds()
+        
+        # Clear existing entities in chunk
+        chunk.entities.clear()
+        
+        # Add current NPCs to chunk
+        for npc in self.current_level.npcs:
+            # Check if NPC is in this chunk
+            if start_x <= npc.x < end_x and start_y <= npc.y < end_y:
+                local_x = npc.x - start_x
+                local_y = npc.y - start_y
+                
+                npc_data = {
+                    'type': 'npc',
+                    'name': npc.name,
+                    'building': getattr(npc, 'building', 'Unknown Building'),
+                    'has_shop': getattr(npc, 'has_shop', False),
+                    'x': local_x,
+                    'y': local_y,
+                    'id': f"npc_{npc.name.lower().replace(' ', '_')}_{chunk_x}_{chunk_y}"
+                }
+                chunk.add_entity(npc_data)
+        
+        # Add current LIVING enemies to chunk (dead ones are excluded)
+        for enemy in self.current_level.enemies:
+            # Check if enemy is in this chunk and alive
+            if (start_x <= enemy.x < end_x and start_y <= enemy.y < end_y and 
+                enemy.health > 0):
+                local_x = enemy.x - start_x
+                local_y = enemy.y - start_y
+                
+                enemy_data = {
+                    'type': 'enemy',
+                    'name': enemy.name,
+                    'x': local_x,
+                    'y': local_y,
+                    'health': enemy.health,
+                    'max_health': enemy.max_health,
+                    'damage': enemy.damage,
+                    'id': getattr(enemy, 'entity_id', f"{enemy.name}_{int(enemy.x)}_{int(enemy.y)}")
+                }
+                chunk.add_entity(enemy_data)
+        
+        # Add current objects to chunk
+        for obj in self.current_level.objects:
+            # Check if object is in this chunk
+            if start_x <= obj.x < end_x and start_y <= obj.y < end_y:
+                local_x = obj.x - start_x
+                local_y = obj.y - start_y
+                
+                obj_data = {
+                    'type': 'object',
+                    'name': obj.name,
+                    'x': local_x,
+                    'y': local_y,
+                    'id': f"{obj.name}_{obj.x}_{obj.y}"
+                }
+                chunk.add_entity(obj_data)
+        
+        self.game_log.add_message(f"  🔄 Updated chunk with {len(chunk.entities)} current entities", "system")
     
     def update(self):
         """Update game logic"""

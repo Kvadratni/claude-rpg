@@ -164,7 +164,81 @@ class ChunkedLevel(LevelBase):
     
     def save_world(self):
         """Save the world state"""
+        # First, update all loaded chunks with current entity states
+        self.sync_entities_to_chunks()
+        
+        # Then save all chunks
         self.chunk_manager.save_all_chunks()
+    
+    def sync_entities_to_chunks(self):
+        """Sync current entity states back to chunk data"""
+        # Get all loaded chunks
+        loaded_chunks = self.chunk_manager.get_loaded_chunks()
+        
+        for chunk in loaded_chunks:
+            self._update_chunk_with_current_entities(chunk)
+    
+    def _update_chunk_with_current_entities(self, chunk):
+        """Update a chunk with current entity states (similar to game.py method)"""
+        # Get chunk bounds
+        start_x, start_y, end_x, end_y = chunk.get_world_bounds()
+        
+        # Clear existing entities in chunk
+        chunk.entities.clear()
+        
+        # Add current NPCs to chunk
+        for npc in self.npcs:
+            # Check if NPC is in this chunk
+            if start_x <= npc.x < end_x and start_y <= npc.y < end_y:
+                local_x = npc.x - start_x
+                local_y = npc.y - start_y
+                
+                npc_data = {
+                    'type': 'npc',
+                    'name': npc.name,
+                    'building': getattr(npc, 'building', 'Unknown Building'),
+                    'has_shop': getattr(npc, 'has_shop', False),
+                    'x': local_x,
+                    'y': local_y,
+                    'id': f"npc_{npc.name.lower().replace(' ', '_')}_{chunk.chunk_x}_{chunk.chunk_y}"
+                }
+                chunk.add_entity(npc_data)
+        
+        # Add current LIVING enemies to chunk (dead ones are excluded)
+        for enemy in self.enemies:
+            # Check if enemy is in this chunk and alive
+            if (start_x <= enemy.x < end_x and start_y <= enemy.y < end_y and 
+                enemy.health > 0):
+                local_x = enemy.x - start_x
+                local_y = enemy.y - start_y
+                
+                enemy_data = {
+                    'type': 'enemy',
+                    'name': enemy.name,
+                    'x': local_x,
+                    'y': local_y,
+                    'health': enemy.health,
+                    'max_health': getattr(enemy, 'max_health', enemy.health),
+                    'damage': enemy.damage,
+                    'id': getattr(enemy, 'entity_id', f"{enemy.name}_{int(enemy.x)}_{int(enemy.y)}")
+                }
+                chunk.add_entity(enemy_data)
+        
+        # Add current objects to chunk
+        for obj in self.objects:
+            # Check if object is in this chunk
+            if start_x <= obj.x < end_x and start_y <= obj.y < end_y:
+                local_x = obj.x - start_x
+                local_y = obj.y - start_y
+                
+                obj_data = {
+                    'type': 'object',
+                    'name': obj.name,
+                    'x': local_x,
+                    'y': local_y,
+                    'id': f"{obj.name}_{obj.x}_{obj.y}"
+                }
+                chunk.add_entity(obj_data)
     
     def get_world_info(self) -> Dict:
         """Get world information"""
