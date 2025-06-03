@@ -187,8 +187,8 @@ class WallRenderer:
         """Load dedicated window wall assets"""
         wall_height = self.tile_height + 32  # Match other wall heights
         
-        # Load horizontal window wall - note the typo in the asset filename
-        h_window_image = self.asset_loader.get_image("wall_window_horizonal")  # Asset has typo
+        # Load horizontal window wall
+        h_window_image = self.asset_loader.get_image("wall_window_horizontal")
         if h_window_image:
             scaled_h_window = pygame.transform.scale(h_window_image, (self.tile_width + 8, wall_height))
             self.tile_sprites[self.TILE_WALL_WINDOW_HORIZONTAL] = scaled_h_window
