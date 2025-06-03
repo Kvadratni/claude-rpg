@@ -1,5 +1,5 @@
 """
-World generator that creates chunks on-demand with settlement override system
+World generator that creates chunks on-demand with settlement pattern system
 """
 
 import random
@@ -9,6 +9,7 @@ from ..procedural_generation.src.biome_generator import BiomeGenerator
 from ..procedural_generation.src.enhanced_entity_spawner import EnhancedEntitySpawner
 from .chunk import Chunk
 from .settlement_manager import ChunkSettlementManager
+from .settlement_patterns import SettlementPatternGenerator
 
 
 class WorldGenerator:
@@ -18,13 +19,14 @@ class WorldGenerator:
     
     def __init__(self, world_seed: int):
         """
-        Initialize world generator
+        Initialize world generator with settlement patterns
         
         Args:
             world_seed: Seed for the entire world
         """
         self.world_seed = world_seed
         self.settlement_manager = ChunkSettlementManager(world_seed)
+        self.pattern_generator = SettlementPatternGenerator()
         random.seed(world_seed)
         
     def generate_chunk(self, chunk_x: int, chunk_y: int) -> Chunk:
@@ -141,7 +143,7 @@ class WorldGenerator:
     
     def _override_area_with_settlement(self, chunk: Chunk, settlement_data: Dict[str, Any], settlement_type: str) -> int:
         """
-        HARDCORE OVERRIDE: Completely clear and replace settlement area with appropriate terrain and buildings
+        Apply settlement pattern to chunk area with proper tiles and buildings
         
         Args:
             chunk: The chunk to modify
@@ -155,40 +157,88 @@ class WorldGenerator:
         start_x, start_y, end_x, end_y = chunk.get_world_bounds()
         settlement_world_x = settlement_data['world_x']
         settlement_world_y = settlement_data['world_y']
-        settlement_size = settlement_data['size']
         
         # Convert to local chunk coordinates
         local_settlement_x = settlement_world_x - start_x
         local_settlement_y = settlement_world_y - start_y
         
-        # Ensure settlement fits in chunk (adjust if needed)
-        local_settlement_x = max(2, min(Chunk.CHUNK_SIZE - settlement_size[0] - 2, local_settlement_x))
-        local_settlement_y = max(2, min(Chunk.CHUNK_SIZE - settlement_size[1] - 2, local_settlement_y))
+        print(f"    🏗️  Applying {settlement_type} pattern at local coords ({local_settlement_x}, {local_settlement_y})")
         
-        print(f"    🏗️  OVERRIDING area ({local_settlement_x}, {local_settlement_y}) to ({local_settlement_x + settlement_size[0]}, {local_settlement_y + settlement_size[1]})")
+        # Get settlement pattern
+        base_pattern = self.pattern_generator.get_pattern(settlement_type)
         
-        # STEP 1: Determine appropriate base terrain for the settlement based on biome
-        dominant_biome = self._get_dominant_biome_in_area(chunk, local_settlement_x, local_settlement_y, settlement_size[0], settlement_size[1])
-        base_terrain_tile = self._get_settlement_base_terrain(dominant_biome)
+        # Determine dominant biome for pattern adaptation
+        dominant_biome = self._get_dominant_biome_in_area(chunk, local_settlement_x, local_settlement_y, 
+                                                        base_pattern.width, base_pattern.height)
         
-        print(f"    🌍 Dominant biome: {dominant_biome}, using base terrain: {base_terrain_tile}")
+        # Adapt pattern to biome
+        settlement_pattern = self.pattern_generator.adapt_pattern_to_biome(base_pattern, dominant_biome)
         
-        # STEP 2: CLEAR THE ENTIRE SETTLEMENT AREA - remove all entities and reset terrain
-        self._clear_settlement_area(chunk, local_settlement_x, local_settlement_y, settlement_size[0], settlement_size[1])
+        print(f"    🌍 Using {settlement_pattern.name} pattern adapted for {dominant_biome}")
         
-        # STEP 3: Set base terrain for the entire settlement area
-        for y in range(local_settlement_y, local_settlement_y + settlement_size[1]):
-            for x in range(local_settlement_x, local_settlement_x + settlement_size[0]):
-                if 0 <= x < Chunk.CHUNK_SIZE and 0 <= y < Chunk.CHUNK_SIZE:
-                    chunk.set_tile(x, y, base_terrain_tile)
+        # Ensure settlement fits in chunk
+        if (local_settlement_x + settlement_pattern.width >= Chunk.CHUNK_SIZE or 
+            local_settlement_y + settlement_pattern.height >= Chunk.CHUNK_SIZE):
+            # Adjust position if needed
+            local_settlement_x = max(1, min(Chunk.CHUNK_SIZE - settlement_pattern.width - 1, local_settlement_x))
+            local_settlement_y = max(1, min(Chunk.CHUNK_SIZE - settlement_pattern.height - 1, local_settlement_y))
+            print(f"    📐 Adjusted settlement position to ({local_settlement_x}, {local_settlement_y})")
         
-        # STEP 4: Create pathways through the settlement
-        self._create_settlement_pathways(chunk, local_settlement_x, local_settlement_y, settlement_size[0], settlement_size[1], dominant_biome)
+        # STEP 1: Clear entities from settlement area
+        self._clear_settlement_area(chunk, local_settlement_x, local_settlement_y, 
+                                  settlement_pattern.width, settlement_pattern.height)
         
-        # STEP 5: Place buildings with guaranteed space
-        buildings_placed = self._place_settlement_buildings_guaranteed(chunk, settlement_data, local_settlement_x, local_settlement_y)
+        # STEP 2: Apply settlement tile pattern
+        buildings_placed = self._apply_settlement_pattern(chunk, settlement_pattern, 
+                                                        local_settlement_x, local_settlement_y)
         
-        print(f"    ✅ Settlement override complete: {buildings_placed} buildings placed on {base_terrain_tile} terrain")
+        print(f"    ✅ Settlement pattern applied: {buildings_placed} buildings placed")
+        return buildings_placed
+    
+    def _apply_settlement_pattern(self, chunk: Chunk, pattern: 'SettlementPattern', 
+                                offset_x: int, offset_y: int) -> int:
+        """Apply a settlement pattern to the chunk"""
+        
+        # Apply tile pattern
+        tiles_applied = 0
+        for y in range(pattern.height):
+            for x in range(pattern.width):
+                chunk_x = offset_x + x
+                chunk_y = offset_y + y
+                
+                if 0 <= chunk_x < Chunk.CHUNK_SIZE and 0 <= chunk_y < Chunk.CHUNK_SIZE:
+                    tile_type = pattern.get_tile_at(x, y)
+                    chunk.set_tile(chunk_x, chunk_y, tile_type)
+                    tiles_applied += 1
+        
+        print(f"      🗺️  Applied {tiles_applied} tiles from pattern")
+        
+        # Apply buildings from pattern
+        buildings_placed = 0
+        settlement_random = random.Random(hash((self.world_seed, chunk.chunk_x, chunk.chunk_y, "pattern_buildings")))
+        
+        for building_info in pattern.get_building_positions():
+            building_x = offset_x + building_info['x']
+            building_y = offset_y + building_info['y']
+            building_width = building_info['width']
+            building_height = building_info['height']
+            building_type = building_info.get('type', 'house')
+            
+            # Ensure building fits in chunk
+            if (building_x + building_width <= Chunk.CHUNK_SIZE and 
+                building_y + building_height <= Chunk.CHUNK_SIZE):
+                
+                tiles_placed = self._create_building_on_chunk(chunk, building_x, building_y, 
+                                                            building_width, building_height, settlement_random)
+                
+                if tiles_placed > 0:
+                    buildings_placed += 1
+                    print(f"      🏠 Placed {building_type} ({building_width}x{building_height}) at ({building_x}, {building_y})")
+                else:
+                    print(f"      ❌ Failed to place {building_type} at ({building_x}, {building_y})")
+            else:
+                print(f"      ⚠️  Skipped {building_type} - would extend outside chunk")
+        
         return buildings_placed
     
     def _get_dominant_biome_in_area(self, chunk: Chunk, x: int, y: int, width: int, height: int) -> str:
@@ -204,18 +254,6 @@ class WorldGenerator:
                     biome_counts[biome] = biome_counts.get(biome, 0) + 1
         
         return max(biome_counts.keys(), key=lambda k: biome_counts[k]) if biome_counts else "PLAINS"
-    
-    def _get_settlement_base_terrain(self, biome: str) -> int:
-        """Get appropriate base terrain tile for settlement based on biome"""
-        terrain_mapping = {
-            "PLAINS": 1,      # TILE_DIRT - cleared plains become dirt paths
-            "FOREST": 18,     # TILE_FOREST_FLOOR - forest clearings
-            "DESERT": 16,     # TILE_SAND - desert settlements on sand
-            "TUNDRA": 17,     # TILE_SNOW - snowy settlements
-            "SWAMP": 1,       # TILE_DIRT - drained swamp becomes dirt
-            "MOUNTAINS": 2,   # TILE_STONE - mountain settlements on stone
-        }
-        return terrain_mapping.get(biome, 1)  # Default to dirt
     
     def _clear_settlement_area(self, chunk: Chunk, x: int, y: int, width: int, height: int):
         """Clear all entities from the settlement area"""
@@ -235,114 +273,6 @@ class WorldGenerator:
             chunk.entities.remove(entity)
         
         print(f"    🧹 Cleared {len(entities_to_remove)} entities from settlement area")
-    
-    def _create_settlement_pathways(self, chunk: Chunk, x: int, y: int, width: int, height: int, biome: str):
-        """Create pathways through the settlement"""
-        # Get pathway tile based on biome
-        pathway_tile = self._get_pathway_tile(biome)
-        
-        # Create main horizontal pathway through center
-        center_y = y + height // 2
-        for px in range(x, x + width):
-            if 0 <= px < Chunk.CHUNK_SIZE and 0 <= center_y < Chunk.CHUNK_SIZE:
-                chunk.set_tile(px, center_y, pathway_tile)
-        
-        # Create main vertical pathway through center
-        center_x = x + width // 2
-        for py in range(y, y + height):
-            if 0 <= center_x < Chunk.CHUNK_SIZE and 0 <= py < Chunk.CHUNK_SIZE:
-                chunk.set_tile(center_x, py, pathway_tile)
-        
-        print(f"    🛤️  Created pathways using tile type {pathway_tile}")
-    
-    def _get_pathway_tile(self, biome: str) -> int:
-        """Get appropriate pathway tile for biome"""
-        pathway_mapping = {
-            "PLAINS": 2,      # TILE_STONE - stone paths in plains
-            "FOREST": 1,      # TILE_DIRT - dirt paths in forest
-            "DESERT": 2,      # TILE_STONE - stone paths in desert
-            "TUNDRA": 2,      # TILE_STONE - stone paths in tundra
-            "SWAMP": 2,       # TILE_STONE - stone paths in swamp
-            "MOUNTAINS": 2,   # TILE_STONE - stone paths in mountains
-        }
-        return pathway_mapping.get(biome, 2)  # Default to stone
-    
-    def _place_settlement_buildings_guaranteed(self, chunk: Chunk, settlement_data: Dict[str, Any], 
-                                             local_x: int, local_y: int) -> int:
-        """Place settlement buildings with guaranteed space allocation"""
-        buildings = settlement_data.get('buildings', [])
-        settlement_size = settlement_data['size']
-        
-        if not buildings:
-            return 0
-        
-        # Create a grid system for guaranteed building placement
-        grid_cells = self._create_building_grid(local_x, local_y, settlement_size[0], settlement_size[1], len(buildings))
-        
-        buildings_placed = 0
-        settlement_random = random.Random(hash((self.world_seed, chunk.chunk_x, chunk.chunk_y, "buildings")))
-        
-        for i, building in enumerate(buildings):
-            if i >= len(grid_cells):
-                break  # More buildings than grid cells
-            
-            cell_x, cell_y, cell_width, cell_height = grid_cells[i]
-            building_width, building_height = building['size']
-            
-            # Ensure building fits in cell (shrink if necessary)
-            if building_width > cell_width - 2:
-                building_width = max(3, cell_width - 2)
-            if building_height > cell_height - 2:
-                building_height = max(3, cell_height - 2)
-            
-            # Center building in cell
-            building_x = cell_x + (cell_width - building_width) // 2
-            building_y = cell_y + (cell_height - building_height) // 2
-            
-            # Place the building
-            tiles_placed = self._create_building_on_chunk(chunk, building_x, building_y, 
-                                                        building_width, building_height, settlement_random)
-            
-            if tiles_placed > 0:
-                buildings_placed += 1
-                print(f"    🏠 Placed {building['name']} ({building_width}x{building_height}) at ({building_x}, {building_y})")
-            else:
-                print(f"    ❌ Failed to place {building['name']}")
-        
-        return buildings_placed
-    
-    def _create_building_grid(self, x: int, y: int, width: int, height: int, num_buildings: int) -> List[tuple]:
-        """Create a grid system for guaranteed building placement"""
-        if num_buildings <= 0:
-            return []
-        
-        # Calculate optimal grid dimensions
-        import math
-        grid_cols = math.ceil(math.sqrt(num_buildings))
-        grid_rows = math.ceil(num_buildings / grid_cols)
-        
-        # Calculate cell dimensions
-        cell_width = width // grid_cols
-        cell_height = height // grid_rows
-        
-        # Create grid cells
-        grid_cells = []
-        for row in range(grid_rows):
-            for col in range(grid_cols):
-                if len(grid_cells) >= num_buildings:
-                    break
-                
-                cell_x = x + col * cell_width
-                cell_y = y + row * cell_height
-                
-                # Adjust last column/row to use remaining space
-                actual_cell_width = cell_width if col < grid_cols - 1 else width - col * cell_width
-                actual_cell_height = cell_height if row < grid_rows - 1 else height - row * cell_height
-                
-                grid_cells.append((cell_x, cell_y, actual_cell_width, actual_cell_height))
-        
-        print(f"    📐 Created {len(grid_cells)} grid cells ({grid_cols}x{grid_rows}) for {num_buildings} buildings")
-        return grid_cells
     
     def get_chunk_seed(self, chunk_x: int, chunk_y: int) -> int:
         """Get deterministic seed for a specific chunk"""
