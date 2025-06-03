@@ -69,6 +69,13 @@ class EntityManagerMixin:
                 entity_id = f"{enemy.name}_{int(enemy.x)}_{int(enemy.y)}"
             
             self.chunk_manager.remove_entity_from_chunks(entity_id, enemy.x, enemy.y)
+            
+            # Force immediate sync to prevent race conditions
+            if hasattr(self, 'sync_entities_to_chunks'):
+                try:
+                    self.sync_entities_to_chunks()
+                except Exception as e:
+                    print(f"Warning: Failed to sync entities after enemy death: {e}")
         
         self.enemies.remove(enemy)
         self.player.gain_experience(enemy.experience)
