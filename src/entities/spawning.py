@@ -9,9 +9,32 @@ import random
 import math
 try:
     from . import Enemy, NPC, Item, Entity, Chest
+    # Import AI NPC classes
+    from .npcs import (
+        VillageElderNPC, MasterMerchantNPC, GuardCaptainNPC,
+        MasterSmithNPC, InnkeeperNPC, HealerNPC, 
+        BlacksmithNPC, CaravanMasterNPC
+    )
 except ImportError:
     # Fallback for direct execution
     from . import Enemy, NPC, Item, Entity, Chest
+    # Try to import AI NPCs, fallback to regular NPC if not available
+    try:
+        from .npcs import (
+            VillageElderNPC, MasterMerchantNPC, GuardCaptainNPC,
+            MasterSmithNPC, InnkeeperNPC, HealerNPC,
+            BlacksmithNPC, CaravanMasterNPC
+        )
+    except ImportError:
+        # If AI NPCs not available, create aliases to regular NPC
+        VillageElderNPC = NPC
+        MasterMerchantNPC = NPC
+        GuardCaptainNPC = NPC
+        MasterSmithNPC = NPC
+        InnkeeperNPC = NPC
+        HealerNPC = NPC
+        BlacksmithNPC = NPC
+        CaravanMasterNPC = NPC
 
 
 class SpawningMixin:
@@ -156,123 +179,59 @@ class SpawningMixin:
     def spawn_story_npcs(self):
         """Spawn NPCs across the expanded world"""
         # MAIN VILLAGE NPCs
-        # Shopkeeper in the large store
+        # Shopkeeper in the large store - AI POWERED
         shopkeeper_x, shopkeeper_y = 77, 85  # Inside large shop building
-        shopkeeper = NPC(shopkeeper_x, shopkeeper_y, "Master Merchant", 
-                        dialog=[
-                            "Welcome to the finest shop in all the lands!",
-                            "I have goods from every corner of the realm!",
-                            "The roads are dangerous, but profitable for traders.",
-                            "I hear the ancient ruins hold great treasures..."
-                        ], 
-                        asset_loader=self.asset_loader, has_shop=True)
+        shopkeeper = MasterMerchantNPC(shopkeeper_x, shopkeeper_y, asset_loader=self.asset_loader)
         self.npcs.append(shopkeeper)
         
-        # Village Elder in his house
+        # Village Elder in his house - AI POWERED
         elder_x, elder_y = 122, 85  # Inside elder's house
-        elder = NPC(elder_x, elder_y, "Village Elder", 
-                   dialog=[
-                       "Welcome, brave adventurer!",
-                       "Our peaceful village sits at the crossroads of many realms.",
-                       "To the north lie ancient forests filled with danger.",
-                       "The mountains hold both treasure and terror.",
-                       "The desert sands conceal forgotten secrets.",
-                       "May your journey bring you wisdom and fortune!"
-                   ], 
-                   asset_loader=self.asset_loader)
+        elder = VillageElderNPC(elder_x, elder_y, asset_loader=self.asset_loader)
         self.npcs.append(elder)
         
-        # Blacksmith
+        # Blacksmith - AI POWERED
         blacksmith_x, blacksmith_y = 76, 109  # Inside blacksmith
-        blacksmith = NPC(blacksmith_x, blacksmith_y, "Master Smith", 
-                        dialog=[
-                            "The forge burns hot today!",
-                            "I craft the finest weapons and armor.",
-                            "Bring me rare metals and I'll make you legendary gear!",
-                            "The crystal caves have materials I need..."
-                        ], 
-                        asset_loader=self.asset_loader, has_shop=True)
+        blacksmith = MasterSmithNPC(blacksmith_x, blacksmith_y, asset_loader=self.asset_loader)
         self.npcs.append(blacksmith)
         
-        # Innkeeper
+        # Innkeeper - AI POWERED
         innkeeper_x, innkeeper_y = 121, 109  # Inside inn
-        innkeeper = NPC(innkeeper_x, innkeeper_y, "Innkeeper", 
-                       dialog=[
-                           "Welcome to the Crossroads Inn!",
-                           "Travelers from all lands rest here.",
-                           "I've heard tales of dragons in the northern peaks.",
-                           "The swamp folk speak of ancient magic.",
-                           "Rest well, the roads are perilous."
-                       ], 
-                       asset_loader=self.asset_loader)
+        innkeeper = InnkeeperNPC(innkeeper_x, innkeeper_y, asset_loader=self.asset_loader)
         self.npcs.append(innkeeper)
         
-        # Temple Priest
+        # Temple Priest - AI POWERED (using Healer for now)
         priest_x, priest_y = 100, 70  # Inside temple
-        priest = NPC(priest_x, priest_y, "High Priest", 
-                    dialog=[
-                        "The light guides all who seek it.",
-                        "Ancient evils stir in the forgotten places.",
-                        "The stone circles hold power beyond understanding.",
-                        "May the divine protect you on your journey."
-                    ], 
-                    asset_loader=self.asset_loader)
+        priest = HealerNPC(priest_x, priest_y, asset_loader=self.asset_loader)
+        priest.name = "High Priest"  # Override name
         self.npcs.append(priest)
         
-        # Village Guard Captain
+        # Village Guard Captain - AI POWERED
         guard_x, guard_y = 65, 97  # In guard house
-        guard = NPC(guard_x, guard_y, "Guard Captain", 
-                   dialog=[
-                       "I keep watch over our village.",
-                       "Bandits have been spotted on the roads.",
-                       "The northern forests grow more dangerous each day.",
-                       "If you're heading out, be well armed!",
-                       "Report any suspicious activity to me."
-                   ], 
-                   asset_loader=self.asset_loader)
+        guard = GuardCaptainNPC(guard_x, guard_y, asset_loader=self.asset_loader)
         self.npcs.append(guard)
         
         # MINING TOWN NPCs
-        # Mine Foreman
+        # Mine Foreman - AI POWERED (using BlacksmithNPC for now)
         foreman_x, foreman_y = 155, 57  # In mine office
-        foreman = NPC(foreman_x, foreman_y, "Mine Foreman", 
-                     dialog=[
-                         "The mines run deep into the mountain.",
-                         "We've found strange crystals in the lower tunnels.",
-                         "Some miners speak of hearing voices in the dark.",
-                         "The work is hard but the pay is good."
-                     ], 
-                     asset_loader=self.asset_loader, has_shop=True)
+        foreman = BlacksmithNPC(foreman_x, foreman_y, asset_loader=self.asset_loader)
+        foreman.name = "Mine Foreman"  # Override name
         self.npcs.append(foreman)
         
         # FISHING VILLAGE NPCs
-        # Harbor Master
+        # Harbor Master - AI POWERED (using MasterMerchantNPC for now)
         harbor_x, harbor_y = 125, 167  # In fish market
-        harbor = NPC(harbor_x, harbor_y, "Harbor Master", 
-                    dialog=[
-                        "The great lake provides for our village.",
-                        "Strange lights have been seen beneath the waters.",
-                        "The fish have been acting oddly lately.",
-                        "Ancient ruins lie submerged in the deep parts."
-                    ], 
-                    asset_loader=self.asset_loader, has_shop=True)
+        harbor = MasterMerchantNPC(harbor_x, harbor_y, asset_loader=self.asset_loader)
+        harbor.name = "Harbor Master"  # Override name
         self.npcs.append(harbor)
         
         # DESERT OUTPOST NPCs
-        # Caravan Leader
+        # Caravan Leader - AI POWERED
         caravan_x, caravan_y = 32, 162  # In trading post
-        caravan = NPC(caravan_x, caravan_y, "Caravan Master", 
-                     dialog=[
-                         "The desert trade routes are treacherous.",
-                         "Sandstorms hide ancient ruins from view.",
-                         "The oasis is sacred to the desert dwellers.",
-                         "Scorpions grow large in these parts."
-                     ], 
-                     asset_loader=self.asset_loader, has_shop=True)
+        caravan = CaravanMasterNPC(caravan_x, caravan_y, asset_loader=self.asset_loader)
         self.npcs.append(caravan)
         
         # FOREST HAMLET NPCs
-        # Ranger
+        # Ranger - Regular NPC for now (could create ForestRangerNPC later)
         ranger_x, ranger_y = 97, 32  # In ranger station
         ranger = NPC(ranger_x, ranger_y, "Forest Ranger", 
                     dialog=[
@@ -284,16 +243,10 @@ class SpawningMixin:
                     asset_loader=self.asset_loader)
         self.npcs.append(ranger)
         
-        # Herbalist
+        # Herbalist - AI POWERED (using HealerNPC)
         herbalist_x, herbalist_y = 107, 32  # In herbalist hut
-        herbalist = NPC(herbalist_x, herbalist_y, "Master Herbalist", 
-                       dialog=[
-                           "The forest provides all manner of healing herbs.",
-                           "Magical plants grow near the stone circles.",
-                           "The swamp has rare ingredients, but it's dangerous.",
-                           "I can brew potions from the right materials."
-                       ], 
-                       asset_loader=self.asset_loader, has_shop=True)
+        herbalist = HealerNPC(herbalist_x, herbalist_y, asset_loader=self.asset_loader)
+        herbalist.name = "Master Herbalist"  # Override name
         self.npcs.append(herbalist)
         
         # MYSTERIOUS WANDERERS (scattered around the world)
@@ -603,47 +556,13 @@ class SpawningMixin:
 
 
     def enable_ai_for_npcs(self):
-        """Enable AI for specific NPCs immediately when world loads"""
-        print(f"🔧 Enabling AI for NPCs... Found {len(self.npcs)} NPCs")
-        try:
-            # List of NPCs that should have AI capabilities
-            ai_enabled_npcs = [
-                "Village Elder",
-                "Master Merchant", 
-                "Guard Captain",
-                "High Priest",
-                "Mysterious Wizard"
-            ]
-            
-            # Get game context for AI initialization
-            from ..ai_integration import GameContext
-            game_context = GameContext(self.player, self)
-            
-            for npc in self.npcs:
-                print(f"🔍 Checking NPC: {npc.name}")
-                if npc.name in ai_enabled_npcs:
-                    print(f"🤖 Starting AI session for {npc.name} immediately...")
-                    try:
-                        # Enable AI immediately instead of marking as ready
-                        npc.enable_ai(self.player, game_context)
-                        print(f"✅ {npc.name} AI session started successfully")
-                        # Don't set ai_ready since AI is already enabled
-                    except Exception as e:
-                        print(f"❌ Failed to start AI session for {npc.name}: {e}")
-                        # Fallback to marking as AI-ready for later initialization
-                        npc.ai_ready = True
-                        print(f"⚠️  {npc.name} marked as AI-ready for later initialization")
-                else:
-                    npc.ai_ready = False
-                    print(f"📝 {npc.name} marked as regular NPC")
-                    
-        except Exception as e:
-            print(f"⚠️  Could not enable AI for NPCs: {e}")
-            import traceback
-            traceback.print_exc()
-            # Mark all NPCs as AI-ready for later initialization if there's an error
-            for npc in self.npcs:
-                if npc.name in ["Village Elder", "Master Merchant", "Guard Captain", "High Priest", "Mysterious Wizard"]:
-                    npc.ai_ready = True
-                else:
-                    npc.ai_ready = False
+        """NPCs are now AI-powered by default - this method is deprecated"""
+        print(f"🤖 AI NPCs loaded: {len([npc for npc in self.npcs if hasattr(npc, 'ai_enabled') and npc.ai_enabled])} AI-powered NPCs")
+        print(f"📝 Regular NPCs: {len([npc for npc in self.npcs if not hasattr(npc, 'ai_enabled') or not npc.ai_enabled])} regular NPCs")
+        
+        # Log which NPCs are AI-powered
+        for npc in self.npcs:
+            if hasattr(npc, 'ai_enabled') and npc.ai_enabled:
+                print(f"✅ {npc.name} - AI-powered with recipe")
+            else:
+                print(f"📝 {npc.name} - Regular NPC")

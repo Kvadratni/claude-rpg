@@ -105,9 +105,17 @@ class BaseAINPC(Entity):
             "Village Elder": "recipes/village_elder.yaml",
             "Master Merchant": "recipes/master_merchant.yaml", 
             "Guard Captain": "recipes/guard_captain.yaml",
+            "Master Smith": "recipes/master_smith.yaml",
             "Blacksmith": "recipes/blacksmith.yaml",
+            "Innkeeper": "recipes/innkeeper.yaml",
             "Healer": "recipes/healer.yaml",
-            "Tavern Keeper": "recipes/tavern_keeper.yaml"
+            "High Priest": "recipes/healer.yaml",  # Use healer recipe for priest
+            "Caravan Master": "recipes/caravan_master.yaml",
+            "Mine Foreman": "recipes/blacksmith.yaml",  # Use blacksmith recipe for foreman
+            "Harbor Master": "recipes/master_merchant.yaml",  # Use merchant recipe for harbor master
+            "Master Herbalist": "recipes/master_herbalist.yaml",
+            "Tavern Keeper": "recipes/tavern_keeper.yaml",
+            "Forest Ranger": "recipes/forest_ranger.yaml"
         }
         
         recipe_file = recipe_file_map.get(self.name)
