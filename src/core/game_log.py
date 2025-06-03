@@ -14,6 +14,10 @@ class GameLog:
         self.font = pygame.font.Font(None, 20)
         self.small_font = pygame.font.Font(None, 16)
         
+        # Scrolling functionality
+        self.scroll_offset = 0  # How many messages to scroll up from the bottom
+        self.max_scroll_offset = 0  # Maximum scroll offset based on message count
+        
         # Colors
         self.colors = {
             "default": (255, 255, 255),
@@ -24,6 +28,7 @@ class GameLog:
             "dialog": (200, 200, 255),
             "quest": (255, 215, 0),      # Gold for quest messages
             "story": (255, 165, 0),      # Orange for story messages
+            "exploration": (100, 255, 255),  # Cyan for exploration
             "reward": (50, 255, 50),     # Bright green for rewards
             "error": (255, 50, 50)
         }
@@ -49,8 +54,37 @@ class GameLog:
         if len(self.messages) > self.max_messages:
             self.messages.pop(0)
         
+        # Update max scroll offset
+        self.max_scroll_offset = max(0, len(self.messages) - self.visible_messages)
+        
+        # Auto-scroll to bottom when new message arrives (unless user is scrolling)
+        if self.scroll_offset == 0:
+            self.scroll_offset = 0  # Stay at bottom
+        
         # Print to console as well for debugging
         print(f"[{msg_type.upper()}] {text}")
+    
+    def scroll_up(self):
+        """Scroll up in the message log"""
+        if self.scroll_offset < self.max_scroll_offset:
+            self.scroll_offset += 1
+            return True
+        return False
+    
+    def scroll_down(self):
+        """Scroll down in the message log"""
+        if self.scroll_offset > 0:
+            self.scroll_offset -= 1
+            return True
+        return False
+    
+    def handle_scroll(self, scroll_direction):
+        """Handle scroll wheel input"""
+        if scroll_direction > 0:  # Scroll up
+            return self.scroll_up()
+        elif scroll_direction < 0:  # Scroll down
+            return self.scroll_down()
+        return False
     
     def update(self):
         """Update message fading"""
@@ -88,19 +122,37 @@ class GameLog:
         # Draw border
         pygame.draw.rect(log_surface, (100, 100, 100), log_surface.get_rect(), 2)
         
-        # Draw title
-        title_text = self.small_font.render("Game Log", True, (200, 200, 200))
-        log_surface.blit(title_text, (5, 2))
+        # Draw title with scroll indicator
+        title_text = "Game Log"
+        if self.scroll_offset > 0:
+            title_text += f" (↑{self.scroll_offset})"
+        title_surface = self.small_font.render(title_text, True, (200, 200, 200))
+        log_surface.blit(title_surface, (5, 2))
         
-        # Draw messages (most recent at bottom)
-        recent_messages = self.messages[-self.visible_messages:]
+        # Show scroll hint
+        if len(self.messages) > self.visible_messages:
+            hint_text = "Scroll wheel to navigate"
+            hint_surface = self.small_font.render(hint_text, True, (150, 150, 150))
+            hint_width = hint_surface.get_width()
+            log_surface.blit(hint_surface, (panel_width - hint_width - 5, 2))
         
-        for i, message in enumerate(recent_messages):
+        # Calculate which messages to show based on scroll offset
+        if len(self.messages) <= self.visible_messages:
+            # Show all messages if we have fewer than visible_messages
+            messages_to_show = self.messages
+        else:
+            # Show messages based on scroll position
+            start_index = len(self.messages) - self.visible_messages - self.scroll_offset
+            end_index = len(self.messages) - self.scroll_offset
+            messages_to_show = self.messages[start_index:end_index]
+        
+        # Draw messages
+        for i, message in enumerate(messages_to_show):
             y_pos = 18 + (i * self.message_height)
             color = self.colors.get(message["type"], self.colors["default"])
             
-            # Apply alpha for fading
-            if message["alpha"] < 255:
+            # Apply alpha for fading (but not when scrolling up)
+            if message["alpha"] < 255 and self.scroll_offset == 0:
                 color = (*color, message["alpha"])
                 text_surface = self.font.render(message["text"], True, color)
                 text_surface.set_alpha(message["alpha"])

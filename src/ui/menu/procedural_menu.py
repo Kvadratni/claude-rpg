@@ -12,7 +12,7 @@ class ProceduralWorldMenu(BaseMenu):
     
     def __init__(self, game):
         super().__init__(game)
-        self.title = "Create Procedural World"
+        self.title = "Create New World"
         
         # Menu state
         self.seed_input = ""
@@ -103,7 +103,7 @@ class ProceduralWorldMenu(BaseMenu):
             self.go_back()
     
     def generate_world(self):
-        """Generate the procedural world"""
+        """Generate the new world"""
         if self.use_random_seed:
             seed = random.randint(1, 999999)
         else:
@@ -112,7 +112,7 @@ class ProceduralWorldMenu(BaseMenu):
             else:
                 seed = random.randint(1, 999999)
         
-        print(f"Generating procedural world with seed: {seed}")
+        print(f"Generating world with seed: {seed}")
         
         # Play generation sound
         self.play_ui_sound("menu_confirm")
@@ -148,7 +148,7 @@ class ProceduralWorldMenu(BaseMenu):
         self.render_particles(screen)
         
         # Draw title with main menu styling
-        title_text = "PROCEDURAL WORLD"
+        title_text = "NEW WORLD"
         pulse_scale = 1.0 + self.title_pulse * 0.05
         title_size = int(72 * pulse_scale)
         title_font = pygame.font.Font(None, title_size)
@@ -164,7 +164,7 @@ class ProceduralWorldMenu(BaseMenu):
         screen.blit(title_surface, title_rect)
         
         # Subtitle
-        subtitle_text = "Create Your Own Adventure"
+        subtitle_text = "Configure Your Adventure"
         subtitle_surface = self.subtitle_font.render(subtitle_text, True, self.colors['menu_normal'])
         subtitle_rect = subtitle_surface.get_rect(center=(screen_width // 2, screen_height // 4 + 50))
         screen.blit(subtitle_surface, subtitle_rect)

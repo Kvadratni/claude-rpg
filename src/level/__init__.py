@@ -37,13 +37,13 @@ class Level(
     while providing a cleaner, more maintainable internal structure.
     """
     
-    def __init__(self, level_name, player, asset_loader, game=None, use_procedural=True, seed=None):
-        """Initialize the level with procedural generation (default)"""
+    def __init__(self, level_name, player, asset_loader, game=None, seed=None):
+        """Initialize the level with procedural generation"""
         
-        # Always use procedural generation now
+        # Always use procedural generation
         print(f"Creating procedural level: {level_name}")
         
-        # Initialize the base class but skip template initialization
+        # Initialize the base class
         self.name = level_name
         self.player = player
         self.asset_loader = asset_loader

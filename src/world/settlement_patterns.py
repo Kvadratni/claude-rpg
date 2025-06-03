@@ -252,9 +252,16 @@ class SettlementPatternGenerator:
     
     def get_pattern(self, settlement_type: str) -> SettlementPattern:
         """Get a pattern for a specific settlement type"""
-        # Map settlement types to patterns
+        # Map settlement types to patterns - FIXED to match actual settlement types
         type_mapping = {
+            # Main settlement types from settlement manager
             'village': 'small_village',
+            'desert_outpost': 'outpost',
+            'snow_settlement': 'small_village',  # Use small village pattern for snow settlements
+            'swamp_village': 'small_village',    # Use small village pattern for swamp villages  
+            'forest_camp': 'outpost',            # Use outpost pattern for forest camps
+            
+            # Legacy/fallback mappings
             'town': 'medium_town', 
             'city': 'large_settlement',
             'outpost': 'outpost',

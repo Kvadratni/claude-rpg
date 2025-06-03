@@ -69,7 +69,7 @@ class Game:
     
     def new_game(self, seed=None):
         """Start a new game with procedural generation"""
-        # Always use procedural generation now
+        # Always use procedural generation
         level_name = f"Procedural World"
         if seed:
             level_name += f" (Seed: {seed})"
@@ -101,7 +101,7 @@ class Game:
         self.state = Game.STATE_PLAYING
         
         # Log game start
-        self.game_log.add_message("Welcome to a procedurally generated world!", "system")
+        self.game_log.add_message("Welcome to your procedurally generated world!", "system")
         self.game_log.add_message("Explore and discover what awaits you...", "exploration")
         if seed:
             self.game_log.add_message(f"World seed: {seed}", "system")
@@ -135,7 +135,7 @@ class Game:
                 self.game_log.add_message(f"Procedural world regenerated from seed: {seed}", "system")
             else:
                 # Convert old template saves to procedural worlds
-                print("Converting old template save to procedural world...")
+                print("Converting old save to procedural world...")
                 self.current_level = Level(
                     "Procedural World (Converted)",
                     self.player, 
@@ -206,6 +206,25 @@ class Game:
                             self.current_level.items.append(item)
                             item.x, item.y = self.player.x, self.player.y
                 elif event.type == pygame.KEYDOWN:
+                    # Handle teleport mode keys first
+                    if hasattr(self, 'teleport_mode') and self.teleport_mode:
+                        if event.key == pygame.K_ESCAPE:
+                            # Cancel teleport mode
+                            self.teleport_mode = False
+                            self.game_log.add_message("🚫 Teleport cancelled", "system")
+                        elif event.key == pygame.K_o:
+                            # Teleport to origin
+                            self.execute_teleport(0, 0)
+                        elif event.key >= pygame.K_1 and event.key <= pygame.K_5:
+                            # Teleport to settlement shortcut
+                            shortcut_key = str(event.key - pygame.K_0)
+                            if shortcut_key in self.teleport_shortcuts:
+                                target_x, target_y = self.teleport_shortcuts[shortcut_key]
+                                self.execute_teleport(target_x, target_y)
+                            else:
+                                self.game_log.add_message(f"❌ No settlement shortcut {shortcut_key}", "system")
+                        return  # Don't process other keys in teleport mode
+                    
                     if event.key == pygame.K_ESCAPE:
                         self.state = Game.STATE_PAUSED
                         self.menu = PauseMenu(self)
@@ -258,6 +277,18 @@ class Game:
                             self.refresh_current_chunk()
                         else:
                             self.game_log.add_message("Chunk refresh only works in procedural worlds", "system")
+                    elif event.key == pygame.K_F7:
+                        # DEBUG: Teleport to coordinates with F7
+                        if self.player and self.current_level:
+                            self.prompt_teleport()
+                        else:
+                            self.game_log.add_message("Teleport only works during gameplay", "system")
+                    elif event.key == pygame.K_F8:
+                        # DEBUG: List all settlements with F8
+                        if self.player and self.current_level:
+                            self.list_all_settlements()
+                        else:
+                            self.game_log.add_message("Settlement list only works during gameplay", "system")
                 else:
                     self.current_level.handle_event(event)
             elif self.state == Game.STATE_PAUSED:
@@ -326,6 +357,13 @@ class Game:
                 print(f"    - {npc.name} at ({npc.x:.1f}, {npc.y:.1f})")
             print(f"  Enemies: {len(self.current_level.enemies)}")
             print(f"  Objects: {len(self.current_level.objects)}")
+            print("\n=== DEBUG CONTROLS ===")
+            print("F5 - Toggle movement mode (WASD/Click)")
+            print("F6 - Refresh current chunk")
+            print("F7 - Teleport mode (use number keys for settlements)")
+            print("F8 - List all settlements")
+            print("Scroll Wheel - Scroll game log")
+            print("Cmd+D - Show this debug info")
             print("==================\n")
             
             self.game_log.add_message("Debug info printed to console", "system")
@@ -475,6 +513,248 @@ class Game:
                 chunk.add_entity(obj_data)
         
         self.game_log.add_message(f"  🔄 Updated chunk with {len(chunk.entities)} current entities", "system")
+    
+    def prompt_teleport(self):
+        """DEBUG: Prompt for coordinates and teleport player"""
+        try:
+            # Get audio manager
+            audio = getattr(self.asset_loader, 'audio_manager', None)
+            if audio:
+                audio.play_ui_sound("click")
+            
+            # Show current position
+            current_x, current_y = self.player.x, self.player.y
+            self.game_log.add_message(f"📍 Current position: ({current_x:.1f}, {current_y:.1f})", "system")
+            
+            # Show teleport options in game log instead of console input
+            self.game_log.add_message("🚀 TELEPORT OPTIONS:", "system")
+            
+            # Show some helpful coordinates
+            if hasattr(self.current_level, 'chunk_manager'):
+                chunk_x, chunk_y = self.current_level.chunk_manager.world_to_chunk_coords(current_x, current_y)
+                self.game_log.add_message(f"Current chunk: ({chunk_x}, {chunk_y})", "system")
+                
+                # Show nearby settlements with teleport shortcuts
+                settlements_found = False
+                shortcut_num = 1
+                for dx in range(-3, 4):
+                    for dy in range(-3, 4):
+                        check_chunk_x, check_chunk_y = chunk_x + dx, chunk_y + dy
+                        chunk_key = (check_chunk_x, check_chunk_y)
+                        
+                        if chunk_key in self.current_level.chunk_manager.loaded_chunks:
+                            chunk = self.current_level.chunk_manager.loaded_chunks[chunk_key]
+                            npcs_in_chunk = [e for e in chunk.entities if e['type'] == 'npc']
+                            if npcs_in_chunk and shortcut_num <= 5:
+                                settlements_found = True
+                                chunk_center_x = check_chunk_x * 50 + 25
+                                chunk_center_y = check_chunk_y * 50 + 25
+                                distance = ((chunk_center_x - current_x)**2 + (chunk_center_y - current_y)**2)**0.5
+                                self.game_log.add_message(f"{shortcut_num}. Settlement at ({chunk_center_x}, {chunk_center_y}) - {distance:.0f} units", "exploration")
+                                shortcut_num += 1
+                
+                if not settlements_found:
+                    self.game_log.add_message("No settlements found nearby", "system")
+            
+            # Show common teleport destinations
+            self.game_log.add_message("📍 Quick destinations:", "system")
+            self.game_log.add_message("• World origin: (0, 0)", "system")
+            self.game_log.add_message("• Northeast: (200, -200)", "system")
+            self.game_log.add_message("• Southeast: (200, 200)", "system")
+            self.game_log.add_message("• Southwest: (-200, 200)", "system")
+            self.game_log.add_message("• Northwest: (-200, -200)", "system")
+            
+            self.game_log.add_message("💡 Use number keys 1-5 for quick settlement teleport", "system")
+            self.game_log.add_message("💡 Or press O for origin (0,0)", "system")
+            
+            # Set teleport mode flag for key handling
+            if not hasattr(self, 'teleport_mode'):
+                self.teleport_mode = False
+            self.teleport_mode = True
+            self.teleport_shortcuts = {}
+            
+            # Store settlement shortcuts
+            if hasattr(self.current_level, 'chunk_manager'):
+                shortcut_num = 1
+                for dx in range(-3, 4):
+                    for dy in range(-3, 4):
+                        check_chunk_x, check_chunk_y = chunk_x + dx, chunk_y + dy
+                        chunk_key = (check_chunk_x, check_chunk_y)
+                        
+                        if chunk_key in self.current_level.chunk_manager.loaded_chunks and shortcut_num <= 5:
+                            chunk = self.current_level.chunk_manager.loaded_chunks[chunk_key]
+                            npcs_in_chunk = [e for e in chunk.entities if e['type'] == 'npc']
+                            if npcs_in_chunk:
+                                chunk_center_x = check_chunk_x * 50 + 25
+                                chunk_center_y = check_chunk_y * 50 + 25
+                                self.teleport_shortcuts[str(shortcut_num)] = (chunk_center_x, chunk_center_y)
+                                shortcut_num += 1
+            
+            print(f"\n=== TELEPORT MODE ACTIVATED ===")
+            print(f"Press number keys 1-5 for settlement shortcuts")
+            print(f"Press O for world origin (0,0)")
+            print(f"Press ESC to cancel teleport")
+            print("================================\n")
+            
+        except Exception as e:
+            self.game_log.add_message(f"❌ Teleport setup failed: {e}", "system")
+            print(f"Teleport setup error: {e}")
+            import traceback
+            traceback.print_exc()
+    
+    def execute_teleport(self, target_x, target_y):
+        """Execute teleport to specified coordinates"""
+        try:
+            # Get audio manager
+            audio = getattr(self.asset_loader, 'audio_manager', None)
+            if audio:
+                audio.play_ui_sound("menu_confirm")
+            
+            # Teleport the player
+            old_x, old_y = self.player.x, self.player.y
+            self.player.x = target_x
+            self.player.y = target_y
+            
+            # Update camera to follow player
+            if hasattr(self.current_level, 'camera_x') and hasattr(self.current_level, 'camera_y'):
+                # Center camera on player
+                screen_width = self.screen.get_width()
+                screen_height = self.screen.get_height()
+                self.current_level.camera_x = target_x - screen_width // 2
+                self.current_level.camera_y = target_y - screen_height // 2
+            
+            # Generate chunks around new location if needed
+            if hasattr(self.current_level, 'chunk_manager'):
+                new_chunk_x, new_chunk_y = self.current_level.chunk_manager.world_to_chunk_coords(target_x, target_y)
+                
+                # Update entities from chunks around new location
+                self.current_level.update_entities_from_chunks()
+                
+                self.game_log.add_message(f"📍 Teleported to ({target_x:.1f}, {target_y:.1f})", "system")
+                self.game_log.add_message(f"🗺️ Now in chunk ({new_chunk_x}, {new_chunk_y})", "system")
+                
+                # Check for settlements at new location
+                chunk = self.current_level.chunk_manager.get_chunk(new_chunk_x, new_chunk_y)
+                if chunk:
+                    npcs_in_chunk = [e for e in chunk.entities if e['type'] == 'npc']
+                    if npcs_in_chunk:
+                        self.game_log.add_message(f"🏘️ Settlement found with {len(npcs_in_chunk)} NPCs", "system")
+                    else:
+                        self.game_log.add_message(f"🌲 Wilderness area", "system")
+            else:
+                self.game_log.add_message(f"📍 Teleported to ({target_x:.1f}, {target_y:.1f})", "system")
+            
+            # Exit teleport mode
+            self.teleport_mode = False
+            
+            print(f"Teleported from ({old_x:.1f}, {old_y:.1f}) to ({target_x:.1f}, {target_y:.1f})")
+            
+        except Exception as e:
+            self.game_log.add_message(f"❌ Teleport failed: {e}", "system")
+            print(f"Teleport error: {e}")
+            self.teleport_mode = False
+    
+    def list_all_settlements(self):
+        """DEBUG: List all settlements with their coordinates"""
+        try:
+            # Get audio manager
+            audio = getattr(self.asset_loader, 'audio_manager', None)
+            if audio:
+                audio.play_ui_sound("click")
+            
+            self.game_log.add_message("🏘️ Scanning for settlements...", "system")
+            
+            if not hasattr(self.current_level, 'chunk_manager'):
+                self.game_log.add_message("❌ Settlement list only works in procedural worlds", "system")
+                return
+            
+            chunk_manager = self.current_level.chunk_manager
+            settlements = []
+            
+            print(f"\n=== SETTLEMENT LIST ===")
+            print(f"Scanning all loaded chunks for settlements...")
+            
+            # Check all loaded chunks for settlements
+            for (chunk_x, chunk_y), chunk in chunk_manager.loaded_chunks.items():
+                npcs_in_chunk = [e for e in chunk.entities if e['type'] == 'npc']
+                
+                if npcs_in_chunk:
+                    # Calculate world coordinates for chunk center
+                    chunk_center_x = chunk_x * 50 + 25
+                    chunk_center_y = chunk_y * 50 + 25
+                    
+                    # Determine settlement type based on NPCs
+                    npc_names = [npc['name'] for npc in npcs_in_chunk]
+                    settlement_type = "Village"
+                    
+                    # Classify settlement based on NPCs
+                    if any("Swamp" in name for name in npc_names):
+                        settlement_type = "Swamp Village"
+                    elif any("Forest" in name or "Druid" in name or "Ranger" in name for name in npc_names):
+                        settlement_type = "Forest Camp"
+                    elif any("Master" in name or "Captain" in name for name in npc_names):
+                        settlement_type = "Town"
+                    elif len(npcs_in_chunk) >= 6:
+                        settlement_type = "Large Village"
+                    elif len(npcs_in_chunk) <= 3:
+                        settlement_type = "Small Camp"
+                    
+                    settlement_info = {
+                        'type': settlement_type,
+                        'chunk': (chunk_x, chunk_y),
+                        'center': (chunk_center_x, chunk_center_y),
+                        'npc_count': len(npcs_in_chunk),
+                        'npcs': npc_names[:3]  # Show first 3 NPCs
+                    }
+                    settlements.append(settlement_info)
+            
+            # Sort settlements by distance from player
+            player_x, player_y = self.player.x, self.player.y
+            settlements.sort(key=lambda s: ((s['center'][0] - player_x)**2 + (s['center'][1] - player_y)**2)**0.5)
+            
+            if not settlements:
+                self.game_log.add_message("🌲 No settlements found in loaded chunks", "system")
+                print("No settlements found in currently loaded chunks.")
+                print("Try exploring more areas or use F7 to teleport to distant locations.")
+            else:
+                self.game_log.add_message(f"📋 Found {len(settlements)} settlements:", "system")
+                print(f"\nFound {len(settlements)} settlements:")
+                
+                for i, settlement in enumerate(settlements, 1):
+                    # Calculate distance from player
+                    distance = ((settlement['center'][0] - player_x)**2 + (settlement['center'][1] - player_y)**2)**0.5
+                    
+                    # Format settlement info
+                    settlement_line = f"{i}. {settlement['type']} at ({settlement['center'][0]}, {settlement['center'][1]})"
+                    detail_line = f"   {settlement['npc_count']} NPCs, {distance:.1f} units away"
+                    npc_line = f"   NPCs: {', '.join(settlement['npcs'])}"
+                    if settlement['npc_count'] > 3:
+                        npc_line += f" (+{settlement['npc_count'] - 3} more)"
+                    
+                    # Add to game log
+                    self.game_log.add_message(settlement_line, "exploration")
+                    
+                    # Print to console with more detail
+                    print(f"\n{settlement_line}")
+                    print(detail_line)
+                    print(npc_line)
+                    print(f"   Chunk: ({settlement['chunk'][0]}, {settlement['chunk'][1]})")
+                    print(f"   Teleport command: {settlement['center'][0]},{settlement['center'][1]}")
+                
+                # Show usage hint
+                self.game_log.add_message("💡 Use F7 to teleport to any coordinates", "system")
+                print(f"\n=== USAGE ===")
+                print(f"• Press F7 and enter coordinates like: 125,-75")
+                print(f"• Current position: ({player_x:.1f}, {player_y:.1f})")
+                print(f"• Closest settlement: {settlements[0]['type']} at {settlements[0]['center']}")
+            
+            print("========================\n")
+            
+        except Exception as e:
+            self.game_log.add_message(f"❌ Settlement scan failed: {e}", "system")
+            print(f"Settlement scan error: {e}")
+            import traceback
+            traceback.print_exc()
     
     def update(self):
         """Update game logic"""

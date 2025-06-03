@@ -30,9 +30,21 @@ class EventHandlingMixin:
             elif event.button == 3:  # Right click
                 self.handle_right_click(event.pos)
             elif event.button == 4:  # Mouse wheel up
-                print("Zoom in (not implemented)")
+                # Scroll up in game log
+                if hasattr(self, 'game') and hasattr(self.game, 'game_log'):
+                    if self.game.game_log.handle_scroll(1):  # Scroll up
+                        pass  # Successfully scrolled
+                elif hasattr(self, 'player') and hasattr(self.player, 'game_log'):
+                    if self.player.game_log.handle_scroll(1):  # Scroll up
+                        pass  # Successfully scrolled
             elif event.button == 5:  # Mouse wheel down
-                print("Zoom out (not implemented)")
+                # Scroll down in game log
+                if hasattr(self, 'game') and hasattr(self.game, 'game_log'):
+                    if self.game.game_log.handle_scroll(-1):  # Scroll down
+                        pass  # Successfully scrolled
+                elif hasattr(self, 'player') and hasattr(self.player, 'game_log'):
+                    if self.player.game_log.handle_scroll(-1):  # Scroll down
+                        pass  # Successfully scrolled
     
     def handle_click(self, pos):
         """Handle mouse click at position"""

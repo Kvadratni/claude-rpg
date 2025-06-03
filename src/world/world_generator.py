@@ -51,6 +51,10 @@ class WorldGenerator:
         biome_gen = BiomeGenerator(Chunk.CHUNK_SIZE, Chunk.CHUNK_SIZE, chunk_seed)
         chunk.biomes = biome_gen.generate_biome_map()
         chunk.tiles = biome_gen.generate_tiles(chunk.biomes)
+        
+        # CRITICAL: Set is_loaded = True so that set_tile() works during pattern application
+        chunk.is_loaded = True
+        
         print(f"  ✅ Generated base terrain")
         
         # STEP 2: Generate base entities (objects and enemies)
