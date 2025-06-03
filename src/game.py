@@ -251,6 +251,13 @@ class Game:
                                 self.game_log.add_message("Use WASD keys to move around", "system")
                             else:
                                 self.game_log.add_message("Click to move and interact", "system")
+                    elif event.key == pygame.K_F6:
+                        # DEBUG: Refresh current chunk with F6
+                        if (self.player and self.current_level and 
+                            hasattr(self.current_level, 'chunk_manager')):
+                            self.refresh_current_chunk()
+                        else:
+                            self.game_log.add_message("Chunk refresh only works in procedural worlds", "system")
                 else:
                     self.current_level.handle_event(event)
             elif self.state == Game.STATE_PAUSED:
@@ -322,6 +329,83 @@ class Game:
             print("==================\n")
             
             self.game_log.add_message("Debug info printed to console", "system")
+    
+    def refresh_current_chunk(self):
+        """DEBUG: Force refresh the current chunk to test settlement override and enemy persistence"""
+        if not (self.player and self.current_level and hasattr(self.current_level, 'chunk_manager')):
+            return
+        
+        # Get audio manager
+        audio = getattr(self.asset_loader, 'audio_manager', None)
+        if audio:
+            audio.play_ui_sound("click")
+        
+        # Get current chunk coordinates
+        chunk_manager = self.current_level.chunk_manager
+        chunk_x, chunk_y = chunk_manager.world_to_chunk_coords(self.player.x, self.player.y)
+        
+        self.game_log.add_message(f"🔄 DEBUG: Refreshing chunk ({chunk_x}, {chunk_y})...", "system")
+        
+        # Store current entity counts for comparison
+        old_counts = {
+            'npcs': len(self.current_level.npcs),
+            'enemies': len(self.current_level.enemies),
+            'objects': len(self.current_level.objects)
+        }
+        
+        try:
+            # Force remove chunk from memory
+            chunk_key = (chunk_x, chunk_y)
+            if chunk_key in chunk_manager.loaded_chunks:
+                # Save current chunk first
+                old_chunk = chunk_manager.loaded_chunks[chunk_key]
+                old_chunk.save_to_file(chunk_manager.world_dir)
+                
+                # Remove from memory to force regeneration
+                del chunk_manager.loaded_chunks[chunk_key]
+                self.game_log.add_message(f"  💾 Saved and unloaded chunk ({chunk_x}, {chunk_y})", "system")
+            
+            # Force regenerate the chunk
+            new_chunk = chunk_manager.get_chunk(chunk_x, chunk_y)
+            self.game_log.add_message(f"  🌍 Regenerated chunk with {len(new_chunk.entities)} entities", "system")
+            
+            # Update entities from the refreshed chunk
+            self.current_level.update_entities_from_chunks()
+            
+            # Report new entity counts
+            new_counts = {
+                'npcs': len(self.current_level.npcs),
+                'enemies': len(self.current_level.enemies),
+                'objects': len(self.current_level.objects)
+            }
+            
+            # Show comparison
+            self.game_log.add_message(f"  📊 Entity changes:", "system")
+            for entity_type, old_count in old_counts.items():
+                new_count = new_counts[entity_type]
+                if new_count != old_count:
+                    change = new_count - old_count
+                    symbol = "+" if change > 0 else ""
+                    self.game_log.add_message(f"    {entity_type.capitalize()}: {old_count} → {new_count} ({symbol}{change})", "system")
+                else:
+                    self.game_log.add_message(f"    {entity_type.capitalize()}: {old_count} (no change)", "system")
+            
+            # Check for settlements
+            npcs_in_chunk = [e for e in new_chunk.entities if e['type'] == 'npc']
+            if npcs_in_chunk:
+                self.game_log.add_message(f"  🏘️ Settlement detected with {len(npcs_in_chunk)} NPCs", "system")
+                for npc_data in npcs_in_chunk:
+                    self.game_log.add_message(f"    - {npc_data['name']} ({npc_data.get('building', 'Unknown Building')})", "system")
+            else:
+                self.game_log.add_message(f"  🌲 Wilderness chunk (no settlement)", "system")
+            
+            self.game_log.add_message("✅ Chunk refresh complete!", "system")
+            
+        except Exception as e:
+            self.game_log.add_message(f"❌ Chunk refresh failed: {e}", "system")
+            print(f"Chunk refresh error: {e}")
+            import traceback
+            traceback.print_exc()
     
     def update(self):
         """Update game logic"""

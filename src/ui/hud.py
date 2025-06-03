@@ -48,6 +48,7 @@ class HUD:
         self.render_equipment_slots(ui_panel, screen_width)
         self.render_xp_bar(ui_panel, screen_width)
         self.render_movement_mode_indicator(ui_panel, screen_width)
+        self.render_debug_keys_indicator(ui_panel, screen_width)
         
         # Blit the UI panel to the screen
         screen.blit(ui_panel, (0, screen_height - ui_height))
@@ -236,3 +237,32 @@ class HUD:
             hint_surface = pygame.font.Font(None, 16).render(hint_text, True, (150, 150, 150))
             hint_rect = hint_surface.get_rect(center=(indicator_rect.centerx, indicator_rect.bottom + 10))
             surface.blit(hint_surface, hint_rect)
+    
+    def render_debug_keys_indicator(self, surface, screen_width):
+        """Render debug keys indicator in the bottom-right corner"""
+        # Only show in procedural worlds
+        if (hasattr(self.game, 'current_level') and self.game.current_level and 
+            hasattr(self.game.current_level, 'chunk_manager')):
+            
+            # Create indicator background
+            indicator_width = 120
+            indicator_height = 40
+            indicator_x = screen_width - indicator_width - 10
+            indicator_y = 80
+            
+            # Background with border
+            indicator_rect = pygame.Rect(indicator_x, indicator_y, indicator_width, indicator_height)
+            pygame.draw.rect(surface, (40, 40, 60), indicator_rect)
+            pygame.draw.rect(surface, (80, 80, 120), indicator_rect, 2)
+            
+            # Debug text
+            debug_text = "DEBUG"
+            debug_surface = pygame.font.Font(None, 18).render(debug_text, True, (200, 200, 255))
+            debug_rect = debug_surface.get_rect(center=(indicator_rect.centerx, indicator_rect.y + 12))
+            surface.blit(debug_surface, debug_rect)
+            
+            # F6 hint text
+            f6_text = "F6: Refresh Chunk"
+            f6_surface = pygame.font.Font(None, 16).render(f6_text, True, (150, 150, 200))
+            f6_rect = f6_surface.get_rect(center=(indicator_rect.centerx, indicator_rect.y + 28))
+            surface.blit(f6_surface, f6_rect)
