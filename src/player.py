@@ -12,12 +12,20 @@ class Player:
     """Player character class"""
     
     def __init__(self, x, y, asset_loader=None, game_log=None):
-        self.x = x
-        self.y = y
+        # Convert to integer tile coordinates
+        self.tile_x = int(x)
+        self.tile_y = int(y)
         self.asset_loader = asset_loader
         self.game_log = game_log
-        self.speed = 0.2  # Increased from 0.1
-        self.size = 0.4
+        
+        # Movement animation properties (separate from movement_system)
+        self._moving = False  # Internal moving state for animation
+        self.move_animation_progress = 0.0
+        self.move_animation_speed = 0.15  # How fast movement animation plays
+        self.move_start_tile = (self.tile_x, self.tile_y)
+        self.move_target_tile = (self.tile_x, self.tile_y)
+        
+        self.size = 0.4  # Keep for compatibility but not used for collision
         
         # RPG stats
         self.level = 1
@@ -56,54 +64,103 @@ class Player:
         self.combat_system = CombatSystem(self)
         self.movement_system = MovementSystem(self)
     
+    # Properties for world coordinates (for rendering and compatibility)
+    @property
+    def x(self):
+        """Get current world X coordinate (for rendering)"""
+        if self._moving:
+            # Interpolate between start and target during movement animation
+            start_x = self.move_start_tile[0] + 0.5
+            target_x = self.move_target_tile[0] + 0.5
+            return start_x + (target_x - start_x) * self.move_animation_progress
+        else:
+            return self.tile_x + 0.5  # Center of tile
+    
+    @property
+    def y(self):
+        """Get current world Y coordinate (for rendering)"""
+        if self._moving:
+            # Interpolate between start and target during movement animation
+            start_y = self.move_start_tile[1] + 0.5
+            target_y = self.move_target_tile[1] + 0.5
+            return start_y + (target_y - start_y) * self.move_animation_progress
+        else:
+            return self.tile_y + 0.5  # Center of tile
+    
     # Properties for backward compatibility with movement system
     @property
     def moving(self):
-        return self.movement_system.moving
+        if hasattr(self, 'movement_system'):
+            return self.movement_system.moving
+        else:
+            return self._moving
     
     @moving.setter
     def moving(self, value):
-        self.movement_system.moving = value
+        if hasattr(self, 'movement_system'):
+            self.movement_system.moving = value
+        else:
+            self._moving = value
     
     @property
     def direction(self):
-        return self.movement_system.direction
+        if hasattr(self, 'movement_system'):
+            return self.movement_system.direction
+        else:
+            return 0  # Default direction
     
     @direction.setter
     def direction(self, value):
-        self.movement_system.direction = value
+        if hasattr(self, 'movement_system'):
+            self.movement_system.direction = value
     
     @property
     def target_x(self):
-        return self.movement_system.target_x
+        if hasattr(self, 'movement_system'):
+            return self.movement_system.target_x
+        else:
+            return self.x
     
     @target_x.setter
     def target_x(self, value):
-        self.movement_system.target_x = value
+        if hasattr(self, 'movement_system'):
+            self.movement_system.target_x = value
     
     @property
     def target_y(self):
-        return self.movement_system.target_y
+        if hasattr(self, 'movement_system'):
+            return self.movement_system.target_y
+        else:
+            return self.y
     
     @target_y.setter
     def target_y(self, value):
-        self.movement_system.target_y = value
+        if hasattr(self, 'movement_system'):
+            self.movement_system.target_y = value
     
     @property
     def path(self):
-        return self.movement_system.path
+        if hasattr(self, 'movement_system'):
+            return self.movement_system.path
+        else:
+            return []
     
     @path.setter
     def path(self, value):
-        self.movement_system.path = value
+        if hasattr(self, 'movement_system'):
+            self.movement_system.path = value
     
     @property
     def path_index(self):
-        return self.movement_system.path_index
+        if hasattr(self, 'movement_system'):
+            return self.movement_system.path_index
+        else:
+            return 0
     
     @path_index.setter
     def path_index(self, value):
-        self.movement_system.path_index = value
+        if hasattr(self, 'movement_system'):
+            self.movement_system.path_index = value
     
     def create_sprite(self):
         """Create player sprite"""
@@ -162,6 +219,18 @@ class Player:
     
     def update(self, level):
         """Update player logic"""
+        # Update movement animation
+        if self._moving:
+            self.move_animation_progress += self.move_animation_speed
+            if self.move_animation_progress >= 1.0:
+                # Movement animation complete
+                self.move_animation_progress = 0.0
+                self.tile_x = self.move_target_tile[0]
+                self.tile_y = self.move_target_tile[1]
+                self.move_start_tile = (self.tile_x, self.tile_y)
+                self.move_target_tile = (self.tile_x, self.tile_y)
+                self._moving = False
+        
         # Update combat system (projectile effects, etc.)
         self.combat_system.update()
         
@@ -171,6 +240,22 @@ class Player:
             if self.stamina_regen_timer >= self.stamina_regen_rate:
                 self.stamina_regen_timer = 0
                 self.stamina += 1
+    
+    def move_to_tile(self, target_tile_x, target_tile_y):
+        """Start movement to a target tile"""
+        if self._moving:
+            return False  # Already moving
+        
+        # Validate target tile
+        if target_tile_x == self.tile_x and target_tile_y == self.tile_y:
+            return False  # Already at target
+        
+        # Start movement animation
+        self.move_start_tile = (self.tile_x, self.tile_y)
+        self.move_target_tile = (target_tile_x, target_tile_y)
+        self.move_animation_progress = 0.0
+        self._moving = True
+        return True
     
     def get_weapon_stamina_cost(self):
         """Get stamina cost based on equipped weapon"""
@@ -356,8 +441,10 @@ class Player:
     def get_save_data(self):
         """Get data for saving"""
         return {
-            "x": self.x,
-            "y": self.y,
+            "tile_x": self.tile_x,
+            "tile_y": self.tile_y,
+            "x": self.tile_x,  # Backward compatibility
+            "y": self.tile_y,  # Backward compatibility
             "level": self.level,
             "health": self.health,
             "max_health": self.max_health,
@@ -378,7 +465,11 @@ class Player:
         """Create player from save data"""
         from .entities import Item
         
-        player = cls(data["x"], data["y"], asset_loader, game_log)
+        # Handle both old (x, y) and new (tile_x, tile_y) save formats
+        tile_x = data.get("tile_x", int(data.get("x", 0)))
+        tile_y = data.get("tile_y", int(data.get("y", 0)))
+        
+        player = cls(tile_x, tile_y, asset_loader, game_log)
         player.level = data["level"]
         player.health = data["health"]
         player.max_health = data["max_health"]

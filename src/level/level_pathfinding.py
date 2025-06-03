@@ -550,3 +550,105 @@ class PathfindingMixin:
                             return check_x, check_y
         
         return None, None  # No walkable position found
+    
+    def find_tile_path(self, start_tile_x, start_tile_y, target_tile_x, target_tile_y):
+        """Find a tile-based path using Dijkstra's algorithm for optimal shortest path"""
+        import heapq
+        
+        # Check if start and target are the same
+        if start_tile_x == target_tile_x and start_tile_y == target_tile_y:
+            return []
+        
+        # Check if target is walkable
+        if not self.is_tile_walkable(target_tile_x, target_tile_y):
+            # Try to find a nearby walkable tile
+            for dx in [-1, 0, 1]:
+                for dy in [-1, 0, 1]:
+                    if dx == 0 and dy == 0:
+                        continue
+                    alt_x = target_tile_x + dx
+                    alt_y = target_tile_y + dy
+                    if self.is_tile_walkable(alt_x, alt_y):
+                        target_tile_x, target_tile_y = alt_x, alt_y
+                        break
+                if self.is_tile_walkable(target_tile_x, target_tile_y):
+                    break
+            else:
+                return []  # No walkable target found
+        
+        # Dijkstra's algorithm for shortest path
+        # Priority queue: (distance, x, y)
+        pq = [(0, start_tile_x, start_tile_y)]
+        distances = {(start_tile_x, start_tile_y): 0}
+        came_from = {}
+        visited = set()
+        
+        # 8-directional movement (including diagonals)
+        directions = [
+            (0, 1),   # Down
+            (0, -1),  # Up  
+            (1, 0),   # Right
+            (-1, 0),  # Left
+            (1, 1),   # Down-Right
+            (-1, 1),  # Down-Left
+            (1, -1),  # Up-Right
+            (-1, -1)  # Up-Left
+        ]
+        
+        max_iterations = 1000
+        iterations = 0
+        
+        while pq and iterations < max_iterations:
+            iterations += 1
+            current_dist, current_x, current_y = heapq.heappop(pq)
+            
+            # Skip if we've already processed this tile
+            if (current_x, current_y) in visited:
+                continue
+                
+            visited.add((current_x, current_y))
+            
+            # Check if we reached the target
+            if current_x == target_tile_x and current_y == target_tile_y:
+                # Reconstruct path
+                path = []
+                x, y = target_tile_x, target_tile_y
+                
+                while (x, y) in came_from:
+                    path.append((x, y))
+                    x, y = came_from[(x, y)]
+                
+                path.reverse()  # Reverse to get path from start to target
+                return path
+            
+            # Check all neighboring tiles
+            for dx, dy in directions:
+                next_x = current_x + dx
+                next_y = current_y + dy
+                
+                # Skip if already visited
+                if (next_x, next_y) in visited:
+                    continue
+                
+                # Check if the tile is walkable
+                if not self.is_tile_walkable(next_x, next_y):
+                    continue
+                
+                # Calculate movement cost
+                # Diagonal movement costs more (sqrt(2) ≈ 1.414)
+                is_diagonal = abs(dx) == 1 and abs(dy) == 1
+                move_cost = 1.414 if is_diagonal else 1.0
+                
+                new_distance = current_dist + move_cost
+                
+                # If we found a shorter path to this tile, update it
+                if (next_x, next_y) not in distances or new_distance < distances[(next_x, next_y)]:
+                    distances[(next_x, next_y)] = new_distance
+                    came_from[(next_x, next_y)] = (current_x, current_y)
+                    heapq.heappush(pq, (new_distance, next_x, next_y))
+        
+        return []  # No path found
+    
+    def is_tile_walkable(self, tile_x, tile_y):
+        """Check if a tile is walkable (wrapper for compatibility with tile-based movement)"""
+        return self.is_position_walkable_for_pathfinding(tile_x, tile_y, entity_size=0.4)
