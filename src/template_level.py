@@ -130,9 +130,14 @@ class TemplateBasedLevel:
         
         # Import the new AI NPC classes
         try:
-            from .entities.npcs import VillageElderNPC, MasterMerchantNPC, GuardCaptainNPC
+            from .entities.npcs import (
+                VillageElderNPC, MasterMerchantNPC, GuardCaptainNPC,
+                MasterSmithNPC, InnkeeperNPC, HealerNPC,
+                BlacksmithNPC, CaravanMasterNPC
+            )
             from .entities.ai_npc_base import BaseAINPC
             ai_classes_available = True
+            print("✅ All AI NPC classes imported successfully")
         except ImportError as e:
             print(f"⚠️  Could not import AI NPC classes: {e}")
             ai_classes_available = False
@@ -167,7 +172,7 @@ class TemplateBasedLevel:
             },
             {
                 'name': 'Master Smith',
-                'class': None,  # Not implemented yet
+                'class': MasterSmithNPC if ai_classes_available else None,
                 'dialog': [
                     "The forge burns hot today!",
                     "I craft the finest weapons and armor.",
@@ -179,7 +184,7 @@ class TemplateBasedLevel:
             },
             {
                 'name': 'Innkeeper',
-                'class': None,  # Not implemented yet
+                'class': InnkeeperNPC if ai_classes_available else None,
                 'dialog': [
                     "Welcome to the Crossroads Inn!",
                     "Travelers from all lands rest here.",
@@ -192,7 +197,7 @@ class TemplateBasedLevel:
             },
             {
                 'name': 'High Priest',
-                'class': None,  # Not implemented yet
+                'class': HealerNPC if ai_classes_available else None,  # Use Healer class for priest
                 'dialog': [
                     "The light guides all who seek it.",
                     "Ancient evils stir in the forgotten places.",
@@ -233,6 +238,12 @@ class TemplateBasedLevel:
                 if npc_info['class'] and ai_classes_available:
                     # Use new AI NPC class
                     npc = npc_info['class'](x, y, asset_loader=asset_loader)
+                    
+                    # Override name if needed (for cases like High Priest using HealerNPC)
+                    if npc_info['name'] != npc.name:
+                        npc.name = npc_info['name']
+                    
+                    print(f"✅ Created AI-powered {npc_info['name']} using {npc_info['class'].__name__}")
                 else:
                     # Fallback to regular NPC
                     npc = NPC(
@@ -241,6 +252,7 @@ class TemplateBasedLevel:
                         asset_loader=asset_loader,
                         has_shop=npc_info['has_shop']
                     )
+                    print(f"⚠️  Created regular NPC {npc_info['name']} (AI class not available)")
                 
                 npcs.append(npc)
                 self.template.mark_occupied(x, y)
