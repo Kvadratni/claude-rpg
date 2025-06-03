@@ -44,15 +44,9 @@ prompt: |
 
   CURRENT CONTEXT: {{ context }}
   
-  PLAYER SAYS: "{{ message }}"
-  
-  Respond as the Caravan Master to the player's message, staying true to this character.
+  You are now ready to have a conversation with the player. Respond to their messages as the Caravan Master.
 
 parameters:
-  - key: message
-    input_type: string
-    requirement: user_prompt
-    description: The player's message to the Caravan Master
   - key: context
     input_type: string
     requirement: optional

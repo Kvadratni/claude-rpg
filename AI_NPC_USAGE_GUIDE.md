@@ -26,6 +26,14 @@ The recipes use Goose's parameter system to inject:
 - Game context (`{{ context }}`)
 - Dynamic situational information
 
+### Session Management
+The system uses Goose CLI's `--interactive` and `--resume` flags to maintain conversation continuity:
+- **`--interactive`**: Enables interactive mode for real-time conversation flow
+- **`--resume`**: Maintains session state between interactions, preserving conversation history
+- **Session naming**: Each NPC maintains its own session (e.g., `npc_village_elder`) for persistent memory
+
+This ensures that NPCs remember previous parts of the conversation and can reference earlier topics naturally.
+
 ### Recipe Files Structure
 ```yaml
 version: 1.0.0
@@ -139,9 +147,9 @@ The system gracefully handles:
 1. Player sends message to NPC
 2. System identifies NPC type and loads corresponding recipe
 3. Game context is gathered (player stats, location, inventory)
-4. Goose CLI executes recipe with message and context parameters
+4. Goose CLI executes recipe with message and context parameters using `--interactive` and `--resume` flags for session continuity
 5. AI response is parsed, cleaned, and displayed
-6. Conversation history is maintained for context
+6. Conversation history is maintained for context through persistent sessions
 
 ### Model Selection
 - **Primary**: GPT-4o-mini via Goose recipes (fastest response time: ~1.9 seconds)

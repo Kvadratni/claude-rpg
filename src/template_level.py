@@ -124,14 +124,24 @@ class TemplateBasedLevel:
         return walkable
     
     def spawn_npcs(self, asset_loader) -> List[NPC]:
-        """Spawn NPCs at designated template locations"""
+        """Spawn NPCs at designated template locations using new AI NPC classes"""
         npcs = []
         npc_spawns = self.template.get_spawn_points('NPC_SPAWN')
         
-        # Predefined NPC data matching original positions
+        # Import the new AI NPC classes
+        try:
+            from .entities.npcs import VillageElderNPC, MasterMerchantNPC, GuardCaptainNPC
+            from .entities.ai_npc_base import BaseAINPC
+            ai_classes_available = True
+        except ImportError as e:
+            print(f"⚠️  Could not import AI NPC classes: {e}")
+            ai_classes_available = False
+        
+        # Predefined NPC data with class mappings
         npc_data = [
             {
                 'name': 'Master Merchant',
+                'class': MasterMerchantNPC if ai_classes_available else None,
                 'dialog': [
                     "Welcome to the finest shop in all the lands!",
                     "I have goods from every corner of the realm!",
@@ -143,6 +153,7 @@ class TemplateBasedLevel:
             },
             {
                 'name': 'Village Elder',
+                'class': VillageElderNPC if ai_classes_available else None,
                 'dialog': [
                     "Welcome, brave adventurer!",
                     "Our peaceful village sits at the crossroads of many realms.",
@@ -156,6 +167,7 @@ class TemplateBasedLevel:
             },
             {
                 'name': 'Master Smith',
+                'class': None,  # Not implemented yet
                 'dialog': [
                     "The forge burns hot today!",
                     "I craft the finest weapons and armor.",
@@ -167,6 +179,7 @@ class TemplateBasedLevel:
             },
             {
                 'name': 'Innkeeper',
+                'class': None,  # Not implemented yet
                 'dialog': [
                     "Welcome to the Crossroads Inn!",
                     "Travelers from all lands rest here.",
@@ -179,6 +192,7 @@ class TemplateBasedLevel:
             },
             {
                 'name': 'High Priest',
+                'class': None,  # Not implemented yet
                 'dialog': [
                     "The light guides all who seek it.",
                     "Ancient evils stir in the forgotten places.",
@@ -190,6 +204,7 @@ class TemplateBasedLevel:
             },
             {
                 'name': 'Guard Captain',
+                'class': GuardCaptainNPC if ai_classes_available else None,
                 'dialog': [
                     "I keep watch over our village.",
                     "Bandits have been spotted on the roads.",
@@ -214,54 +229,25 @@ class TemplateBasedLevel:
                 if closest_spawn in npc_spawns:
                     npc_spawns.remove(closest_spawn)
                 
-                npc = NPC(
-                    x, y, npc_info['name'],
-                    dialog=npc_info['dialog'],
-                    asset_loader=asset_loader,
-                    has_shop=npc_info['has_shop']
-                )
+                # Create NPC using appropriate class
+                if npc_info['class'] and ai_classes_available:
+                    # Use new AI NPC class
+                    npc = npc_info['class'](x, y, asset_loader=asset_loader)
+                else:
+                    # Fallback to regular NPC
+                    npc = NPC(
+                        x, y, npc_info['name'],
+                        dialog=npc_info['dialog'],
+                        asset_loader=asset_loader,
+                        has_shop=npc_info['has_shop']
+                    )
+                
                 npcs.append(npc)
                 self.template.mark_occupied(x, y)
                 
                 print(f"Spawned {npc_info['name']} at ({x}, {y})")
         
-
-        # Enable AI for key NPCs
-        self.enable_ai_for_npcs(npcs)
-        
         return npcs
-    
-
-    def enable_ai_for_npcs(self, npcs):
-        """Enable AI for specific NPCs"""
-        print(f"🔧 Enabling AI for NPCs... Found {len(npcs)} NPCs")
-        try:
-            # List of NPCs that should have AI capabilities
-            ai_enabled_npcs = [
-                "Village Elder",
-                "Master Merchant", 
-                "Guard Captain",
-                "High Priest",
-                "Mysterious Wizard"
-            ]
-            
-            for npc in npcs:
-                print(f"🔍 Checking NPC: {npc.name}")
-                if npc.name in ai_enabled_npcs:
-                    # Mark NPC as AI-ready (we'll enable it when player interacts)
-                    npc.ai_ready = True
-                    print(f"🤖 {npc.name} marked as AI-ready")
-                else:
-                    npc.ai_ready = False
-                    print(f"📝 {npc.name} marked as regular NPC")
-                    
-        except Exception as e:
-            print(f"⚠️  Could not enable AI for NPCs: {e}")
-            import traceback
-            traceback.print_exc()
-            # Mark all NPCs as not AI-ready if there's an error
-            for npc in npcs:
-                npc.ai_ready = False
 
     def spawn_enemies(self, asset_loader) -> List[Enemy]:
         """Spawn enemies at designated template locations"""

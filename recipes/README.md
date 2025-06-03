@@ -67,8 +67,12 @@ Test individual recipes using the Goose CLI:
 goose run --recipe recipes/village_elder.yaml \
   --params "message=Hello, who are you?" \
   --params "context=Player is in the village center" \
-  --no-session
+  --interactive --resume
 ```
+
+**Note**: The `--interactive` and `--resume` flags are essential for proper NPC conversation flow:
+- `--interactive`: Enables interactive mode for continuous conversation
+- `--resume`: Maintains session continuity between interactions
 
 ### Automated Testing
 Run the test script to verify all recipes:

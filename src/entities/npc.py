@@ -243,6 +243,10 @@ class NPC(Entity):
         if hasattr(self, 'ai_ready') and self.ai_ready and not self.is_ai_enabled:
             print(f"🔧 [NPC] NPC is AI-ready and not yet enabled, calling enable_ai_on_interaction")
             self.enable_ai_on_interaction(player)
+        elif self.is_ai_enabled:
+            print(f"🔧 [NPC] AI already enabled for {self.name}")
+        else:
+            print(f"🔧 [NPC] NPC not AI-ready or already enabled")
         
         # Check if AI is enabled - if so, start AI chat instead of regular dialog
         if self.is_ai_enabled:

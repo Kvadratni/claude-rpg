@@ -22,7 +22,9 @@ class Settings:
             "sfx_volume": 0.8,
             "music_volume": 0.6,
             "show_fps": False,
-            "vsync": True
+            "vsync": True,
+            "ai_model": "gpt-4o",  # Default AI model for NPCs
+            "ai_model_history": ["gpt-4o", "claude-3-5-sonnet", "gpt-4o-mini"]  # Previously used models
         }
         
         # Available resolutions
@@ -99,3 +101,30 @@ class Settings:
             audio_manager.set_master_volume(self.get("master_volume"))
             audio_manager.set_sfx_volume(self.get("sfx_volume"))
             audio_manager.set_music_volume(self.get("music_volume"))
+    
+    def get_ai_model(self):
+        """Get current AI model"""
+        return self.get("ai_model")
+    
+    def set_ai_model(self, model):
+        """Set AI model and update history"""
+        if model and model.strip():
+            model = model.strip()
+            self.set("ai_model", model)
+            
+            # Update model history
+            history = self.get("ai_model_history") or []
+            if model in history:
+                history.remove(model)  # Remove if already exists
+            history.insert(0, model)  # Add to front
+            
+            # Keep only last 10 models
+            history = history[:10]
+            self.set("ai_model_history", history)
+            
+            return self.save_settings()
+        return False
+    
+    def get_ai_model_history(self):
+        """Get list of previously used AI models"""
+        return self.get("ai_model_history") or []

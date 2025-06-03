@@ -135,7 +135,7 @@ class GooseRecipeManager:
             safe_message = user_message.replace("'", "\\'").replace('"', '\\"')
             safe_context = context.replace("'", "\\'").replace('"', '\\"')
             
-            cmd_str = f"goose run --recipe '{recipe_file}' --params 'message={safe_message}' --params 'context={safe_context}' --session 'npc_{recipe_name}'"
+            cmd_str = f"goose run --recipe '{recipe_file}' --params 'message={safe_message}' --params 'context={safe_context}' --interactive --resume --session 'npc_{recipe_name}'"
             
             print(f"🔧 [RecipeManager] Command to execute: {cmd_str}")
             print(f"🔧 [RecipeManager] Working directory: {os.getcwd()}")

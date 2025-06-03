@@ -47,12 +47,6 @@ class Game:
         self.asset_loader = AssetLoader()
         self.game_log = GameLog()
         
-        # Initialize AI recipe manager globally
-        print("🔧 [Game] Initializing global AI recipe manager...")
-        from .recipe_manager import GooseRecipeManager
-        self.recipe_manager = GooseRecipeManager("recipes")
-        print(f"✅ [Game] Global recipe manager initialized with {len(self.recipe_manager.recipes)} recipes")
-        
         # Initialize game components
         self.menu = MainMenu(self)
         self.player = None
@@ -141,24 +135,7 @@ class Game:
                 # CRITICAL: Handle AI chat events FIRST with highest priority
                 ai_event_handled = False
                 if hasattr(self.player, 'current_ai_chat') and self.player.current_ai_chat and self.player.current_ai_chat.is_active:
-                    print(f"Game.py handling AI chat event: {event.type}")
-                    if event.type == pygame.KEYDOWN:
-                        message = self.player.current_ai_chat.handle_input(event)
-                        if message:
-                            print(f"🔧 Player sent message from game.py: {message}")
-                            # Find the NPC that owns this chat and send the message
-                            for npc in getattr(self.current_level, 'npcs', []):
-                                if hasattr(npc, 'chat_window') and npc.chat_window == self.player.current_ai_chat:
-                                    print(f"🔧 Found NPC {npc.name}, sending message to AI from game.py")
-                                    npc.chat_window.add_message("Player", message)
-                                    # Get AI response
-                                    if npc.game_context:
-                                        context = npc.game_context.get_context()
-                                        ai_response = npc.ai_integration.send_message(message, context)
-                                        npc.chat_window.add_message(npc.name, ai_response)
-                                        print(f"🔧 AI responded from game.py: {ai_response}")
-                                    break
-                        ai_event_handled = True  # Mark as handled regardless of whether we got a message
+                    ai_event_handled = self.player.current_ai_chat.handle_input(event)
                 
                 # If AI handled the event, skip other processing
                 if ai_event_handled:

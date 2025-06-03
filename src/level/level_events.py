@@ -18,23 +18,22 @@ class EventHandlingMixin:
         
         # Check if AI chat window is open and handle its events first
         if hasattr(self.player, 'current_ai_chat') and self.player.current_ai_chat and self.player.current_ai_chat.is_active:
-            print(f"🔧 Handling AI chat event: {event.type}")
             # Handle AI chat input
             if event.type == pygame.KEYDOWN:
                 message = self.player.current_ai_chat.handle_input(event)
                 if message:
-                    print(f"🔧 Player sent message: {message}")
+                    print(f"🔧 [EventHandling] Player sent message: '{message}'")
                     # Find the NPC that owns this chat and send the message
                     for npc in self.npcs:
                         if hasattr(npc, 'chat_window') and npc.chat_window == self.player.current_ai_chat:
-                            print(f"🔧 Found NPC {npc.name}, sending message to AI")
+                            print(f"🔧 [EventHandling] Found NPC {npc.name}, sending message to AI")
                             npc.chat_window.add_message("Player", message)
                             # Get AI response
                             if npc.game_context:
                                 context = npc.game_context.get_context()
                                 ai_response = npc.ai_integration.send_message(message, context)
                                 npc.chat_window.add_message(npc.name, ai_response)
-                                print(f"🔧 AI responded: {ai_response}")
+                                print(f"🔧 [EventHandling] AI responded: '{ai_response}'")
                             break
                 return  # AI chat consumed the event
         

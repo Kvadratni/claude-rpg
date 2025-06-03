@@ -603,7 +603,7 @@ class SpawningMixin:
 
 
     def enable_ai_for_npcs(self):
-        """Enable AI for specific NPCs"""
+        """Enable AI for specific NPCs immediately when world loads"""
         print(f"🔧 Enabling AI for NPCs... Found {len(self.npcs)} NPCs")
         try:
             # List of NPCs that should have AI capabilities
@@ -615,12 +615,24 @@ class SpawningMixin:
                 "Mysterious Wizard"
             ]
             
+            # Get game context for AI initialization
+            from ..ai_integration import GameContext
+            game_context = GameContext(self.player, self)
+            
             for npc in self.npcs:
                 print(f"🔍 Checking NPC: {npc.name}")
                 if npc.name in ai_enabled_npcs:
-                    # Mark NPC as AI-ready (we'll enable it when player interacts)
-                    npc.ai_ready = True
-                    print(f"🤖 {npc.name} marked as AI-ready")
+                    print(f"🤖 Starting AI session for {npc.name} immediately...")
+                    try:
+                        # Enable AI immediately instead of marking as ready
+                        npc.enable_ai(self.player, game_context)
+                        print(f"✅ {npc.name} AI session started successfully")
+                        # Don't set ai_ready since AI is already enabled
+                    except Exception as e:
+                        print(f"❌ Failed to start AI session for {npc.name}: {e}")
+                        # Fallback to marking as AI-ready for later initialization
+                        npc.ai_ready = True
+                        print(f"⚠️  {npc.name} marked as AI-ready for later initialization")
                 else:
                     npc.ai_ready = False
                     print(f"📝 {npc.name} marked as regular NPC")
@@ -629,6 +641,9 @@ class SpawningMixin:
             print(f"⚠️  Could not enable AI for NPCs: {e}")
             import traceback
             traceback.print_exc()
-            # Mark all NPCs as not AI-ready if there's an error
+            # Mark all NPCs as AI-ready for later initialization if there's an error
             for npc in self.npcs:
-                npc.ai_ready = False
+                if npc.name in ["Village Elder", "Master Merchant", "Guard Captain", "High Priest", "Mysterious Wizard"]:
+                    npc.ai_ready = True
+                else:
+                    npc.ai_ready = False

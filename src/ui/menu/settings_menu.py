@@ -15,7 +15,7 @@ class SettingsMenu(BaseMenu):
         self.menu_type = "settings"
         
         # Settings items
-        self.settings_items = ["Resolution", "Music Volume", "SFX Volume", "Fullscreen", "Apply", "Back"]
+        self.settings_items = ["Resolution", "Music Volume", "SFX Volume", "Fullscreen", "AI Model", "Apply", "Back"]
         self.selected_item = 0
         self.menu_hover_time = [0] * len(self.settings_items)
         
@@ -24,7 +24,8 @@ class SettingsMenu(BaseMenu):
         self.settings_values = {
             "music_volume": settings.get("music_volume"),
             "sfx_volume": settings.get("sfx_volume"),
-            "fullscreen": settings.get("fullscreen")
+            "fullscreen": settings.get("fullscreen"),
+            "ai_model": settings.get_ai_model()
         }
         
         # Resolution settings
@@ -39,6 +40,9 @@ class SettingsMenu(BaseMenu):
         self.resolution_dropdown_open = False
         self.dragging_music_slider = False
         self.dragging_sfx_slider = False
+        self.ai_model_editing = False
+        self.ai_model_cursor_pos = len(self.settings_values["ai_model"])
+        self.ai_model_cursor_blink = 0
         
         # UI element rectangles
         self._resolution_dropdown_rect = None
@@ -46,6 +50,7 @@ class SettingsMenu(BaseMenu):
         self._music_slider_rect = None
         self._sfx_slider_rect = None
         self._fullscreen_toggle_rect = None
+        self._ai_model_text_rect = None
     
     def handle_event(self, event):
         """Handle settings menu events"""
@@ -78,6 +83,49 @@ class SettingsMenu(BaseMenu):
                 self.dragging_sfx_slider = False
                 
         elif event.type == pygame.KEYDOWN:
+            # Handle AI model text input when editing
+            if self.ai_model_editing:
+                if event.key == pygame.K_ESCAPE:
+                    self.ai_model_editing = False
+                elif event.key == pygame.K_RETURN:
+                    self.ai_model_editing = False
+                elif event.key == pygame.K_BACKSPACE:
+                    if self.ai_model_cursor_pos > 0:
+                        text = self.settings_values["ai_model"]
+                        self.settings_values["ai_model"] = text[:self.ai_model_cursor_pos-1] + text[self.ai_model_cursor_pos:]
+                        self.ai_model_cursor_pos -= 1
+                elif event.key == pygame.K_DELETE:
+                    text = self.settings_values["ai_model"]
+                    if self.ai_model_cursor_pos < len(text):
+                        self.settings_values["ai_model"] = text[:self.ai_model_cursor_pos] + text[self.ai_model_cursor_pos+1:]
+                elif event.key == pygame.K_LEFT:
+                    self.ai_model_cursor_pos = max(0, self.ai_model_cursor_pos - 1)
+                elif event.key == pygame.K_RIGHT:
+                    self.ai_model_cursor_pos = min(len(self.settings_values["ai_model"]), self.ai_model_cursor_pos + 1)
+                elif event.key == pygame.K_HOME:
+                    self.ai_model_cursor_pos = 0
+                elif event.key == pygame.K_END:
+                    self.ai_model_cursor_pos = len(self.settings_values["ai_model"])
+                elif event.key == pygame.K_v and (event.mod & pygame.KMOD_CTRL):
+                    # Handle paste
+                    try:
+                        import pyperclip
+                        clipboard_text = pyperclip.paste()
+                        if clipboard_text:
+                            # Insert clipboard text at cursor position
+                            text = self.settings_values["ai_model"]
+                            self.settings_values["ai_model"] = text[:self.ai_model_cursor_pos] + clipboard_text + text[self.ai_model_cursor_pos:]
+                            self.ai_model_cursor_pos += len(clipboard_text)
+                    except ImportError:
+                        print("pyperclip not available for paste functionality")
+                elif event.unicode and event.unicode.isprintable():
+                    # Insert typed character
+                    text = self.settings_values["ai_model"]
+                    self.settings_values["ai_model"] = text[:self.ai_model_cursor_pos] + event.unicode + text[self.ai_model_cursor_pos:]
+                    self.ai_model_cursor_pos += 1
+                return  # Don't process other key events when editing
+            
+            # Regular menu navigation
             if event.key == pygame.K_ESCAPE:
                 self.back_to_parent()
             elif event.key == pygame.K_UP:
@@ -138,6 +186,27 @@ class SettingsMenu(BaseMenu):
             self.settings_values["fullscreen"] = not self.settings_values["fullscreen"]
             return True
         
+        # Check if clicking on AI model text field
+        if self._ai_model_text_rect and self._ai_model_text_rect.collidepoint(mouse_x, mouse_y):
+            self.ai_model_editing = True
+            # Set cursor position based on click position
+            text_width = self.subtitle_font.size(self.settings_values["ai_model"])[0]
+            relative_x = mouse_x - self._ai_model_text_rect.x - 10  # 10px padding
+            if relative_x <= 0:
+                self.ai_model_cursor_pos = 0
+            elif relative_x >= text_width:
+                self.ai_model_cursor_pos = len(self.settings_values["ai_model"])
+            else:
+                # Approximate cursor position based on click
+                char_width = text_width / len(self.settings_values["ai_model"]) if self.settings_values["ai_model"] else 10
+                self.ai_model_cursor_pos = min(len(self.settings_values["ai_model"]), int(relative_x / char_width))
+            return True
+        else:
+            # Click outside text field - stop editing
+            if self.ai_model_editing:
+                self.ai_model_editing = False
+                return True
+        
         return False
     
     def update_volume_from_mouse(self, mouse_pos, volume_type):
@@ -170,9 +239,12 @@ class SettingsMenu(BaseMenu):
             self.adjust_setting(2, 1)
         elif self.selected_item == 3:  # Fullscreen
             self.adjust_setting(3, 1)
-        elif self.selected_item == 4:  # Apply
+        elif self.selected_item == 4:  # AI Model
+            self.ai_model_editing = True
+            self.ai_model_cursor_pos = len(self.settings_values["ai_model"])
+        elif self.selected_item == 5:  # Apply
             self.apply_settings()
-        elif self.selected_item == 5:  # Back
+        elif self.selected_item == 6:  # Back
             self.back_to_parent()
     
     def apply_settings(self):
@@ -190,6 +262,9 @@ class SettingsMenu(BaseMenu):
         settings.set("music_volume", self.settings_values["music_volume"])
         settings.set("sfx_volume", self.settings_values["sfx_volume"])
         settings.set("fullscreen", self.settings_values["fullscreen"])
+        
+        # Apply AI model setting
+        settings.set_ai_model(self.settings_values["ai_model"])
         
         # Save settings
         settings.save_settings()
@@ -259,7 +334,7 @@ class SettingsMenu(BaseMenu):
             is_hovered = (i == self.mouse_hover)
             
             # Render label (except for Apply/Back buttons)
-            if i < 4:
+            if i < 5:
                 label_color = self.colors['menu_selected'] if is_hovered else self.colors['menu_normal']
                 label_surface = self.menu_font.render(item, True, label_color)
                 label_rect = label_surface.get_rect()
@@ -276,7 +351,9 @@ class SettingsMenu(BaseMenu):
                 self.render_volume_slider(screen, width // 2 + 50, y_pos, "sfx", is_hovered)
             elif i == 3:  # Fullscreen toggle
                 self.render_fullscreen_toggle(screen, width // 2 + 50, y_pos, is_hovered)
-            elif i == 4 or i == 5:  # Apply/Back buttons
+            elif i == 4:  # AI Model text field
+                self.render_ai_model_field(screen, width // 2 + 50, y_pos, is_hovered)
+            elif i == 5 or i == 6:  # Apply/Back buttons
                 self.render_button(screen, width // 2, y_pos, item, is_hovered, i)
     
     def render_resolution_dropdown(self, screen, x, y, is_hovered):
@@ -372,6 +449,78 @@ class SettingsMenu(BaseMenu):
         
         # Store toggle rect for menu system
         self.menu_rects[3] = toggle_rect
+    
+    def render_ai_model_field(self, screen, x, y, is_hovered):
+        """Render AI model text input field"""
+        field_width = 250
+        field_height = 40
+        field_rect = pygame.Rect(x, y - field_height // 2, field_width, field_height)
+        self._ai_model_text_rect = field_rect
+        
+        # Field background
+        if self.ai_model_editing:
+            bg_color = (80, 80, 120)  # Slightly blue when editing
+            border_color = self.colors['accent_blue']
+        elif is_hovered:
+            bg_color = (70, 70, 70)
+            border_color = self.colors['menu_selected']
+        else:
+            bg_color = (50, 50, 50)
+            border_color = self.colors['border_color']
+        
+        pygame.draw.rect(screen, bg_color, field_rect)
+        pygame.draw.rect(screen, border_color, field_rect, 2)
+        
+        # Text content
+        text_content = self.settings_values["ai_model"]
+        if not text_content and not self.ai_model_editing:
+            # Show placeholder text
+            placeholder_surface = self.subtitle_font.render("Enter AI model name...", True, (120, 120, 120))
+            text_rect = placeholder_surface.get_rect()
+            text_rect.x = field_rect.x + 10
+            text_rect.centery = field_rect.centery
+            screen.blit(placeholder_surface, text_rect)
+        else:
+            # Show actual text
+            text_surface = self.subtitle_font.render(text_content, True, (255, 255, 255))
+            text_rect = text_surface.get_rect()
+            text_rect.x = field_rect.x + 10
+            text_rect.centery = field_rect.centery
+            
+            # Scroll text if it's too long
+            if text_rect.width > field_width - 20:
+                # Calculate scroll offset to keep cursor visible
+                char_width = text_rect.width / len(text_content) if text_content else 10
+                cursor_x = self.ai_model_cursor_pos * char_width
+                max_visible_width = field_width - 30
+                
+                if cursor_x > max_visible_width:
+                    scroll_offset = cursor_x - max_visible_width
+                    text_rect.x -= scroll_offset
+            
+            screen.blit(text_surface, text_rect)
+            
+            # Draw cursor when editing
+            if self.ai_model_editing:
+                self.ai_model_cursor_blink += 1
+                if self.ai_model_cursor_blink % 60 < 30:  # Blink every second
+                    cursor_x = text_rect.x + (self.ai_model_cursor_pos * (text_rect.width / len(text_content) if text_content else 10))
+                    cursor_rect = pygame.Rect(cursor_x, field_rect.y + 5, 2, field_height - 10)
+                    pygame.draw.rect(screen, (255, 255, 255), cursor_rect)
+        
+        # Show model history dropdown hint
+        if is_hovered and not self.ai_model_editing:
+            history = self.game.settings.get_ai_model_history()
+            if history:
+                hint_text = f"Recent: {', '.join(history[:3])}"
+                hint_surface = self.small_font.render(hint_text, True, (180, 180, 180))
+                hint_rect = hint_surface.get_rect()
+                hint_rect.x = field_rect.x
+                hint_rect.y = field_rect.bottom + 5
+                screen.blit(hint_surface, hint_rect)
+        
+        # Store field rect for menu system
+        self.menu_rects[4] = field_rect
     
     def render_button(self, screen, x, y, text, is_hovered, index):
         """Render Apply/Back buttons"""

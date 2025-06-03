@@ -10,7 +10,7 @@
 The Goose CLI subprocess calls are not capturing the full AI response output. When running Goose recipes via `subprocess.run()` or `subprocess.Popen()`, only the recipe loading information is captured, but the actual AI response is lost.
 
 **Evidence**:
-- Manual command works: `goose run --recipe recipes/village_elder.yaml --params "message=Hello" --params "context=test" --no-session`
+- Manual command works: `goose run --recipe recipes/village_elder.yaml --params "message=Hello" --params "context=test" --interactive --resume`
 - Subprocess calls only capture ~468 characters (recipe loading info)
 - AI responses are generated (confirmed by manual testing) but not captured by Python subprocess
 
