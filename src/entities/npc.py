@@ -42,7 +42,15 @@ class NPC(Entity):
             from ..ai_integration import EnhancedGooseRecipeIntegration, AIChatWindow
             print(f"🔧 [NPC] Successfully imported AI classes")
             
-            self.ai_integration = EnhancedGooseRecipeIntegration(self.name)
+            # Get global recipe manager from game
+            game_recipe_manager = None
+            if hasattr(player_ref, 'game') and hasattr(player_ref.game, 'recipe_manager'):
+                game_recipe_manager = player_ref.game.recipe_manager
+                print(f"🔧 [NPC] Using global recipe manager from game")
+            else:
+                print(f"⚠️  [NPC] No global recipe manager found, will create new one")
+            
+            self.ai_integration = EnhancedGooseRecipeIntegration(self.name, game_recipe_manager=game_recipe_manager)
             print(f"🔧 [NPC] Created EnhancedGooseRecipeIntegration for {self.name}")
             
             self.chat_window = AIChatWindow(self.asset_loader)

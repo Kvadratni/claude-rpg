@@ -505,7 +505,7 @@ except ImportError as e:
 class EnhancedGooseRecipeIntegration(GooseRecipeIntegration):
     """Enhanced version with recipe support and fallback AI"""
     
-    def __init__(self, npc_name: str):
+    def __init__(self, npc_name: str, game_recipe_manager=None):
         print(f"🔧 [EnhancedGooseRecipeIntegration] Initializing for {npc_name}")
         print(f"🔧 [EnhancedGooseRecipeIntegration] RECIPES_AVAILABLE: {RECIPES_AVAILABLE}")
         
@@ -517,7 +517,7 @@ class EnhancedGooseRecipeIntegration(GooseRecipeIntegration):
         if RECIPES_AVAILABLE:
             try:
                 print(f"🔧 [EnhancedGooseRecipeIntegration] Attempting to create RecipeBasedGooseIntegration")
-                self.recipe_integration = RecipeBasedGooseIntegration(npc_name, "recipes")
+                self.recipe_integration = RecipeBasedGooseIntegration(npc_name, "recipes", game_recipe_manager)
                 self.use_recipes = True
                 print(f"✅ [EnhancedGooseRecipeIntegration] Recipe integration created for {npc_name}")
             except Exception as e:

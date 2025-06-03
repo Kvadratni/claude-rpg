@@ -47,6 +47,12 @@ class Game:
         self.asset_loader = AssetLoader()
         self.game_log = GameLog()
         
+        # Initialize AI recipe manager globally
+        print("🔧 [Game] Initializing global AI recipe manager...")
+        from .recipe_manager import GooseRecipeManager
+        self.recipe_manager = GooseRecipeManager("recipes")
+        print(f"✅ [Game] Global recipe manager initialized with {len(self.recipe_manager.recipes)} recipes")
+        
         # Initialize game components
         self.menu = MainMenu(self)
         self.player = None

@@ -135,7 +135,7 @@ class GooseRecipeManager:
             safe_message = user_message.replace("'", "\\'").replace('"', '\\"')
             safe_context = context.replace("'", "\\'").replace('"', '\\"')
             
-            cmd_str = f"goose run --recipe '{recipe_file}' --params 'message={safe_message}' --params 'context={safe_context}' --interactive"
+            cmd_str = f"goose run --recipe '{recipe_file}' --params 'message={safe_message}' --params 'context={safe_context}' --session 'npc_{recipe_name}'"
             
             print(f"🔧 [RecipeManager] Command to execute: {cmd_str}")
             print(f"🔧 [RecipeManager] Working directory: {os.getcwd()}")
@@ -310,33 +310,100 @@ class GooseRecipeManager:
 
 # Enhanced integration class that uses recipes
 class RecipeBasedGooseIntegration:
-    """Goose integration that uses recipe files for NPC personalities"""
+    """Goose integration that uses recipe files for NPC personalities with session management"""
     
-    def __init__(self, npc_name: str, recipes_dir: str = "recipes"):
+    def __init__(self, npc_name: str, recipes_dir: str = "recipes", game_recipe_manager=None):
         print(f"🔧 [RecipeIntegration] Initializing for NPC: '{npc_name}' with recipes_dir: '{recipes_dir}'")
         self.npc_name = npc_name
         self.conversation_history = []
-        self.recipe_manager = GooseRecipeManager(recipes_dir)
+        
+        # Use global recipe manager if provided, otherwise create new one
+        if game_recipe_manager:
+            print(f"🔧 [RecipeIntegration] Using global recipe manager for {npc_name}")
+            self.recipe_manager = game_recipe_manager
+        else:
+            print(f"🔧 [RecipeIntegration] Creating new recipe manager for {npc_name}")
+            self.recipe_manager = GooseRecipeManager(recipes_dir)
+        
         self.recipe_name = self.recipe_manager.get_npc_recipe(npc_name)
+        self.session_name = f"npc_{self.recipe_name}" if self.recipe_name else None
+        self.session_initialized = False
         
         if self.recipe_name:
             print(f"✅ [RecipeIntegration] {npc_name} using recipe: {self.recipe_name}")
+            print(f"🔧 [RecipeIntegration] Session name: {self.session_name}")
+            # Pre-initialize the session
+            self._initialize_session()
         else:
             print(f"⚠️  [RecipeIntegration] No recipe found for {npc_name}, available recipes: {self.recipe_manager.list_recipes()}")
     
+    def _initialize_session(self):
+        """Pre-initialize the AI session for this NPC"""
+        if not self.recipe_name:
+            return False
+        
+        try:
+            print(f"🔧 [RecipeIntegration] Pre-initializing session for {self.npc_name}")
+            
+            # Run a simple initialization message to start the session
+            init_response = self.recipe_manager.run_recipe(
+                self.recipe_name, 
+                "Initialize", 
+                "NPC is being prepared for conversation"
+            )
+            
+            if init_response and len(init_response.strip()) > 5:
+                self.session_initialized = True
+                print(f"✅ [RecipeIntegration] Session pre-initialized for {self.npc_name}")
+                print(f"🔧 [RecipeIntegration] Init response: '{init_response[:50]}...'")
+                return True
+            else:
+                print(f"⚠️  [RecipeIntegration] Session initialization failed for {self.npc_name}")
+                return False
+                
+        except Exception as e:
+            print(f"❌ [RecipeIntegration] Error initializing session for {self.npc_name}: {e}")
+            return False
+    
+    def _get_conversation_context(self) -> str:
+        """Build conversation context from history"""
+        if not self.conversation_history:
+            return "This is the beginning of our conversation."
+        
+        context_parts = ["Previous conversation:"]
+        # Include last few exchanges to maintain context
+        recent_history = self.conversation_history[-3:]  # Last 3 exchanges
+        
+        for exchange in recent_history:
+            context_parts.append(f"Player: {exchange['player']}")
+            context_parts.append(f"You: {exchange['npc']}")
+        
+        context_parts.append("Current interaction:")
+        return "\n".join(context_parts)
+    
     def send_message(self, message: str, context: str = "") -> str:
-        """Send message using the appropriate recipe"""
+        """Send message using the appropriate recipe with session context"""
         print(f"🔧 [RecipeIntegration] send_message called for {self.npc_name}")
         print(f"🔧 [RecipeIntegration] Message: '{message}', Context: '{context}'")
+        print(f"🔧 [RecipeIntegration] Session initialized: {self.session_initialized}")
         
         if not self.recipe_name:
             print(f"❌ [RecipeIntegration] No recipe available for {self.npc_name}")
             return f"*{self.npc_name} nods thoughtfully*"
         
         try:
+            # Build enhanced context with conversation history
+            conversation_context = self._get_conversation_context()
+            enhanced_context = f"{context}\n{conversation_context}" if context else conversation_context
+            
             print(f"🔧 [RecipeIntegration] Calling recipe_manager.run_recipe for {self.recipe_name}")
-            response = self.recipe_manager.run_recipe(self.recipe_name, message, context)
+            print(f"🔧 [RecipeIntegration] Enhanced context: '{enhanced_context[:100]}...'")
+            
+            response = self.recipe_manager.run_recipe(self.recipe_name, message, enhanced_context)
+            
+            # Store in conversation history
             self.conversation_history.append({"player": message, "npc": response})
+            
             print(f"✅ [RecipeIntegration] Successfully got response for {self.npc_name}: '{response[:50]}...'")
             return response
         except Exception as e:
