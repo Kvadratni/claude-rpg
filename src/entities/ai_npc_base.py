@@ -32,6 +32,9 @@ class BaseAINPC(Entity):
         self.session_initialized = False
         self.first_interaction = True  # Track if this is the first interaction
         
+        # MCP integration
+        self.npc_id = f"{self.name.lower().replace(' ', '_')}_{id(self)}"
+        
         # Create NPC sprite
         self.create_npc_sprite()
     
@@ -405,6 +408,9 @@ class BaseAINPC(Entity):
         """Get current game context for AI"""
         context_parts = []
         
+        # Add NPC ID for MCP tools
+        context_parts.append(f"NPC ID: {self.npc_id}")
+        
         if player:
             context_parts.append(f"Player Level: {getattr(player, 'level', 1)}")
             context_parts.append(f"Player HP: {getattr(player, 'hp', 100)}/{getattr(player, 'max_hp', 100)}")
@@ -426,7 +432,7 @@ class BaseAINPC(Entity):
                 if item_count > 0:
                     context_parts.append(f"Player has {item_count} items in inventory")
         
-        return " | ".join(context_parts) if context_parts else "Player is exploring the world"
+        return " | ".join(context_parts) if context_parts else f"NPC ID: {self.npc_id} | Player is exploring the world"
     
     def create_npc_sprite(self):
         """Create NPC sprite - override in subclasses for specific appearances"""
