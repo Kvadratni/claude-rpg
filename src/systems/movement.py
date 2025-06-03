@@ -164,7 +164,7 @@ class MovementSystem:
     
     def _check_entity_click(self, tile_x, tile_y, level):
         """Check if click is on an entity - with more forgiving click detection"""
-        click_radius = 0.7  # Allow clicks within 0.7 tiles of entity center
+        click_radius = 1.2  # Increased for much more forgiving clicks
         
         # Check NPCs
         for npc in level.npcs:
