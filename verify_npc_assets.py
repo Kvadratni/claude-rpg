@@ -1,121 +1,171 @@
 #!/usr/bin/env python3
 """
-Verify that all NPCs have proper asset mappings
+Final verification of NPC asset coverage
 """
 
-import sys
 import os
+import sys
+sys.path.append(os.path.dirname(os.path.abspath(__file__)))
 
-# Add the project root to the path
-sys.path.insert(0, '/Users/mnovich/Development/claude-rpg/src')
+from src.world.settlement_manager import ChunkSettlementManager
 
 def verify_npc_assets():
-    """Verify all NPCs have asset mappings"""
-    from procedural_generation.src.settlement_generator import SettlementGenerator
+    """Verify all NPC assets exist and are properly mapped"""
     
-    print("=== NPC ASSET VERIFICATION ===")
+    print("🎯 Final NPC Asset Verification")
+    print("=" * 35)
     
-    # Get all NPCs from settlement templates
-    generator = SettlementGenerator(100, 100, 12345)
+    # Get all NPCs from settlement system
+    sm = ChunkSettlementManager(12345)
     all_npcs = set()
+    npc_to_settlement = {}
     
-    for template_name, template_config in generator.SETTLEMENT_TEMPLATES.items():
-        for building in template_config['buildings']:
-            if building.get('npc'):
-                all_npcs.add(building['npc'])
+    for settlement_type, config in sm.SETTLEMENT_TEMPLATES.items():
+        for building in config['buildings']:
+            if 'npc' in building:
+                npc_name = building['npc']
+                all_npcs.add(npc_name)
+                if npc_name not in npc_to_settlement:
+                    npc_to_settlement[npc_name] = []
+                npc_to_settlement[npc_name].append(settlement_type)
     
-    print(f"Found {len(all_npcs)} unique NPC types in settlements:")
-    for npc in sorted(all_npcs):
-        print(f"  - {npc}")
-    
-    # Check sprite mappings from NPC class
-    print("\nChecking sprite mappings...")
-    
-    # Check sprite mappings from NPC class - UPDATED WITH NEW SPRITES
-    sprite_mappings = {
-        # Existing NPCs with dedicated assets
-        "Master Merchant": "npc_shopkeeper",
-        "Shopkeeper": "npc_shopkeeper", 
-        "Village Elder": "elder_npc",
-        "Elder": "elder_npc",
-        "Guard Captain": "guard_captain",
-        "Guard": "village_guard_sprite",
-        "Master Smith": "master_smith",
-        "Blacksmith": "master_smith",
-        "Innkeeper": "innkeeper",
-        "High Priest": "high_priest",
-        "Mine Foreman": "mine_foreman",
-        "Harbor Master": "harbor_master",
-        "Caravan Master": "caravan_master",
-        "Forest Ranger": "forest_ranger",
-        "Master Herbalist": "master_herbalist",
-        "Mysterious Wizard": "mysterious_wizard",
-        "Old Hermit": "old_hermit",
-        
-        # New NPCs - NOW WITH DEDICATED SPRITES!
-        "Desert Guide": "desert_guide",      # NEW dedicated sprite
-        "Head Miner": "head_miner",          # NEW dedicated sprite
-        "Master Fisher": "master_fisher",    # NEW dedicated sprite
-        "Trade Master": "trade_master",      # NEW dedicated sprite
-        "Stable Master": "stable_master",    # NEW dedicated sprite
-        "Water Keeper": "water_keeper",      # NEW dedicated sprite
-        "Lodge Keeper": "lodge_keeper"       # NEW dedicated sprite
+    # NPC to asset mapping (from our updated NPC.py)
+    npc_mappings = {
+        'Master Merchant': 'npc_shopkeeper',
+        'Trader': 'trade_master',
+        'Rich Merchant': 'trade_master',
+        'Market Master': 'trade_master',
+        'Village Elder': 'elder_npc',
+        'Mayor': 'mayor',
+        'Noble': 'noble',
+        'Guard Captain': 'guard_captain',
+        'Commander': 'guard_captain',
+        'Barracks Chief': 'guard_captain',
+        'Master Smith': 'master_smith',
+        'Tool Maker': 'master_smith',
+        'Weapon Master': 'master_smith',
+        'Craftsman': 'craftsman',
+        'Innkeeper': 'innkeeper',
+        'Inn Master': 'innkeeper',
+        'Lodge Keeper': 'innkeeper',
+        'Barkeeper': 'barkeeper',
+        'High Priest': 'high_priest',
+        'Archbishop': 'high_priest',
+        'Forest Priest': 'high_priest',
+        'Mine Foreman': 'mine_foreman',
+        'Ore Master': 'mine_foreman',
+        'Veteran Miner': 'mine_foreman',
+        'Assayer': 'assayer',
+        'Harbor Master': 'harbor_master',
+        'Dock Master': 'harbor_master',
+        'Fisherman': 'master_fisher',
+        'Old Fisherman': 'master_fisher',
+        'Fish Merchant': 'master_fisher',
+        'Net Weaver': 'master_fisher',
+        'Smoke Master': 'master_fisher',
+        'Sailor': 'master_fisher',
+        'Boat Builder': 'boat_builder',
+        'Caravan Master': 'caravan_master',
+        'Desert Guide': 'caravan_master',
+        'Desert Nomad': 'caravan_master',
+        'Oasis Keeper': 'caravan_master',
+        'Forest Ranger': 'forest_ranger',
+        'Scout Leader': 'forest_ranger',
+        'Hunter': 'forest_ranger',
+        'Tree Keeper': 'forest_ranger',
+        'Master Woodcutter': 'master_woodcutter',
+        'Master Herbalist': 'master_herbalist',
+        'Herb Gatherer': 'master_herbalist',
+        'Forest Druid': 'master_herbalist',
+        'Swamp Alchemist': 'master_herbalist',
+        'Mysterious Wizard': 'mysterious_wizard',
+        'Court Wizard': 'mysterious_wizard',
+        'Swamp Witch': 'swamp_witch',
+        'Old Hermit': 'old_hermit',
+        'Swamp Dweller': 'old_hermit',
+        'Villager': 'old_hermit',
+        'Stable Master': 'stable_master',
+        'Banker': 'banker',
+        'Librarian': 'librarian',
+        'Guild Master': 'guild_master',
+        'Miller': 'miller',
+        'Fur Trader': 'fur_trader',
+        'Ice Keeper': 'ice_keeper',
+        'Water Keeper': 'water_keeper',
+        'Mushroom Farmer': 'mushroom_farmer',
     }
     
-    # Check available assets
-    assets_dir = "/Users/mnovich/Development/claude-rpg/assets/images"
-    available_assets = set()
-    
+    # Check which assets exist
+    assets_dir = 'assets/images'
+    existing_assets = set()
     if os.path.exists(assets_dir):
-        for file in os.listdir(assets_dir):
-            if file.endswith('.png'):
-                available_assets.add(file[:-4])  # Remove .png extension
+        existing_assets = set(f.replace('.png', '') for f in os.listdir(assets_dir) if f.endswith('.png'))
     
-    print(f"\nFound {len(available_assets)} image assets")
+    # Verify coverage
+    print(f"📊 Settlement System Overview:")
+    print(f"   Settlement Types: {len(sm.SETTLEMENT_TEMPLATES)}")
+    print(f"   Total Unique NPCs: {len(all_npcs)}")
+    print(f"   Available Assets: {len(existing_assets)}")
     
-    # Verify each NPC has a mapping and the asset exists
-    missing_mappings = []
-    missing_assets = []
+    # Check each NPC
+    print(f"\n🎭 NPC Verification by Settlement Type:")
+    print("-" * 40)
     
-    for npc_name in sorted(all_npcs):
-        if npc_name not in sprite_mappings:
-            missing_mappings.append(npc_name)
-        else:
-            asset_name = sprite_mappings[npc_name]
-            if asset_name not in available_assets:
-                missing_assets.append((npc_name, asset_name))
+    all_good = True
+    total_mapped = 0
+    total_assets_found = 0
     
-    # Report results
-    print("\n=== VERIFICATION RESULTS ===")
-    
-    if not missing_mappings and not missing_assets:
-        print("✅ ALL NPCs HAVE PROPER ASSET MAPPINGS!")
-        print("\nNPC → Asset mappings:")
-        for npc_name in sorted(all_npcs):
-            asset_name = sprite_mappings[npc_name]
-            status = "✓" if asset_name in available_assets else "✗"
-            print(f"  {status} {npc_name} → {asset_name}")
-    else:
-        if missing_mappings:
-            print(f"❌ {len(missing_mappings)} NPCs missing sprite mappings:")
-            for npc in missing_mappings:
-                print(f"  - {npc}")
+    for settlement_type, config in sm.SETTLEMENT_TEMPLATES.items():
+        print(f"\n🏘️  {settlement_type}:")
+        settlement_npcs = [b['npc'] for b in config['buildings'] if 'npc' in b]
         
-        if missing_assets:
-            print(f"❌ {len(missing_assets)} NPCs have mappings to missing assets:")
-            for npc, asset in missing_assets:
-                print(f"  - {npc} → {asset} (asset not found)")
+        for npc_name in settlement_npcs:
+            total_mapped += 1
+            asset_name = npc_mappings.get(npc_name)
+            
+            if asset_name and asset_name in existing_assets:
+                total_assets_found += 1
+                shop_indicator = "🛒" if any(b.get('has_shop') for b in config['buildings'] if b.get('npc') == npc_name) else "💬"
+                print(f"   ✅ {shop_indicator} {npc_name} → {asset_name}.png")
+            elif asset_name:
+                print(f"   ❌ {npc_name} → {asset_name}.png (MISSING)")
+                all_good = False
+            else:
+                print(f"   ⚠️  {npc_name} → NO MAPPING")
+                all_good = False
     
-    return len(missing_mappings) == 0 and len(missing_assets) == 0
+    # New assets we generated
+    new_assets = [
+        'mayor', 'noble', 'banker', 'librarian', 'guild_master', 'barkeeper',
+        'craftsman', 'master_woodcutter', 'miller', 'boat_builder', 'swamp_witch',
+        'fur_trader', 'ice_keeper', 'water_keeper', 'mushroom_farmer', 'assayer'
+    ]
+    
+    print(f"\n🎨 Newly Generated Assets:")
+    print("-" * 25)
+    new_assets_found = 0
+    for asset in new_assets:
+        if asset in existing_assets:
+            new_assets_found += 1
+            print(f"   ✅ {asset}.png")
+        else:
+            print(f"   ❌ {asset}.png (MISSING)")
+    
+    # Final summary
+    print(f"\n📈 Final Verification Results:")
+    print("=" * 30)
+    print(f"   Total NPCs: {len(all_npcs)}")
+    print(f"   Mapped NPCs: {total_mapped}")
+    print(f"   Assets Found: {total_assets_found}/{total_mapped} ({total_assets_found/total_mapped*100:.1f}%)")
+    print(f"   New Assets Generated: {new_assets_found}/{len(new_assets)} ({new_assets_found/len(new_assets)*100:.1f}%)")
+    
+    if all_good and total_assets_found == total_mapped:
+        print(f"\n🎉 PERFECT! All {len(all_npcs)} NPCs have proper asset coverage!")
+        print(f"✅ Enhanced settlement system is ready with full NPC asset support")
+        return True
+    else:
+        print(f"\n⚠️  Some issues found, but fallback generation will handle missing assets")
+        return False
 
 if __name__ == "__main__":
-    try:
-        success = verify_npc_assets()
-        if success:
-            print("\n🎉 All NPCs are properly configured with assets!")
-        else:
-            print("\n⚠️  Some NPCs need attention.")
-    except Exception as e:
-        print(f"Error during verification: {e}")
-        import traceback
-        traceback.print_exc()
+    verify_npc_assets()

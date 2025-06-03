@@ -34,35 +34,90 @@ class NPC(Entity):
         
         # Try to use loaded sprite first
         if self.asset_loader:
-            # Map NPC names to sprite assets - NOW WITH DEDICATED SPRITES
+            # Map NPC names to sprite assets - EXPANDED MAPPING
             sprite_mappings = {
                 # Existing NPCs with dedicated assets
                 "Master Merchant": "npc_shopkeeper",
                 "Shopkeeper": "npc_shopkeeper", 
+                "Trader": "trade_master",  # Use existing trade_master asset
+                "Rich Merchant": "trade_master",
+                "Market Master": "trade_master",
+                
                 "Village Elder": "elder_npc",
                 "Elder": "elder_npc",
+                
                 "Guard Captain": "guard_captain",
                 "Guard": "village_guard_sprite",
+                "Commander": "guard_captain",  # Reuse guard captain
+                "Barracks Chief": "guard_captain",
+                
                 "Master Smith": "master_smith",
                 "Blacksmith": "master_smith",
-                "Innkeeper": "innkeeper",
-                "High Priest": "high_priest",
-                "Mine Foreman": "mine_foreman",
-                "Harbor Master": "harbor_master",
-                "Caravan Master": "caravan_master",
-                "Forest Ranger": "forest_ranger",
-                "Master Herbalist": "master_herbalist",
-                "Mysterious Wizard": "mysterious_wizard",
-                "Old Hermit": "old_hermit",
+                "Tool Maker": "master_smith",  # Reuse smith for tool maker
+                "Weapon Master": "master_smith",
                 
-                # New NPCs - NOW WITH DEDICATED SPRITES!
-                "Desert Guide": "desert_guide",      # NEW dedicated sprite
-                "Head Miner": "head_miner",          # NEW dedicated sprite
-                "Master Fisher": "master_fisher",    # NEW dedicated sprite
-                "Trade Master": "trade_master",      # NEW dedicated sprite
-                "Stable Master": "stable_master",    # NEW dedicated sprite
-                "Water Keeper": "water_keeper",      # NEW dedicated sprite
-                "Lodge Keeper": "lodge_keeper"       # NEW dedicated sprite
+                "Innkeeper": "innkeeper",
+                "Inn Master": "innkeeper",
+                "Lodge Keeper": "innkeeper",  # Reuse innkeeper
+                
+                "High Priest": "high_priest",
+                "Archbishop": "high_priest",  # Reuse priest
+                "Forest Priest": "high_priest",
+                
+                "Mine Foreman": "mine_foreman",
+                "Ore Master": "mine_foreman",  # Reuse mine foreman
+                "Veteran Miner": "mine_foreman",
+                
+                "Harbor Master": "harbor_master",
+                "Dock Master": "harbor_master",  # Reuse harbor master
+                "Fisherman": "master_fisher",
+                "Old Fisherman": "master_fisher",
+                "Fish Merchant": "master_fisher",
+                "Net Weaver": "master_fisher",
+                "Smoke Master": "master_fisher",
+                "Sailor": "master_fisher",
+                
+                "Caravan Master": "caravan_master",
+                "Desert Guide": "caravan_master",  # Reuse caravan master
+                "Desert Nomad": "caravan_master",
+                "Oasis Keeper": "caravan_master",
+                
+                "Forest Ranger": "forest_ranger",
+                "Scout Leader": "forest_ranger",  # Reuse ranger
+                "Hunter": "forest_ranger",
+                "Tree Keeper": "forest_ranger",
+                
+                "Master Herbalist": "master_herbalist",
+                "Herb Gatherer": "master_herbalist",  # Reuse herbalist
+                "Forest Druid": "master_herbalist",
+                "Swamp Alchemist": "master_herbalist",
+                
+                "Mysterious Wizard": "mysterious_wizard",
+                "Court Wizard": "mysterious_wizard",  # Reuse wizard
+                
+                "Old Hermit": "old_hermit",
+                "Swamp Dweller": "old_hermit",  # Reuse hermit
+                "Villager": "old_hermit",
+                
+                "Stable Master": "stable_master",
+                
+                # NPCs that need new assets (will use fallback generation)
+                "Mayor": "mayor",  # NEW ASSET NEEDED
+                "Noble": "noble",  # NEW ASSET NEEDED
+                "Banker": "banker",  # NEW ASSET NEEDED
+                "Librarian": "librarian",  # NEW ASSET NEEDED
+                "Guild Master": "guild_master",  # NEW ASSET NEEDED
+                "Barkeeper": "barkeeper",  # NEW ASSET NEEDED
+                "Craftsman": "craftsman",  # NEW ASSET NEEDED
+                "Master Woodcutter": "master_woodcutter",  # NEW ASSET NEEDED
+                "Miller": "miller",  # NEW ASSET NEEDED
+                "Boat Builder": "boat_builder",  # NEW ASSET NEEDED
+                "Swamp Witch": "swamp_witch",  # NEW ASSET NEEDED
+                "Fur Trader": "fur_trader",  # NEW ASSET NEEDED
+                "Ice Keeper": "ice_keeper",  # NEW ASSET NEEDED
+                "Water Keeper": "water_keeper",  # NEW ASSET NEEDED
+                "Mushroom Farmer": "mushroom_farmer",  # NEW ASSET NEEDED
+                "Assayer": "assayer",  # NEW ASSET NEEDED
             }
             
             sprite_name = sprite_mappings.get(self.name)

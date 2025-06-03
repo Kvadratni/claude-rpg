@@ -56,19 +56,43 @@ class SettlementPatternGenerator:
         self._create_default_patterns()
     
     def _create_default_patterns(self):
-        """Create default settlement patterns"""
+        """Create enhanced settlement patterns for all settlement types"""
         
-        # Small Village Pattern (12x12)
+        # Small Village Pattern (12x12) - Basic settlements
         self.patterns['small_village'] = self._create_small_village_pattern()
         
-        # Medium Town Pattern (16x16) 
-        self.patterns['medium_town'] = self._create_medium_town_pattern()
+        # Medium Village Pattern (16x16) - Standard villages
+        self.patterns['medium_village'] = self._create_medium_village_pattern()
         
-        # Large Settlement Pattern (20x20)
-        self.patterns['large_settlement'] = self._create_large_settlement_pattern()
+        # Large Village Pattern (20x20) - Large villages
+        self.patterns['large_village'] = self._create_large_village_pattern()
         
-        # Outpost Pattern (8x8)
+        # Town Pattern (24x24) - Major settlements
+        self.patterns['town'] = self._create_town_pattern()
+        
+        # Large Town Pattern (30x30) - Major towns
+        self.patterns['large_town'] = self._create_large_town_pattern()
+        
+        # Outpost Pattern (8x8) - Small outposts
         self.patterns['outpost'] = self._create_outpost_pattern()
+        
+        # Desert Outpost Pattern (12x12) - Desert settlements
+        self.patterns['desert_outpost'] = self._create_desert_outpost_pattern()
+        
+        # Mining Camp Pattern (14x14) - Mining settlements
+        self.patterns['mining_camp'] = self._create_mining_camp_pattern()
+        
+        # Fishing Village Pattern (16x16) - Coastal settlements
+        self.patterns['fishing_village'] = self._create_fishing_village_pattern()
+        
+        # Forest Camp Pattern (12x12) - Forest settlements
+        self.patterns['forest_camp'] = self._create_forest_camp_pattern()
+        
+        # Swamp Village Pattern (16x16) - Swamp settlements
+        self.patterns['swamp_village'] = self._create_swamp_village_pattern()
+        
+        # Snow Settlement Pattern (14x14) - Cold climate settlements
+        self.patterns['snow_settlement'] = self._create_snow_settlement_pattern()
     
     def _create_small_village_pattern(self) -> SettlementPattern:
         """Create a small village pattern with central square and surrounding buildings"""
@@ -107,11 +131,11 @@ class SettlementPatternGenerator:
         
         return SettlementPattern('small_village', size, pattern_data)
     
-    def _create_medium_town_pattern(self) -> SettlementPattern:
-        """Create a medium town pattern with multiple districts"""
+    def _create_medium_village_pattern(self) -> SettlementPattern:
+        """Create a medium village pattern (16x16)"""
         size = (16, 16)
         
-        # Create tile pattern - more complex layout
+        # Create tile pattern with organized layout
         tiles = []
         for y in range(16):
             row = []
@@ -122,33 +146,29 @@ class SettlementPatternGenerator:
                 # Secondary pathways
                 elif x == 4 or x == 12 or y == 4 or y == 12:
                     row.append(self.TILE_DIRT)
-                # Central plaza area
-                elif 6 <= x <= 10 and 6 <= y <= 10:
+                # Central plaza
+                elif 6 <= x <= 9 and 6 <= y <= 9:
                     row.append(self.TILE_BRICK)
                 else:
                     row.append(self.TILE_DIRT)
             tiles.append(row)
         
-        # Define building positions
+        # Define building positions for medium village
         buildings = [
-            # North district
-            {'x': 1, 'y': 1, 'width': 3, 'height': 3, 'type': 'house'},
-            {'x': 5, 'y': 1, 'width': 3, 'height': 3, 'type': 'house'},
-            {'x': 10, 'y': 1, 'width': 4, 'height': 3, 'type': 'inn'},
-            
-            # South district  
-            {'x': 1, 'y': 13, 'width': 3, 'height': 3, 'type': 'house'},
-            {'x': 5, 'y': 13, 'width': 4, 'height': 3, 'type': 'shop'},
-            {'x': 10, 'y': 13, 'width': 4, 'height': 3, 'type': 'blacksmith'},
-            
-            # East/West districts
-            {'x': 13, 'y': 5, 'width': 3, 'height': 3, 'type': 'house'},
+            # Central important buildings
+            {'x': 1, 'y': 1, 'width': 4, 'height': 3, 'type': 'inn'},
+            {'x': 10, 'y': 1, 'width': 4, 'height': 3, 'type': 'shop'},
+            {'x': 1, 'y': 12, 'width': 3, 'height': 3, 'type': 'blacksmith'},
+            {'x': 12, 'y': 12, 'width': 3, 'height': 3, 'type': 'temple'},
+            # Residential
             {'x': 1, 'y': 5, 'width': 3, 'height': 3, 'type': 'house'},
+            {'x': 12, 'y': 5, 'width': 3, 'height': 3, 'type': 'house'},
+            {'x': 5, 'y': 1, 'width': 3, 'height': 3, 'type': 'house'},
+            {'x': 5, 'y': 12, 'width': 3, 'height': 3, 'type': 'house'},
         ]
         
         pathways = [(8, y) for y in range(16)] + [(x, 8) for x in range(16)]
         pathways += [(4, y) for y in range(16)] + [(12, y) for y in range(16)]
-        pathways += [(x, 4) for x in range(16)] + [(x, 12) for x in range(16)]
         
         pattern_data = {
             'tiles': tiles,
@@ -156,18 +176,18 @@ class SettlementPatternGenerator:
             'pathways': pathways
         }
         
-        return SettlementPattern('medium_town', size, pattern_data)
+        return SettlementPattern('medium_village', size, pattern_data)
     
-    def _create_large_settlement_pattern(self) -> SettlementPattern:
-        """Create a large settlement pattern with organized districts"""
+    def _create_large_village_pattern(self) -> SettlementPattern:
+        """Create a large village pattern (20x20)"""
         size = (20, 20)
         
-        # Create tile pattern
+        # Create tile pattern with multiple districts
         tiles = []
         for y in range(20):
             row = []
             for x in range(20):
-                # Main cross pathways (wider)
+                # Main pathways (wider)
                 if 9 <= x <= 10 or 9 <= y <= 10:
                     row.append(self.TILE_STONE)
                 # District pathways
@@ -176,22 +196,18 @@ class SettlementPatternGenerator:
                 # Central plaza
                 elif 7 <= x <= 12 and 7 <= y <= 12:
                     row.append(self.TILE_BRICK)
-                # Corner plazas
-                elif (2 <= x <= 4 and 2 <= y <= 4) or (15 <= x <= 17 and 2 <= y <= 4) or \
-                     (2 <= x <= 4 and 15 <= y <= 17) or (15 <= x <= 17 and 15 <= y <= 17):
-                    row.append(self.TILE_STONE)
                 else:
                     row.append(self.TILE_DIRT)
             tiles.append(row)
         
-        # Define building positions - more organized layout
+        # Define building positions for large village
         buildings = [
-            # Central important buildings
+            # Central plaza buildings
             {'x': 8, 'y': 1, 'width': 4, 'height': 4, 'type': 'town_hall'},
             {'x': 1, 'y': 8, 'width': 4, 'height': 4, 'type': 'temple'},
             {'x': 15, 'y': 8, 'width': 4, 'height': 4, 'type': 'market'},
             
-            # Residential areas
+            # Residential quarter
             {'x': 1, 'y': 1, 'width': 3, 'height': 3, 'type': 'house'},
             {'x': 16, 'y': 1, 'width': 3, 'height': 3, 'type': 'house'},
             {'x': 1, 'y': 16, 'width': 3, 'height': 3, 'type': 'house'},
@@ -199,15 +215,17 @@ class SettlementPatternGenerator:
             
             # Commercial district
             {'x': 6, 'y': 16, 'width': 3, 'height': 3, 'type': 'shop'},
-            {'x': 11, 'y': 16, 'width': 3, 'height': 3, 'type': 'inn'},
+            {'x': 11, 'y': 16, 'width': 4, 'height': 3, 'type': 'inn'},
             {'x': 13, 'y': 1, 'width': 3, 'height': 3, 'type': 'blacksmith'},
+            
+            # Additional buildings
+            {'x': 1, 'y': 13, 'width': 3, 'height': 2, 'type': 'stable'},
+            {'x': 16, 'y': 13, 'width': 3, 'height': 2, 'type': 'workshop'},
         ]
         
         pathways = []
-        # Main pathways
         pathways += [(x, 9) for x in range(20)] + [(x, 10) for x in range(20)]
         pathways += [(9, y) for y in range(20)] + [(10, y) for y in range(20)]
-        # District pathways
         pathways += [(5, y) for y in range(20)] + [(15, y) for y in range(20)]
         pathways += [(x, 5) for x in range(20)] + [(x, 15) for x in range(20)]
         
@@ -217,10 +235,377 @@ class SettlementPatternGenerator:
             'pathways': pathways
         }
         
-        return SettlementPattern('large_settlement', size, pattern_data)
+        return SettlementPattern('large_village', size, pattern_data)
+    
+    def _create_town_pattern(self) -> SettlementPattern:
+        """Create a town pattern (24x24)"""
+        size = (24, 24)
+        
+        # Create sophisticated town layout
+        tiles = []
+        for y in range(24):
+            row = []
+            for x in range(24):
+                # Main boulevards
+                if 11 <= x <= 12 or 11 <= y <= 12:
+                    row.append(self.TILE_STONE)
+                # Secondary streets
+                elif x == 6 or x == 18 or y == 6 or y == 18:
+                    row.append(self.TILE_STONE)
+                # District paths
+                elif x == 3 or x == 21 or y == 3 or y == 21:
+                    row.append(self.TILE_DIRT)
+                # Central plaza
+                elif 9 <= x <= 14 and 9 <= y <= 14:
+                    row.append(self.TILE_BRICK)
+                # Corner plazas
+                elif (4 <= x <= 6 and 4 <= y <= 6) or (17 <= x <= 19 and 4 <= y <= 6) or \
+                     (4 <= x <= 6 and 17 <= y <= 19) or (17 <= x <= 19 and 17 <= y <= 19):
+                    row.append(self.TILE_BRICK)
+                else:
+                    row.append(self.TILE_DIRT)
+            tiles.append(row)
+        
+        # Define building positions for town
+        buildings = [
+            # Central government/religious district
+            {'x': 10, 'y': 1, 'width': 4, 'height': 5, 'type': 'town_hall'},
+            {'x': 1, 'y': 10, 'width': 5, 'height': 4, 'type': 'cathedral'},
+            {'x': 18, 'y': 10, 'width': 5, 'height': 4, 'type': 'market'},
+            
+            # Commercial district
+            {'x': 7, 'y': 19, 'width': 4, 'height': 4, 'type': 'inn'},
+            {'x': 13, 'y': 19, 'width': 4, 'height': 4, 'type': 'shop'},
+            {'x': 19, 'y': 1, 'width': 4, 'height': 3, 'type': 'blacksmith'},
+            {'x': 1, 'y': 19, 'width': 4, 'height': 4, 'type': 'guildhall'},
+            
+            # Residential districts
+            {'x': 1, 'y': 1, 'width': 3, 'height': 3, 'type': 'house'},
+            {'x': 20, 'y': 20, 'width': 3, 'height': 3, 'type': 'house'},
+            {'x': 1, 'y': 4, 'width': 3, 'height': 3, 'type': 'house'},
+            {'x': 20, 'y': 4, 'width': 3, 'height': 3, 'type': 'house'},
+            
+            # Specialized buildings
+            {'x': 15, 'y': 1, 'width': 3, 'height': 3, 'type': 'library'},
+            {'x': 1, 'y': 15, 'width': 3, 'height': 3, 'type': 'barracks'},
+            {'x': 20, 'y': 15, 'width': 3, 'height': 3, 'type': 'bank'},
+        ]
+        
+        pathways = []
+        # Main boulevards
+        pathways += [(x, 11) for x in range(24)] + [(x, 12) for x in range(24)]
+        pathways += [(11, y) for y in range(24)] + [(12, y) for y in range(24)]
+        # Secondary streets
+        pathways += [(6, y) for y in range(24)] + [(18, y) for y in range(24)]
+        pathways += [(x, 6) for x in range(24)] + [(x, 18) for x in range(24)]
+        
+        pattern_data = {
+            'tiles': tiles,
+            'buildings': buildings,
+            'pathways': pathways
+        }
+        
+        return SettlementPattern('town', size, pattern_data)
+    
+    def _create_large_town_pattern(self) -> SettlementPattern:
+        """Create a large town pattern (30x30)"""
+        size = (30, 30)
+        
+        # Create grand town layout
+        tiles = []
+        for y in range(30):
+            row = []
+            for x in range(30):
+                # Grand boulevards
+                if 14 <= x <= 15 or 14 <= y <= 15:
+                    row.append(self.TILE_STONE)
+                # Major streets
+                elif x == 7 or x == 22 or y == 7 or y == 22:
+                    row.append(self.TILE_STONE)
+                # Minor streets
+                elif x == 3 or x == 26 or y == 3 or y == 26:
+                    row.append(self.TILE_DIRT)
+                # Grand central plaza
+                elif 12 <= x <= 17 and 12 <= y <= 17:
+                    row.append(self.TILE_BRICK)
+                # District plazas
+                elif (5 <= x <= 7 and 5 <= y <= 7) or (22 <= x <= 24 and 5 <= y <= 7) or \
+                     (5 <= x <= 7 and 22 <= y <= 24) or (22 <= x <= 24 and 22 <= y <= 24):
+                    row.append(self.TILE_BRICK)
+                else:
+                    row.append(self.TILE_DIRT)
+            tiles.append(row)
+        
+        # Define building positions for large town
+        buildings = [
+            # Central government district
+            {'x': 12, 'y': 1, 'width': 6, 'height': 5, 'type': 'town_hall'},
+            {'x': 1, 'y': 12, 'width': 7, 'height': 6, 'type': 'cathedral'},
+            {'x': 22, 'y': 12, 'width': 7, 'height': 6, 'type': 'grand_market'},
+            
+            # Major commercial buildings
+            {'x': 8, 'y': 24, 'width': 6, 'height': 5, 'type': 'grand_inn'},
+            {'x': 16, 'y': 24, 'width': 5, 'height': 5, 'type': 'armory'},
+            {'x': 24, 'y': 1, 'width': 5, 'height': 4, 'type': 'magic_shop'},
+            {'x': 1, 'y': 24, 'width': 6, 'height': 5, 'type': 'guildhall'},
+            
+            # Institutional buildings
+            {'x': 19, 'y': 1, 'width': 4, 'height': 4, 'type': 'library'},
+            {'x': 1, 'y': 19, 'width': 5, 'height': 4, 'type': 'barracks'},
+            {'x': 24, 'y': 19, 'width': 5, 'height': 4, 'type': 'bank'},
+            
+            # Residential districts
+            {'x': 1, 'y': 1, 'width': 4, 'height': 4, 'type': 'noble_house'},
+            {'x': 25, 'y': 25, 'width': 4, 'height': 4, 'type': 'merchant_house'},
+            {'x': 1, 'y': 4, 'width': 3, 'height': 3, 'type': 'house'},
+            {'x': 26, 'y': 4, 'width': 3, 'height': 3, 'type': 'house'},
+            {'x': 4, 'y': 26, 'width': 3, 'height': 3, 'type': 'house'},
+            {'x': 23, 'y': 26, 'width': 3, 'height': 3, 'type': 'house'},
+        ]
+        
+        pathways = []
+        # Grand boulevards
+        pathways += [(x, 14) for x in range(30)] + [(x, 15) for x in range(30)]
+        pathways += [(14, y) for y in range(30)] + [(15, y) for y in range(30)]
+        # Major streets
+        pathways += [(7, y) for y in range(30)] + [(22, y) for y in range(30)]
+        pathways += [(x, 7) for x in range(30)] + [(x, 22) for x in range(30)]
+        
+        pattern_data = {
+            'tiles': tiles,
+            'buildings': buildings,
+            'pathways': pathways
+        }
+        
+        return SettlementPattern('large_town', size, pattern_data)
+    
+    def _create_desert_outpost_pattern(self) -> SettlementPattern:
+        """Create a desert outpost pattern (12x12)"""
+        size = (12, 12)
+        
+        # Desert layout with central courtyard
+        tiles = []
+        for y in range(12):
+            row = []
+            for x in range(12):
+                # Central courtyard
+                if 4 <= x <= 7 and 4 <= y <= 7:
+                    row.append(self.TILE_SAND)  # Open courtyard
+                # Pathways around courtyard
+                elif x == 3 or x == 8 or y == 3 or y == 8:
+                    row.append(self.TILE_STONE)
+                else:
+                    row.append(self.TILE_SAND)
+            tiles.append(row)
+        
+        buildings = [
+            {'x': 1, 'y': 1, 'width': 5, 'height': 3, 'type': 'trading_post'},
+            {'x': 7, 'y': 1, 'width': 4, 'height': 3, 'type': 'water_cistern'},
+            {'x': 1, 'y': 9, 'width': 6, 'height': 2, 'type': 'caravan_rest'},
+            {'x': 8, 'y': 9, 'width': 3, 'height': 2, 'type': 'shelter'},
+        ]
+        
+        pathways = [(3, y) for y in range(12)] + [(8, y) for y in range(12)]
+        pathways += [(x, 3) for x in range(12)] + [(x, 8) for x in range(12)]
+        
+        pattern_data = {
+            'tiles': tiles,
+            'buildings': buildings,
+            'pathways': pathways
+        }
+        
+        return SettlementPattern('desert_outpost', size, pattern_data)
+    
+    def _create_mining_camp_pattern(self) -> SettlementPattern:
+        """Create a mining camp pattern (14x14)"""
+        size = (14, 14)
+        
+        # Mining camp with industrial layout
+        tiles = []
+        for y in range(14):
+            row = []
+            for x in range(14):
+                # Main road to mine entrance
+                if x == 7 or y == 7:
+                    row.append(self.TILE_STONE)
+                # Work areas
+                elif 5 <= x <= 9 and 5 <= y <= 9:
+                    row.append(self.TILE_DIRT)
+                else:
+                    row.append(self.TILE_DIRT)
+            tiles.append(row)
+        
+        buildings = [
+            {'x': 6, 'y': 1, 'width': 4, 'height': 3, 'type': 'mine_entrance'},
+            {'x': 1, 'y': 5, 'width': 5, 'height': 4, 'type': 'ore_processing'},
+            {'x': 8, 'y': 10, 'width': 5, 'height': 3, 'type': 'barracks'},
+            {'x': 1, 'y': 10, 'width': 3, 'height': 3, 'type': 'tool_shop'},
+            {'x': 10, 'y': 5, 'width': 3, 'height': 3, 'type': 'assay_office'},
+        ]
+        
+        pathways = [(7, y) for y in range(14)] + [(x, 7) for x in range(14)]
+        
+        pattern_data = {
+            'tiles': tiles,
+            'buildings': buildings,
+            'pathways': pathways
+        }
+        
+        return SettlementPattern('mining_camp', size, pattern_data)
+    
+    def _create_fishing_village_pattern(self) -> SettlementPattern:
+        """Create a fishing village pattern (16x16)"""
+        size = (16, 16)
+        
+        # Coastal layout with docks
+        tiles = []
+        for y in range(16):
+            row = []
+            for x in range(16):
+                # Harbor area (bottom)
+                if y >= 12:
+                    row.append(self.TILE_WATER)
+                # Dock pathways
+                elif y == 11 or x == 8:
+                    row.append(self.TILE_STONE)
+                # Village area
+                else:
+                    row.append(self.TILE_DIRT)
+            tiles.append(row)
+        
+        buildings = [
+            {'x': 6, 'y': 10, 'width': 4, 'height': 2, 'type': 'dock'},
+            {'x': 1, 'y': 1, 'width': 4, 'height': 3, 'type': 'harbor_master'},
+            {'x': 10, 'y': 1, 'width': 5, 'height': 4, 'type': 'fish_market'},
+            {'x': 1, 'y': 5, 'width': 3, 'height': 3, 'type': 'net_maker'},
+            {'x': 12, 'y': 6, 'width': 3, 'height': 3, 'type': 'fisherman_hut'},
+            {'x': 5, 'y': 6, 'width': 4, 'height': 3, 'type': 'smokehouse'},
+        ]
+        
+        pathways = [(8, y) for y in range(12)] + [(x, 11) for x in range(16)]
+        
+        pattern_data = {
+            'tiles': tiles,
+            'buildings': buildings,
+            'pathways': pathways
+        }
+        
+        return SettlementPattern('fishing_village', size, pattern_data)
+    
+    def _create_forest_camp_pattern(self) -> SettlementPattern:
+        """Create a forest camp pattern (12x12)"""
+        size = (12, 12)
+        
+        # Forest layout with natural clearings
+        tiles = []
+        for y in range(12):
+            row = []
+            for x in range(12):
+                # Central clearing
+                if 4 <= x <= 7 and 4 <= y <= 7:
+                    row.append(self.TILE_FOREST_FLOOR)
+                # Natural paths
+                elif x == 6 or y == 6:
+                    row.append(self.TILE_DIRT)
+                else:
+                    row.append(self.TILE_FOREST_FLOOR)
+            tiles.append(row)
+        
+        buildings = [
+            {'x': 1, 'y': 1, 'width': 4, 'height': 3, 'type': 'woodcutter_lodge'},
+            {'x': 8, 'y': 8, 'width': 3, 'height': 3, 'type': 'druid_circle'},
+            {'x': 8, 'y': 1, 'width': 3, 'height': 3, 'type': 'scout_post'},
+            {'x': 1, 'y': 8, 'width': 4, 'height': 3, 'type': 'lumber_mill'},
+        ]
+        
+        pathways = [(6, y) for y in range(12)] + [(x, 6) for x in range(12)]
+        
+        pattern_data = {
+            'tiles': tiles,
+            'buildings': buildings,
+            'pathways': pathways
+        }
+        
+        return SettlementPattern('forest_camp', size, pattern_data)
+    
+    def _create_swamp_village_pattern(self) -> SettlementPattern:
+        """Create a swamp village pattern (16x16)"""
+        size = (16, 16)
+        
+        # Swamp layout with raised walkways
+        tiles = []
+        for y in range(16):
+            row = []
+            for x in range(16):
+                # Raised walkways
+                if x == 8 or y == 8 or (x == 4 and 4 <= y <= 12) or (x == 12 and 4 <= y <= 12):
+                    row.append(self.TILE_STONE)  # Raised walkways
+                # Building platforms
+                elif (2 <= x <= 5 and 2 <= y <= 5) or (10 <= x <= 13 and 2 <= y <= 5) or \
+                     (2 <= x <= 5 and 10 <= y <= 13) or (10 <= x <= 13 and 10 <= y <= 13):
+                    row.append(self.TILE_DIRT)  # Raised platforms
+                else:
+                    row.append(self.TILE_SWAMP)
+            tiles.append(row)
+        
+        buildings = [
+            {'x': 2, 'y': 2, 'width': 4, 'height': 4, 'type': 'alchemist_hut'},
+            {'x': 10, 'y': 2, 'width': 4, 'height': 3, 'type': 'witch_hut'},
+            {'x': 2, 'y': 10, 'width': 4, 'height': 4, 'type': 'boat_builder'},
+            {'x': 10, 'y': 10, 'width': 4, 'height': 4, 'type': 'stilted_house'},
+            {'x': 6, 'y': 12, 'width': 4, 'height': 3, 'type': 'mushroom_farm'},
+        ]
+        
+        pathways = [(8, y) for y in range(16)] + [(x, 8) for x in range(16)]
+        pathways += [(4, y) for y in range(4, 13)] + [(12, y) for y in range(4, 13)]
+        
+        pattern_data = {
+            'tiles': tiles,
+            'buildings': buildings,
+            'pathways': pathways
+        }
+        
+        return SettlementPattern('swamp_village', size, pattern_data)
+    
+    def _create_snow_settlement_pattern(self) -> SettlementPattern:
+        """Create a snow settlement pattern (14x14)"""
+        size = (14, 14)
+        
+        # Cold climate layout with central fire pit
+        tiles = []
+        for y in range(14):
+            row = []
+            for x in range(14):
+                # Central fire pit area
+                if 6 <= x <= 7 and 6 <= y <= 7:
+                    row.append(self.TILE_STONE)  # Fire pit
+                # Cleared paths
+                elif x == 7 or y == 7:
+                    row.append(self.TILE_DIRT)  # Cleared paths
+                else:
+                    row.append(self.TILE_SNOW)
+            tiles.append(row)
+        
+        buildings = [
+            {'x': 1, 'y': 1, 'width': 4, 'height': 4, 'type': 'warm_lodge'},
+            {'x': 9, 'y': 1, 'width': 4, 'height': 4, 'type': 'ranger_station'},
+            {'x': 1, 'y': 9, 'width': 3, 'height': 4, 'type': 'hunter_cabin'},
+            {'x': 5, 'y': 9, 'width': 4, 'height': 4, 'type': 'ice_house'},
+            {'x': 10, 'y': 9, 'width': 3, 'height': 4, 'type': 'herbalist_hut'},
+        ]
+        
+        pathways = [(7, y) for y in range(14)] + [(x, 7) for x in range(14)]
+        
+        pattern_data = {
+            'tiles': tiles,
+            'buildings': buildings,
+            'pathways': pathways
+        }
+        
+        return SettlementPattern('snow_settlement', size, pattern_data)
     
     def _create_outpost_pattern(self) -> SettlementPattern:
-        """Create a small outpost pattern"""
+        """Create a small outpost pattern (8x8)"""
         size = (8, 8)
         
         # Simple outpost layout
@@ -237,7 +622,7 @@ class SettlementPatternGenerator:
         
         buildings = [
             {'x': 1, 'y': 1, 'width': 3, 'height': 3, 'type': 'guard_post'},
-            {'x': 5, 'y': 5, 'width': 3, 'height': 3, 'type': 'storage'},
+            {'x': 5, 'y': 5, 'width': 2, 'height': 2, 'type': 'storage'},
         ]
         
         pathways = [(4, y) for y in range(8)] + [(x, 4) for x in range(8)]
@@ -252,24 +637,28 @@ class SettlementPatternGenerator:
     
     def get_pattern(self, settlement_type: str) -> SettlementPattern:
         """Get a pattern for a specific settlement type"""
-        # Map settlement types to patterns - FIXED to match actual settlement types
+        # Enhanced mapping to match new settlement types
         type_mapping = {
             # Main settlement types from settlement manager
-            'village': 'small_village',
-            'desert_outpost': 'outpost',
-            'snow_settlement': 'small_village',  # Use small village pattern for snow settlements
-            'swamp_village': 'small_village',    # Use small village pattern for swamp villages  
-            'forest_camp': 'outpost',            # Use outpost pattern for forest camps
+            'VILLAGE': 'medium_village',
+            'TOWN': 'large_town',
+            'DESERT_OUTPOST': 'desert_outpost',
+            'SNOW_SETTLEMENT': 'snow_settlement',
+            'SWAMP_VILLAGE': 'swamp_village',
+            'FOREST_CAMP': 'forest_camp',
+            'MINING_CAMP': 'mining_camp',
+            'FISHING_VILLAGE': 'fishing_village',
             
             # Legacy/fallback mappings
-            'town': 'medium_town', 
-            'city': 'large_settlement',
+            'village': 'medium_village',
+            'town': 'town',
+            'city': 'large_town',
             'outpost': 'outpost',
             'hamlet': 'small_village',
-            'settlement': 'medium_town'
+            'settlement': 'medium_village'
         }
         
-        pattern_name = type_mapping.get(settlement_type.lower(), 'small_village')
+        pattern_name = type_mapping.get(settlement_type.upper(), 'small_village')
         return self.patterns.get(pattern_name, self.patterns['small_village'])
     
     def adapt_pattern_to_biome(self, pattern: SettlementPattern, biome: str) -> SettlementPattern:

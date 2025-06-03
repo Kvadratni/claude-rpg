@@ -70,6 +70,23 @@ class AssetLoader:
             "master_herbalist": "master_herbalist.png",
             "mysterious_wizard": "mysterious_wizard.png",
             "old_hermit": "old_hermit.png",
+            # Additional NPCs that need new assets
+            "mayor": "mayor.png",
+            "noble": "noble.png", 
+            "banker": "banker.png",
+            "librarian": "librarian.png",
+            "guild_master": "guild_master.png",
+            "barkeeper": "barkeeper.png",
+            "craftsman": "craftsman.png",
+            "master_woodcutter": "master_woodcutter.png",
+            "miller": "miller.png",
+            "boat_builder": "boat_builder.png",
+            "swamp_witch": "swamp_witch.png",
+            "fur_trader": "fur_trader.png",
+            "ice_keeper": "ice_keeper.png",
+            "water_keeper": "water_keeper.png",
+            "mushroom_farmer": "mushroom_farmer.png",
+            "assayer": "assayer.png",
             # New Enemies
             "bandit_scout": "bandit_scout.png",
             "forest_sprite": "forest_sprite.png",
@@ -202,6 +219,23 @@ class AssetLoader:
             "master_herbalist": (50, 205, 50),  # Lime green
             "mysterious_wizard": (75, 0, 130),  # Indigo
             "old_hermit": (160, 160, 160),  # Gray
+            # Additional NPCs
+            "mayor": (128, 0, 128),  # Purple for authority
+            "noble": (255, 215, 0),  # Gold for wealth
+            "banker": (0, 100, 0),  # Dark green for money
+            "librarian": (139, 69, 19),  # Brown for books
+            "guild_master": (70, 130, 180),  # Steel blue for leadership
+            "barkeeper": (160, 82, 45),  # Saddle brown
+            "craftsman": (139, 69, 19),  # Brown for crafting
+            "master_woodcutter": (34, 139, 34),  # Forest green
+            "miller": (210, 180, 140),  # Tan for grain
+            "boat_builder": (0, 100, 150),  # Navy blue
+            "swamp_witch": (85, 107, 47),  # Dark olive green
+            "fur_trader": (160, 82, 45),  # Saddle brown
+            "ice_keeper": (173, 216, 230),  # Light blue
+            "water_keeper": (30, 144, 255),  # Dodger blue
+            "mushroom_farmer": (160, 82, 45),  # Saddle brown
+            "assayer": (105, 105, 105),  # Gray for minerals
             # New Enemies
             "bandit_scout": (101, 67, 33),  # Brown
             "forest_sprite": (50, 205, 50),  # Lime green
