@@ -166,6 +166,7 @@ class WorldGenerator:
         
         # Get settlement pattern
         base_pattern = self.pattern_generator.get_pattern(settlement_type)
+        print(f"    📋 Base pattern: {base_pattern.name} ({base_pattern.width}x{base_pattern.height})")
         
         # Determine dominant biome for pattern adaptation
         dominant_biome = self._get_dominant_biome_in_area(chunk, local_settlement_x, local_settlement_y, 
@@ -175,6 +176,7 @@ class WorldGenerator:
         settlement_pattern = self.pattern_generator.adapt_pattern_to_biome(base_pattern, dominant_biome)
         
         print(f"    🌍 Using {settlement_pattern.name} pattern adapted for {dominant_biome}")
+        print(f"    📐 Pattern size: {settlement_pattern.width}x{settlement_pattern.height} with {len(settlement_pattern.get_building_positions())} buildings")
         
         # Ensure settlement fits in chunk
         if (local_settlement_x + settlement_pattern.width >= Chunk.CHUNK_SIZE or 
