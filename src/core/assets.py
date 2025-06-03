@@ -71,6 +71,9 @@ class AssetLoader:
             "master_herbalist": "master_herbalist.png",
             "mysterious_wizard": "mysterious_wizard.png",
             "old_hermit": "old_hermit.png",
+            "stable_master": "stable_master.png",  # Added missing stable master
+            "master_fisher": "master_fisher.png",  # Added missing master fisher
+            "trade_master": "trade_master.png",    # Added missing trade master
             # Additional NPCs that need new assets
             "mayor": "mayor.png",
             "noble": "noble.png", 
@@ -221,6 +224,9 @@ class AssetLoader:
             "master_herbalist": (50, 205, 50),  # Lime green
             "mysterious_wizard": (75, 0, 130),  # Indigo
             "old_hermit": (160, 160, 160),  # Gray
+            "stable_master": (160, 82, 45),  # Saddle brown for stable master
+            "master_fisher": (0, 139, 139),  # Dark cyan for fisher
+            "trade_master": (255, 140, 0),   # Dark orange for trade master
             # Additional NPCs
             "mayor": (128, 0, 128),  # Purple for authority
             "noble": (255, 215, 0),  # Gold for wealth

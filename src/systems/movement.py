@@ -163,41 +163,41 @@ class MovementSystem:
             self._move_to_tile(target_tile_x, target_tile_y, level)
     
     def _check_entity_click(self, tile_x, tile_y, level):
-        """Check if click is on an entity"""
+        """Check if click is on an entity - with more forgiving click detection"""
+        click_radius = 0.7  # Allow clicks within 0.7 tiles of entity center
+        
         # Check NPCs
         for npc in level.npcs:
-            npc_tile_x = int(npc.x)
-            npc_tile_y = int(npc.y)
-            if npc_tile_x == tile_x and npc_tile_y == tile_y:
+            distance = math.sqrt((npc.x - tile_x - 0.5)**2 + (npc.y - tile_y - 0.5)**2)
+            if distance <= click_radius:
                 return npc
         
         # Check chests
         for chest in level.chests:
-            chest_tile_x = int(chest.x)
-            chest_tile_y = int(chest.y)
-            if chest_tile_x == tile_x and chest_tile_y == tile_y:
+            distance = math.sqrt((chest.x - tile_x - 0.5)**2 + (chest.y - tile_y - 0.5)**2)
+            if distance <= click_radius:
                 return chest
         
         # Check items
         for item in level.items:
-            item_tile_x = int(item.x)
-            item_tile_y = int(item.y)
-            if item_tile_x == tile_x and item_tile_y == tile_y:
+            distance = math.sqrt((item.x - tile_x - 0.5)**2 + (item.y - tile_y - 0.5)**2)
+            if distance <= click_radius:
                 return item
         
         # Check enemies
         for enemy in level.enemies:
-            enemy_tile_x = int(enemy.x)
-            enemy_tile_y = int(enemy.y)
-            if enemy_tile_x == tile_x and enemy_tile_y == tile_y:
+            distance = math.sqrt((enemy.x - tile_x - 0.5)**2 + (enemy.y - tile_y - 0.5)**2)
+            if distance <= click_radius:
                 return enemy
         
         return None
     
     def _handle_entity_interaction(self, entity, tile_x, tile_y, level):
         """Handle interaction with an entity"""
-        # Calculate distance to entity
-        distance = max(abs(self.player.tile_x - tile_x), abs(self.player.tile_y - tile_y))
+        # Calculate distance to entity's actual position
+        entity_tile_x = int(entity.x)
+        entity_tile_y = int(entity.y)
+        distance = max(abs(self.player.tile_x - entity_tile_x), abs(self.player.tile_y - entity_tile_y))
         
         if distance <= 1:
             # Adjacent or same tile - interact directly
@@ -224,8 +224,8 @@ class MovementSystem:
                         weapon_name = self.player.equipped_weapon.name if self.player.equipped_weapon else "fists"
                         self.player.game_log.add_message(f"Not enough stamina to attack with {weapon_name}! (Need {stamina_cost})", "combat")
         else:
-            # Too far - move towards entity
-            self._move_to_tile(tile_x, tile_y, level)
+            # Too far - move towards entity's position
+            self._move_to_tile(entity_tile_x, entity_tile_y, level)
     
     def _move_to_tile(self, target_tile_x, target_tile_y, level):
         """Move to a target tile using pathfinding"""

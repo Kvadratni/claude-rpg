@@ -90,6 +90,8 @@ class CombatSystem:
     
     def melee_attack(self, enemies, audio):
         """Perform melee attack on nearby enemies"""
+        attacked_any = False
+        
         for enemy in enemies[:]:
             # Calculate distance to enemy
             dx = enemy.x - self.player.x
@@ -98,6 +100,8 @@ class CombatSystem:
             
             # Check if enemy is within attack range (circular area around player)
             if distance <= self.attack_range:
+                attacked_any = True
+                
                 # Calculate base damage (unarmed combat)
                 base_damage = 15  # Base unarmed damage
                 damage = base_damage
@@ -136,6 +140,9 @@ class CombatSystem:
                 # Trigger combat music when player attacks
                 if audio and not audio.is_combat_music_active():
                     audio.start_combat_music()
+        
+        if not attacked_any and self.player.game_log:
+            self.player.game_log.add_message("No enemies in melee range!", "combat")
     
     def ranged_attack(self, enemies, audio):
         """Perform ranged attack on enemies within range"""

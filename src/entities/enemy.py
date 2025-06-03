@@ -22,7 +22,7 @@ class Enemy(Entity):
         # AI properties - speed varies by enemy type
         self.speed = self.get_enemy_speed()
         self.detection_range = 6 if not is_boss else 8
-        self.attack_range = 1.2
+        self.attack_range = 1.0  # Exactly 1 tile for melee attacks
         self.attack_cooldown = 0
         self.max_attack_cooldown = 60 if not is_boss else 40
         
@@ -46,28 +46,28 @@ class Enemy(Entity):
         
         speed_table = {
             # Fast, agile enemies
-            "Forest Sprite": 0.038,      # Very fast magical creature
-            "Bandit Scout": 0.032,       # Quick and nimble
-            "Goblin": 0.028,             # Fast and aggressive
-            "Forest Goblin": 0.026,      # Slightly slower in forest
+            "Forest Sprite": 0.095,      # Very fast magical creature
+            "Bandit Scout": 0.080,       # Quick and nimble
+            "Goblin": 0.070,             # Fast and aggressive
+            "Forest Goblin": 0.065,      # Slightly slower in forest
             
             # Normal speed enemies
-            "Giant Scorpion": 0.022,     # Decent speed with claws
-            "Crystal Elemental": 0.020,  # Magical floating movement
-            "Orc Warrior": 0.019,       # Armored but mobile
-            "Fire Drake": 0.018,         # Flying but cautious
+            "Giant Scorpion": 0.055,     # Decent speed with claws
+            "Crystal Elemental": 0.050,  # Magical floating movement
+            "Orc Warrior": 0.048,        # Armored but mobile
+            "Fire Drake": 0.045,         # Flying but cautious
             
             # Slow, heavy enemies
-            "Ancient Guardian": 0.016,   # Skeletal, deliberate movement
-            "Swamp Troll": 0.014,       # Large and lumbering
+            "Ancient Guardian": 0.040,   # Skeletal, deliberate movement
+            "Swamp Troll": 0.035,       # Large and lumbering
             
-            # Boss enemies (very slow but powerful)
-            "Orc Warlord": 0.012,       # Heavy armor, commanding presence
-            "Ancient Dragon": 0.010,     # Massive, deliberate movements
+            # Boss enemies (slow but powerful)
+            "Orc Warlord": 0.030,       # Heavy armor, commanding presence
+            "Ancient Dragon": 0.025,     # Massive, deliberate movements
         }
         
         # Get speed for this enemy type, with fallback for unknown types
-        base_speed = speed_table.get(self.name, 0.020)  # Default to normal speed
+        base_speed = speed_table.get(self.name, 0.050)  # Default to normal speed
         
         # Apply boss modifier if needed (some bosses already have their speed set above)
         if self.is_boss and self.name not in speed_table:

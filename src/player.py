@@ -39,7 +39,7 @@ class Player:
         
         # Combat stats
         self.attack_damage = 25
-        self.attack_range = 1.2
+        self.attack_range = 1.2  # Slightly more than 1 tile for forgiving melee attacks
         self.defense = 5
         
         # Inventory
