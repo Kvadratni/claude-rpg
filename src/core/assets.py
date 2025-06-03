@@ -56,6 +56,7 @@ class AssetLoader:
             "goblin_sprite": "goblin_sprite.png",
             "orc_boss_sprite": "orc_boss_sprite.png",
             "npc_shopkeeper": "npc_shopkeeper.png",
+            "trader": "trader.png",
             "elder_npc": "elder_npc.png",  # Added elder NPC
             "village_guard_sprite": "village_guard_sprite.png",  # Added village guard
             # New NPCs
@@ -205,6 +206,7 @@ class AssetLoader:
             "goblin_sprite": (0, 100, 0),
             "orc_boss_sprite": (139, 0, 0),
             "npc_shopkeeper": (255, 215, 0),
+            "trader": (210, 180, 140),  # Tan for simple trader
             "elder_npc": (128, 0, 128),  # Purple for elder
             "village_guard_sprite": (70, 130, 180),  # Steel blue for guard
             # New NPCs

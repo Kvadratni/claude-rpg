@@ -39,7 +39,7 @@ class NPC(Entity):
                 # Existing NPCs with dedicated assets
                 "Master Merchant": "npc_shopkeeper",
                 "Shopkeeper": "npc_shopkeeper", 
-                "Trader": "trade_master",  # Use existing trade_master asset
+                "Trader": "trader",  # Use dedicated trader asset
                 "Rich Merchant": "trade_master",
                 "Market Master": "trade_master",
                 
