@@ -26,7 +26,7 @@ class Quest:
             self.progress[i] = {
                 "completed": False,
                 "current": 0,
-                "target": objective.get("target", 1)
+                "target": objective.get("count", 1)
             }
     
     def can_start(self, completed_quests):
@@ -178,8 +178,8 @@ class QuestManager:
             "The Orc Threat",
             "The village is under threat from an Orc Chief and his minions. Defeat them to save the village.",
             objectives=[
-                {"type": "kill", "target": "Goblin", "target": 5},
-                {"type": "kill", "target": "Orc Chief", "target": 1}
+                {"type": "kill", "target": "Goblin", "count": 5},
+                {"type": "kill", "target": "Orc Chief", "count": 1}
             ],
             rewards={
                 "experience": 500,
@@ -195,8 +195,8 @@ class QuestManager:
             "Getting Started",
             "Learn the basics of survival in this dangerous world.",
             objectives=[
-                {"type": "collect", "target": "Health Potion", "target": 1},
-                {"type": "kill", "target": "any", "target": 1}
+                {"type": "collect", "target": "Health Potion", "count": 1},
+                {"type": "kill", "target": "any", "count": 1}
             ],
             rewards={
                 "experience": 50,
@@ -211,8 +211,8 @@ class QuestManager:
             "Arm Yourself",
             "Find proper equipment to survive the dangers ahead.",
             objectives=[
-                {"type": "equip", "target": "weapon", "target": 1},
-                {"type": "equip", "target": "armor", "target": 1}
+                {"type": "equip", "target": "weapon", "count": 1},
+                {"type": "equip", "target": "armor", "count": 1}
             ],
             rewards={
                 "experience": 75,
@@ -228,8 +228,8 @@ class QuestManager:
             "Support Local Business",
             "Visit the shopkeeper and make your first purchase.",
             objectives=[
-                {"type": "talk", "target": "Shopkeeper", "target": 1},
-                {"type": "purchase", "target": "any", "target": 1}
+                {"type": "talk", "target": "Shopkeeper", "count": 1},
+                {"type": "purchase", "target": "any", "count": 1}
             ],
             rewards={
                 "experience": 25,

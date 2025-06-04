@@ -222,6 +222,11 @@ class Shop:
         if player.game_log:
             player.game_log.add_message(f"Purchased {item.name} for {item.value} gold!", "item")
         
+        # Update quest progress for purchases
+        if hasattr(player, 'game') and hasattr(player.game, 'quest_manager'):
+            player.game.quest_manager.update_quest_progress("purchase", item.name)
+            player.game.quest_manager.update_quest_progress("purchase", "any")
+        
         return True
     
     def sell_item(self, item, player):

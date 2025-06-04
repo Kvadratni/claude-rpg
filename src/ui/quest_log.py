@@ -217,7 +217,7 @@ class QuestLog:
         """Get preview text for an objective"""
         obj_type = objective["type"]
         target = objective.get("target", "")
-        amount = objective.get("target", 1) if isinstance(objective.get("target"), int) else 1
+        amount = objective.get("count", 1)
         
         if obj_type == "kill":
             return f"Defeat {amount} {target}"
