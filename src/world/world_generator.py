@@ -511,19 +511,52 @@ class WorldGenerator:
                         chunk.set_tile(x, y, 4)  # TILE_WALL
                         tiles_placed += 1
         
-        # FIXED: Add door(s) - replace bottom wall sections
+        # FIXED: Add door(s) with randomized placement on different sides
+        tiles_placed += self._add_randomized_doors_to_chunk(chunk, start_x, start_y, width, height)
+        
+        print(f"            Building created with {tiles_placed} tiles")
+        return tiles_placed
+    
+    def _add_randomized_doors_to_chunk(self, chunk: Chunk, start_x: int, start_y: int, 
+                                      width: int, height: int) -> int:
+        """
+        Add doors to buildings with randomized placement on different sides
+        
+        Args:
+            chunk: Chunk to modify
+            start_x, start_y: Building starting position
+            width, height: Building dimensions
+            
+        Returns:
+            Number of door tiles placed
+        """
+        # Define possible door sides with weights
+        door_sides = ['bottom', 'top', 'left', 'right']
+        door_weights = [0.35, 0.2, 0.2, 0.25]  # Bottom slightly favored, but all sides possible
+        
+        # Choose a random side for the door
+        chosen_side = random.choices(door_sides, weights=door_weights)[0]
+        
+        # Place door based on chosen side
+        if chosen_side == 'bottom':
+            return self._place_door_bottom_chunk(chunk, start_x, start_y, width, height)
+        elif chosen_side == 'top':
+            return self._place_door_top_chunk(chunk, start_x, start_y, width, height)
+        elif chosen_side == 'left':
+            return self._place_door_left_chunk(chunk, start_x, start_y, width, height)
+        elif chosen_side == 'right':
+            return self._place_door_right_chunk(chunk, start_x, start_y, width, height)
+        
+        return 0
+    
+    def _place_door_bottom_chunk(self, chunk: Chunk, start_x: int, start_y: int, 
+                                width: int, height: int) -> int:
+        """Place door(s) on the bottom wall of the building"""
         door_center_x = start_x + width // 2
         door_y = start_y + height - 1
+        doors_placed = 0
         
-        # For 3x3 buildings, use single door in center
-        # For larger buildings, use double doors
-        if width == 3:
-            # Single door for 3x3 buildings
-            if (0 <= door_center_x < Chunk.CHUNK_SIZE and 0 <= door_y < Chunk.CHUNK_SIZE and 
-                door_center_x > start_x and door_center_x < start_x + width - 1):
-                chunk.set_tile(door_center_x, door_y, 5)  # TILE_DOOR
-                tiles_placed += 1
-        elif width >= 6:
+        if width >= 6:
             # Double door for larger buildings
             door_x1 = door_center_x - 1
             door_x2 = door_center_x
@@ -531,18 +564,107 @@ class WorldGenerator:
             if (0 <= door_x1 < Chunk.CHUNK_SIZE and 0 <= door_y < Chunk.CHUNK_SIZE and 
                 door_x1 > start_x and door_x1 < start_x + width - 1):
                 chunk.set_tile(door_x1, door_y, 5)  # TILE_DOOR
-                tiles_placed += 1
+                doors_placed += 1
             
             if (0 <= door_x2 < Chunk.CHUNK_SIZE and 0 <= door_y < Chunk.CHUNK_SIZE and 
                 door_x2 > start_x and door_x2 < start_x + width - 1):
                 chunk.set_tile(door_x2, door_y, 5)  # TILE_DOOR
-                tiles_placed += 1
+                doors_placed += 1
         else:
-            # Single door for medium buildings
+            # Single door for smaller buildings
             if (0 <= door_center_x < Chunk.CHUNK_SIZE and 0 <= door_y < Chunk.CHUNK_SIZE and 
                 door_center_x > start_x and door_center_x < start_x + width - 1):
                 chunk.set_tile(door_center_x, door_y, 5)  # TILE_DOOR
-                tiles_placed += 1
+                doors_placed += 1
         
-        print(f"            Building created with {tiles_placed} tiles")
-        return tiles_placed
+        return doors_placed
+    
+    def _place_door_top_chunk(self, chunk: Chunk, start_x: int, start_y: int, 
+                             width: int, height: int) -> int:
+        """Place door(s) on the top wall of the building"""
+        door_center_x = start_x + width // 2
+        door_y = start_y
+        doors_placed = 0
+        
+        if width >= 6:
+            # Double door for larger buildings
+            door_x1 = door_center_x - 1
+            door_x2 = door_center_x
+            
+            if (0 <= door_x1 < Chunk.CHUNK_SIZE and 0 <= door_y < Chunk.CHUNK_SIZE and 
+                door_x1 > start_x and door_x1 < start_x + width - 1):
+                chunk.set_tile(door_x1, door_y, 5)  # TILE_DOOR
+                doors_placed += 1
+            
+            if (0 <= door_x2 < Chunk.CHUNK_SIZE and 0 <= door_y < Chunk.CHUNK_SIZE and 
+                door_x2 > start_x and door_x2 < start_x + width - 1):
+                chunk.set_tile(door_x2, door_y, 5)  # TILE_DOOR
+                doors_placed += 1
+        else:
+            # Single door for smaller buildings
+            if (0 <= door_center_x < Chunk.CHUNK_SIZE and 0 <= door_y < Chunk.CHUNK_SIZE and 
+                door_center_x > start_x and door_center_x < start_x + width - 1):
+                chunk.set_tile(door_center_x, door_y, 5)  # TILE_DOOR
+                doors_placed += 1
+        
+        return doors_placed
+    
+    def _place_door_left_chunk(self, chunk: Chunk, start_x: int, start_y: int, 
+                              width: int, height: int) -> int:
+        """Place door(s) on the left wall of the building"""
+        door_x = start_x
+        door_center_y = start_y + height // 2
+        doors_placed = 0
+        
+        if height >= 6:
+            # Double door for taller buildings
+            door_y1 = door_center_y - 1
+            door_y2 = door_center_y
+            
+            if (0 <= door_x < Chunk.CHUNK_SIZE and 0 <= door_y1 < Chunk.CHUNK_SIZE and 
+                door_y1 > start_y and door_y1 < start_y + height - 1):
+                chunk.set_tile(door_x, door_y1, 5)  # TILE_DOOR
+                doors_placed += 1
+            
+            if (0 <= door_x < Chunk.CHUNK_SIZE and 0 <= door_y2 < Chunk.CHUNK_SIZE and 
+                door_y2 > start_y and door_y2 < start_y + height - 1):
+                chunk.set_tile(door_x, door_y2, 5)  # TILE_DOOR
+                doors_placed += 1
+        else:
+            # Single door for smaller buildings
+            if (0 <= door_x < Chunk.CHUNK_SIZE and 0 <= door_center_y < Chunk.CHUNK_SIZE and 
+                door_center_y > start_y and door_center_y < start_y + height - 1):
+                chunk.set_tile(door_x, door_center_y, 5)  # TILE_DOOR
+                doors_placed += 1
+        
+        return doors_placed
+    
+    def _place_door_right_chunk(self, chunk: Chunk, start_x: int, start_y: int, 
+                               width: int, height: int) -> int:
+        """Place door(s) on the right wall of the building"""
+        door_x = start_x + width - 1
+        door_center_y = start_y + height // 2
+        doors_placed = 0
+        
+        if height >= 6:
+            # Double door for taller buildings
+            door_y1 = door_center_y - 1
+            door_y2 = door_center_y
+            
+            if (0 <= door_x < Chunk.CHUNK_SIZE and 0 <= door_y1 < Chunk.CHUNK_SIZE and 
+                door_y1 > start_y and door_y1 < start_y + height - 1):
+                chunk.set_tile(door_x, door_y1, 5)  # TILE_DOOR
+                doors_placed += 1
+            
+            if (0 <= door_x < Chunk.CHUNK_SIZE and 0 <= door_y2 < Chunk.CHUNK_SIZE and 
+                door_y2 > start_y and door_y2 < start_y + height - 1):
+                chunk.set_tile(door_x, door_y2, 5)  # TILE_DOOR
+                doors_placed += 1
+        else:
+            # Single door for smaller buildings
+            if (0 <= door_x < Chunk.CHUNK_SIZE and 0 <= door_center_y < Chunk.CHUNK_SIZE and 
+                door_center_y > start_y and door_center_y < start_y + height - 1):
+                chunk.set_tile(door_x, door_center_y, 5)  # TILE_DOOR
+                doors_placed += 1
+        
+        return doors_placed

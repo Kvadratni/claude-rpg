@@ -43,7 +43,7 @@ class EnhancedSettlementGenerator:
     BUILDING_SHAPES = {
         'rectangle': {
             'pattern': [(0, 0, 1, 1)],  # Single rectangle
-            'door_positions': ['bottom_center']
+            'door_positions': ['random_side']  # Changed from bottom_center only
         },
         'L_shape': {
             'pattern': [
@@ -335,26 +335,38 @@ class EnhancedSettlementGenerator:
         door_positions = shape_info['door_positions']
         
         for door_pos in door_positions:
-            if door_pos == 'bottom_center':
-                door_x = start_x + width // 2
-                door_y = start_y + height - 1
-                if 0 <= door_x < self.width and 0 <= door_y < self.height:
-                    tiles[door_y][door_x] = self.TILE_DOOR
-            elif door_pos == 'top_center':
-                door_x = start_x + width // 2
-                door_y = start_y
-                if 0 <= door_x < self.width and 0 <= door_y < self.height:
-                    tiles[door_y][door_x] = self.TILE_DOOR
-            elif door_pos == 'left_center':
-                door_x = start_x
-                door_y = start_y + height // 2
-                if 0 <= door_x < self.width and 0 <= door_y < self.height:
-                    tiles[door_y][door_x] = self.TILE_DOOR
-            elif door_pos == 'right_center':
-                door_x = start_x + width - 1
-                door_y = start_y + height // 2
-                if 0 <= door_x < self.width and 0 <= door_y < self.height:
-                    tiles[door_y][door_x] = self.TILE_DOOR
+            if door_pos == 'random_side':
+                # Choose a random side for the door
+                door_sides = ['bottom_center', 'top_center', 'left_center', 'right_center']
+                door_weights = [0.35, 0.2, 0.2, 0.25]  # Bottom slightly favored
+                chosen_door_pos = random.choices(door_sides, weights=door_weights)[0]
+                self._place_door_at_position(tiles, start_x, start_y, width, height, chosen_door_pos)
+            else:
+                self._place_door_at_position(tiles, start_x, start_y, width, height, door_pos)
+    
+    def _place_door_at_position(self, tiles: List[List[int]], start_x: int, start_y: int, 
+                               width: int, height: int, door_pos: str) -> None:
+        """Place a door at the specified position"""
+        if door_pos == 'bottom_center':
+            door_x = start_x + width // 2
+            door_y = start_y + height - 1
+            if 0 <= door_x < self.width and 0 <= door_y < self.height:
+                tiles[door_y][door_x] = self.TILE_DOOR
+        elif door_pos == 'top_center':
+            door_x = start_x + width // 2
+            door_y = start_y
+            if 0 <= door_x < self.width and 0 <= door_y < self.height:
+                tiles[door_y][door_x] = self.TILE_DOOR
+        elif door_pos == 'left_center':
+            door_x = start_x
+            door_y = start_y + height // 2
+            if 0 <= door_x < self.width and 0 <= door_y < self.height:
+                tiles[door_y][door_x] = self.TILE_DOOR
+        elif door_pos == 'right_center':
+            door_x = start_x + width - 1
+            door_y = start_y + height // 2
+            if 0 <= door_x < self.width and 0 <= door_y < self.height:
+                tiles[door_y][door_x] = self.TILE_DOOR
     
     def _create_road_network(self, tiles: List[List[int]], start_x: int, start_y: int, 
                            pattern: SettlementPattern, biome: str) -> None:

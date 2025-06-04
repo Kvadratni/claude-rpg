@@ -414,22 +414,132 @@ class SettlementGenerator:
                         # This shouldn't happen, but fallback to regular wall
                         tiles[y][x] = 4  # TILE_WALL
         
-        # Add double doors (2 tiles wide) - replace bottom wall sections
+        # Add doors with randomized placement on different sides
+        self._add_randomized_doors(tiles, start_x, start_y, width, height)
+    
+    def _add_randomized_doors(self, tiles: List[List[int]], start_x: int, start_y: int, 
+                             width: int, height: int) -> None:
+        """
+        Add doors to buildings with randomized placement on different sides
+        
+        Args:
+            tiles: 2D list of tile types
+            start_x, start_y: Building starting position
+            width, height: Building dimensions
+        """
+        # Define possible door sides with weights
+        # Bottom and right are slightly more common (traditional/practical)
+        door_sides = ['bottom', 'top', 'left', 'right']
+        door_weights = [0.35, 0.2, 0.2, 0.25]  # Bottom slightly favored, but all sides possible
+        
+        # Choose a random side for the door
+        chosen_side = random.choices(door_sides, weights=door_weights)[0]
+        
+        # Place door based on chosen side
+        if chosen_side == 'bottom':
+            self._place_door_bottom(tiles, start_x, start_y, width, height)
+        elif chosen_side == 'top':
+            self._place_door_top(tiles, start_x, start_y, width, height)
+        elif chosen_side == 'left':
+            self._place_door_left(tiles, start_x, start_y, width, height)
+        elif chosen_side == 'right':
+            self._place_door_right(tiles, start_x, start_y, width, height)
+    
+    def _place_door_bottom(self, tiles: List[List[int]], start_x: int, start_y: int, 
+                          width: int, height: int) -> None:
+        """Place door(s) on the bottom wall of the building"""
         door_center_x = start_x + width // 2
         door_y = start_y + height - 1
         
-        # Create 2-tile wide door centered on the building
-        door_x1 = door_center_x - 1
-        door_x2 = door_center_x
+        if width >= 6:
+            # Double door for larger buildings
+            door_x1 = door_center_x - 1
+            door_x2 = door_center_x
+            
+            if (0 <= door_x1 < self.width and 0 <= door_y < self.height and 
+                door_x1 > start_x and door_x1 < start_x + width - 1):
+                tiles[door_y][door_x1] = 5  # TILE_DOOR
+            
+            if (0 <= door_x2 < self.width and 0 <= door_y < self.height and 
+                door_x2 > start_x and door_x2 < start_x + width - 1):
+                tiles[door_y][door_x2] = 5  # TILE_DOOR
+        else:
+            # Single door for smaller buildings
+            if (0 <= door_center_x < self.width and 0 <= door_y < self.height and 
+                door_center_x > start_x and door_center_x < start_x + width - 1):
+                tiles[door_y][door_center_x] = 5  # TILE_DOOR
+    
+    def _place_door_top(self, tiles: List[List[int]], start_x: int, start_y: int, 
+                       width: int, height: int) -> None:
+        """Place door(s) on the top wall of the building"""
+        door_center_x = start_x + width // 2
+        door_y = start_y
         
-        # Make sure both door positions are valid and within the building wall
-        if (0 <= door_x1 < self.width and 0 <= door_y < self.height and 
-            door_x1 > start_x and door_x1 < start_x + width - 1):
-            tiles[door_y][door_x1] = 5  # TILE_DOOR
+        if width >= 6:
+            # Double door for larger buildings
+            door_x1 = door_center_x - 1
+            door_x2 = door_center_x
+            
+            if (0 <= door_x1 < self.width and 0 <= door_y < self.height and 
+                door_x1 > start_x and door_x1 < start_x + width - 1):
+                tiles[door_y][door_x1] = 5  # TILE_DOOR
+            
+            if (0 <= door_x2 < self.width and 0 <= door_y < self.height and 
+                door_x2 > start_x and door_x2 < start_x + width - 1):
+                tiles[door_y][door_x2] = 5  # TILE_DOOR
+        else:
+            # Single door for smaller buildings
+            if (0 <= door_center_x < self.width and 0 <= door_y < self.height and 
+                door_center_x > start_x and door_center_x < start_x + width - 1):
+                tiles[door_y][door_center_x] = 5  # TILE_DOOR
+    
+    def _place_door_left(self, tiles: List[List[int]], start_x: int, start_y: int, 
+                        width: int, height: int) -> None:
+        """Place door(s) on the left wall of the building"""
+        door_x = start_x
+        door_center_y = start_y + height // 2
         
-        if (0 <= door_x2 < self.width and 0 <= door_y < self.height and 
-            door_x2 > start_x and door_x2 < start_x + width - 1):
-            tiles[door_y][door_x2] = 5  # TILE_DOOR
+        if height >= 6:
+            # Double door for taller buildings
+            door_y1 = door_center_y - 1
+            door_y2 = door_center_y
+            
+            if (0 <= door_x < self.width and 0 <= door_y1 < self.height and 
+                door_y1 > start_y and door_y1 < start_y + height - 1):
+                tiles[door_y1][door_x] = 5  # TILE_DOOR
+            
+            if (0 <= door_x < self.width and 0 <= door_y2 < self.height and 
+                door_y2 > start_y and door_y2 < start_y + height - 1):
+                tiles[door_y2][door_x] = 5  # TILE_DOOR
+        else:
+            # Single door for smaller buildings
+            if (0 <= door_x < self.width and 0 <= door_center_y < self.height and 
+                door_center_y > start_y and door_center_y < start_y + height - 1):
+                tiles[door_center_y][door_x] = 5  # TILE_DOOR
+    
+    def _place_door_right(self, tiles: List[List[int]], start_x: int, start_y: int, 
+                         width: int, height: int) -> None:
+        """Place door(s) on the right wall of the building"""
+        door_x = start_x + width - 1
+        door_center_y = start_y + height // 2
+        
+        if height >= 6:
+            # Double door for taller buildings
+            door_y1 = door_center_y - 1
+            door_y2 = door_center_y
+            
+            if (0 <= door_x < self.width and 0 <= door_y1 < self.height and 
+                door_y1 > start_y and door_y1 < start_y + height - 1):
+                tiles[door_y1][door_x] = 5  # TILE_DOOR
+            
+            if (0 <= door_x < self.width and 0 <= door_y2 < self.height and 
+                door_y2 > start_y and door_y2 < start_y + height - 1):
+                tiles[door_y2][door_x] = 5  # TILE_DOOR
+        else:
+            # Single door for smaller buildings
+            if (0 <= door_x < self.width and 0 <= door_center_y < self.height and 
+                door_center_y > start_y and door_center_y < start_y + height - 1):
+                tiles[door_center_y][door_x] = 5  # TILE_DOOR
     
     # Helper methods
     def check_area_collision(self, x: int, y: int, width: int, height: int) -> bool:
