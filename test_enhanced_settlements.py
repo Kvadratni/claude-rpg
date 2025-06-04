@@ -1,144 +1,262 @@
-#!/usr/bin/env python3
 """
-Test script for enhanced settlement system
+Test script for enhanced settlement generation
+Demonstrates the new varied building shapes, road networks, and biome-specific architecture
 """
 
 import sys
 import os
-sys.path.append(os.path.dirname(os.path.abspath(__file__)))
+import random
 
-from src.world.settlement_manager import ChunkSettlementManager
-from src.world.settlement_patterns import SettlementPatternGenerator
+# Add the project root to the path
+sys.path.append('/Users/mnovich/Development/claude-rpg')
 
-def test_enhanced_settlements():
-    """Test the enhanced settlement system"""
+from src.world.enhanced_settlement_generator import EnhancedSettlementGenerator
+from src.world.settlement_integration import SettlementIntegrator
+
+
+def create_test_world(width=100, height=100):
+    """Create a test world with different biomes"""
+    # Initialize tiles with grass
+    tiles = [[0 for _ in range(width)] for _ in range(height)]
     
-    print("🏘️  Testing Enhanced Settlement System")
+    # Create biome map with different regions
+    biome_map = [['PLAINS' for _ in range(width)] for _ in range(height)]
+    
+    # Add different biome regions
+    # Desert region (top-left)
+    for y in range(0, height//3):
+        for x in range(0, width//3):
+            biome_map[y][x] = 'DESERT'
+            tiles[y][x] = 16  # TILE_SAND
+    
+    # Forest region (top-right)
+    for y in range(0, height//3):
+        for x in range(2*width//3, width):
+            biome_map[y][x] = 'FOREST'
+            tiles[y][x] = 18  # TILE_FOREST_FLOOR
+    
+    # Snow region (bottom-left)
+    for y in range(2*height//3, height):
+        for x in range(0, width//3):
+            biome_map[y][x] = 'SNOW'
+            tiles[y][x] = 17  # TILE_SNOW
+    
+    # Swamp region (bottom-right)
+    for y in range(2*height//3, height):
+        for x in range(2*width//3, width):
+            biome_map[y][x] = 'SWAMP'
+            tiles[y][x] = 19  # TILE_SWAMP
+    
+    # Add some water features
+    for _ in range(5):
+        water_x = random.randint(10, width-10)
+        water_y = random.randint(10, height-10)
+        for dy in range(-2, 3):
+            for dx in range(-2, 3):
+                if 0 <= water_x + dx < width and 0 <= water_y + dy < height:
+                    if dx*dx + dy*dy <= 4:  # Circular water feature
+                        tiles[water_y + dy][water_x + dx] = 3  # TILE_WATER
+    
+    return tiles, biome_map
+
+
+def test_enhanced_settlement_generation():
+    """Test the enhanced settlement generation system"""
+    print("=== Testing Enhanced Settlement Generation ===")
+    
+    # Create test world
+    width, height = 100, 100
+    tiles, biome_map = create_test_world(width, height)
+    
+    # Initialize integrator
+    integrator = SettlementIntegrator(width, height, seed=42)
+    
+    # Generate settlements
+    print("Generating enhanced settlements...")
+    settlements = integrator.generate_settlements_for_level(tiles, biome_map)
+    
+    # Report results
+    print(f"\n=== Settlement Generation Results ===")
+    print(f"Total settlements generated: {len(settlements)}")
+    
+    for i, settlement in enumerate(settlements):
+        print(f"\nSettlement {i+1}: {settlement['name']}")
+        print(f"  Location: ({settlement['x']}, {settlement['y']})")
+        print(f"  Size: {settlement['size']}")
+        print(f"  Biome: {settlement['biome']}")
+        print(f"  Architectural Style: {settlement.get('architectural_style', 'Unknown')}")
+        print(f"  Pattern Used: {settlement.get('pattern_used', 'Unknown')}")
+        print(f"  Buildings: {len(settlement.get('buildings', []))}")
+        print(f"  NPCs: {settlement.get('total_npcs', 0)}")
+        print(f"  Shops: {settlement.get('shops', 0)}")
+        
+        # List building details
+        for j, building in enumerate(settlement.get('buildings', [])):
+            print(f"    Building {j+1}: {building.get('type', 'Unknown')} "
+                  f"({building.get('width', 0)}x{building.get('height', 0)}) "
+                  f"Shape: {building.get('shape', 'rectangle')}")
+        
+        # List NPC details
+        for j, npc in enumerate(settlement.get('npcs', [])):
+            print(f"    NPC {j+1}: {npc.get('name', 'Unknown')} "
+                  f"at {npc.get('building', 'Unknown Building')} "
+                  f"(Shop: {npc.get('has_shop', False)})")
+
+
+def test_individual_settlement_types():
+    """Test individual settlement types with different biomes"""
+    print("\n=== Testing Individual Settlement Types ===")
+    
+    width, height = 50, 50
+    generator = EnhancedSettlementGenerator(width, height, seed=123)
+    
+    # Test different settlement types in appropriate biomes
+    test_cases = [
+        ('VILLAGE', 'PLAINS'),
+        ('TOWN', 'PLAINS'),
+        ('DESERT_OUTPOST', 'DESERT'),
+        ('SNOW_SETTLEMENT', 'SNOW'),
+        ('SWAMP_VILLAGE', 'SWAMP'),
+        ('FOREST_CAMP', 'FOREST'),
+        ('MINING_CAMP', 'MOUNTAIN'),
+        ('FISHING_VILLAGE', 'COAST')
+    ]
+    
+    for settlement_type, biome in test_cases:
+        print(f"\nTesting {settlement_type} in {biome} biome...")
+        
+        # Create simple test tiles
+        tiles = [[1 for _ in range(width)] for _ in range(height)]  # All dirt
+        
+        # Generate settlement
+        try:
+            settlement = generator.generate_enhanced_settlement(
+                tiles, 10, 10, settlement_type, biome
+            )
+            
+            print(f"  ✓ Successfully generated {settlement_type}")
+            print(f"    Size: {settlement['size']}")
+            print(f"    Buildings: {len(settlement['buildings'])}")
+            print(f"    Architectural Style: {settlement['architectural_style']}")
+            
+            # Show building variety
+            shapes = {}
+            for building in settlement['buildings']:
+                shape = building.get('shape', 'rectangle')
+                shapes[shape] = shapes.get(shape, 0) + 1
+            
+            print(f"    Building shapes: {dict(shapes)}")
+            
+        except Exception as e:
+            print(f"  ✗ Failed to generate {settlement_type}: {e}")
+
+
+def visualize_settlement(tiles, settlement, filename):
+    """Create a simple ASCII visualization of a settlement"""
+    print(f"\nCreating visualization: {filename}")
+    
+    # Define tile characters
+    tile_chars = {
+        0: '.',   # TILE_GRASS
+        1: ',',   # TILE_DIRT
+        2: '#',   # TILE_STONE
+        3: '~',   # TILE_WATER
+        4: '█',   # TILE_WALL
+        5: '▒',   # TILE_DOOR
+        6: '┌',   # TILE_WALL_CORNER_TL
+        7: '┐',   # TILE_WALL_CORNER_TR
+        8: '└',   # TILE_WALL_CORNER_BL
+        9: '┘',   # TILE_WALL_CORNER_BR
+        10: '─',  # TILE_WALL_HORIZONTAL
+        11: '│',  # TILE_WALL_VERTICAL
+        13: '▓',  # TILE_BRICK
+        14: '═',  # TILE_WALL_WINDOW_HORIZONTAL
+        15: '║',  # TILE_WALL_WINDOW_VERTICAL
+        16: '∙',  # TILE_SAND
+        17: '*',  # TILE_SNOW
+        18: '♦',  # TILE_FOREST_FLOOR
+        19: '≈',  # TILE_SWAMP
+    }
+    
+    # Extract settlement area
+    start_x, start_y = settlement['x'], settlement['y']
+    width, height = settlement['size']
+    
+    with open(filename, 'w') as f:
+        f.write(f"Settlement: {settlement['name']} ({settlement['biome']} biome)\n")
+        f.write(f"Architectural Style: {settlement.get('architectural_style', 'Unknown')}\n")
+        f.write(f"Location: ({start_x}, {start_y}), Size: {width}x{height}\n")
+        f.write("=" * (width + 2) + "\n")
+        
+        for y in range(start_y, start_y + height):
+            f.write("|")
+            for x in range(start_x, start_x + width):
+                if 0 <= x < len(tiles[0]) and 0 <= y < len(tiles):
+                    tile_type = tiles[y][x]
+                    char = tile_chars.get(tile_type, '?')
+                    f.write(char)
+                else:
+                    f.write(' ')
+            f.write("|\n")
+        
+        f.write("=" * (width + 2) + "\n")
+        
+        # Add legend
+        f.write("\nLegend:\n")
+        f.write("█ ┌┐└┘─│ = Walls and corners\n")
+        f.write("▒ = Doors\n")
+        f.write("▓ = Interior (brick floors)\n")
+        f.write("# = Stone roads/paths\n")
+        f.write("~ = Water\n")
+        f.write(", = Dirt\n")
+        f.write(". = Grass\n")
+        f.write("∙ = Sand (desert)\n")
+        f.write("* = Snow\n")
+        f.write("♦ = Forest floor\n")
+        f.write("≈ = Swamp\n")
+
+
+def main():
+    """Main test function"""
+    print("Enhanced Settlement Generation Test Suite")
     print("=" * 50)
     
-    # Initialize settlement manager
-    world_seed = 12345
-    settlement_manager = ChunkSettlementManager(world_seed)
-    pattern_generator = SettlementPatternGenerator()
+    # Test 1: Full integration test
+    test_enhanced_settlement_generation()
     
-    print(f"✅ Initialized settlement manager with seed: {world_seed}")
-    print(f"✅ Available settlement types: {len(settlement_manager.SETTLEMENT_TEMPLATES)}")
+    # Test 2: Individual settlement types
+    test_individual_settlement_types()
     
-    # Test each settlement type
-    print("\n📋 Settlement Type Analysis:")
-    print("-" * 30)
+    # Test 3: Create visualizations
+    print("\n=== Creating Settlement Visualizations ===")
     
-    total_buildings = 0
-    total_npcs = 0
+    width, height = 40, 40
+    generator = EnhancedSettlementGenerator(width, height, seed=456)
     
-    for settlement_type, config in settlement_manager.SETTLEMENT_TEMPLATES.items():
-        buildings_count = len(config['buildings'])
-        npcs_count = len([b for b in config['buildings'] if 'npc' in b])
-        shops_count = len([b for b in config['buildings'] if b.get('has_shop', False)])
-        
-        total_buildings += buildings_count
-        total_npcs += npcs_count
-        
-        print(f"🏘️  {settlement_type}:")
-        print(f"   Size: {config['size'][0]}x{config['size'][1]}")
-        print(f"   Buildings: {buildings_count}")
-        print(f"   NPCs: {npcs_count}")
-        print(f"   Shops: {shops_count}")
-        print(f"   Spawn Chance: {config['spawn_chance']*100:.1f}%")
-        print(f"   Biomes: {', '.join(config['biomes'])}")
-        print()
-    
-    print(f"📊 Total across all settlement types:")
-    print(f"   Settlement Types: {len(settlement_manager.SETTLEMENT_TEMPLATES)}")
-    print(f"   Total Buildings: {total_buildings}")
-    print(f"   Total NPCs: {total_npcs}")
-    print(f"   Average NPCs per settlement: {total_npcs / len(settlement_manager.SETTLEMENT_TEMPLATES):.1f}")
-    
-    # Test settlement generation
-    print("\n🎲 Testing Settlement Generation:")
-    print("-" * 35)
-    
-    test_chunks = [
-        (0, 0, {'PLAINS': 3000, 'FOREST': 1000}),
-        (1, 1, {'DESERT': 4000}),
-        (2, 2, {'SNOW': 3500, 'TUNDRA': 500}),
-        (-1, -1, {'SWAMP': 4000}),
-        (3, 3, {'FOREST': 4000}),
-        (4, 4, {'MOUNTAIN': 2000, 'HILLS': 2000}),
-        (5, 5, {'PLAINS': 2000, 'COAST': 2000}),
+    # Create a few example settlements for visualization
+    examples = [
+        ('VILLAGE', 'PLAINS'),
+        ('DESERT_OUTPOST', 'DESERT'),
+        ('SNOW_SETTLEMENT', 'SNOW')
     ]
     
-    settlements_generated = 0
-    
-    for chunk_x, chunk_y, biome_data in test_chunks:
-        settlement_type = settlement_manager.should_generate_settlement(chunk_x, chunk_y, biome_data)
+    for settlement_type, biome in examples:
+        tiles = [[1 for _ in range(width)] for _ in range(height)]  # All dirt
         
-        if settlement_type:
-            settlements_generated += 1
-            settlement_data = settlement_manager.generate_settlement_in_chunk(chunk_x, chunk_y, settlement_type)
-            
-            print(f"🏘️  Generated {settlement_type} at chunk ({chunk_x}, {chunk_y})")
-            print(f"   World Position: ({settlement_data['world_x']}, {settlement_data['world_y']})")
-            print(f"   NPCs: {settlement_data['total_npcs']}")
-            print(f"   Shops: {settlement_data['shops']}")
-            print(f"   Sample NPCs: {[npc['name'] for npc in settlement_data['npcs'][:3]]}")
-            print()
-        else:
-            dominant_biome = max(biome_data.items(), key=lambda x: x[1])[0]
-            print(f"❌ No settlement at chunk ({chunk_x}, {chunk_y}) - {dominant_biome} biome")
-    
-    print(f"📈 Settlement Generation Results:")
-    print(f"   Chunks Tested: {len(test_chunks)}")
-    print(f"   Settlements Generated: {settlements_generated}")
-    print(f"   Generation Rate: {settlements_generated/len(test_chunks)*100:.1f}%")
-    
-    # Test settlement patterns
-    print("\n🗺️  Testing Settlement Patterns:")
-    print("-" * 32)
-    
-    pattern_types = [
-        'VILLAGE', 'TOWN', 'DESERT_OUTPOST', 'SNOW_SETTLEMENT', 
-        'SWAMP_VILLAGE', 'FOREST_CAMP', 'MINING_CAMP', 'FISHING_VILLAGE'
-    ]
-    
-    for pattern_type in pattern_types:
         try:
-            pattern = pattern_generator.get_pattern(pattern_type)
-            building_count = len(pattern.get_building_positions())
-            pathway_count = len(pattern.get_pathway_positions())
+            settlement = generator.generate_enhanced_settlement(
+                tiles, 5, 5, settlement_type, biome
+            )
             
-            print(f"🗺️  {pattern_type} Pattern:")
-            print(f"   Name: {pattern.name}")
-            print(f"   Size: {pattern.width}x{pattern.height}")
-            print(f"   Buildings: {building_count}")
-            print(f"   Pathways: {pathway_count}")
-            print()
+            filename = f"/Users/mnovich/Development/claude-rpg/settlement_{settlement_type.lower()}_{biome.lower()}.txt"
+            visualize_settlement(tiles, settlement, filename)
+            
         except Exception as e:
-            print(f"❌ Error with {pattern_type} pattern: {e}")
+            print(f"Failed to create visualization for {settlement_type}: {e}")
     
-    # Test NPC dialog generation
-    print("\n💬 Testing NPC Dialog Generation:")
-    print("-" * 33)
-    
-    sample_npcs = [
-        ('Master Merchant', 'VILLAGE', 'General Store'),
-        ('Caravan Master', 'DESERT_OUTPOST', 'Trading Post'),
-        ('Forest Druid', 'FOREST_CAMP', 'Druid Circle'),
-        ('Mine Foreman', 'MINING_CAMP', 'Mine Entrance'),
-    ]
-    
-    for npc_name, settlement_type, building_name in sample_npcs:
-        dialog = settlement_manager._generate_npc_dialog(npc_name, settlement_type, building_name)
-        print(f"💬 {npc_name} ({settlement_type}):")
-        print(f"   Building: {building_name}")
-        print(f"   Dialog Lines: {len(dialog)}")
-        print(f"   Sample: \"{dialog[0]}\"")
-        print()
-    
-    print("🎉 Enhanced Settlement System Test Complete!")
-    print(f"✅ All systems functional with {len(settlement_manager.SETTLEMENT_TEMPLATES)} settlement types")
-    print(f"✅ Estimated {settlements_generated/len(test_chunks)*100:.0f}% settlement density")
-    print(f"✅ Rich NPC integration with contextual dialog")
+    print("\n=== Test Suite Complete ===")
+    print("Check the generated .txt files for ASCII visualizations of the settlements.")
+
 
 if __name__ == "__main__":
-    test_enhanced_settlements()
+    main()

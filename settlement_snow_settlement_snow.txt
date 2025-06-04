@@ -1,0 +1,32 @@
+Settlement: SNOW_SETTLEMENT (SNOW biome)
+Architectural Style: Northern Lodge Style
+Location: (5, 5), Size: 14x14
+================
+|**##**#####***|
+|*┌##┐*#####─┐*|
+|##▓▓######▓▓##|
+|##▓▓######▓▓##|
+|*└#▒┘*#####▒┘*|
+|**##**#####***|
+|##############|
+|##############|
+|##############|
+|##############|
+|##▓###▓▓###▓##|
+|*│▓#*│▓▓###▓│*|
+|*└▒#*└#▒###▒┘*|
+|**##**#####***|
+================
+
+Legend:
+█ ┌┐└┘─│ = Walls and corners
+▒ = Doors
+▓ = Interior (brick floors)
+# = Stone roads/paths
+~ = Water
+, = Dirt
+. = Grass
+∙ = Sand (desert)
+* = Snow
+♦ = Forest floor
+≈ = Swamp

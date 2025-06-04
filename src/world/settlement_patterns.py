@@ -635,31 +635,72 @@ class SettlementPatternGenerator:
         
         return SettlementPattern('outpost', size, pattern_data)
     
-    def get_pattern(self, settlement_type: str) -> SettlementPattern:
-        """Get a pattern for a specific settlement type"""
-        # Enhanced mapping to match new settlement types
-        type_mapping = {
-            # Main settlement types from settlement manager
-            'VILLAGE': 'medium_village',
-            'TOWN': 'large_town',
-            'DESERT_OUTPOST': 'desert_outpost',
-            'SNOW_SETTLEMENT': 'snow_settlement',
-            'SWAMP_VILLAGE': 'swamp_village',
-            'FOREST_CAMP': 'forest_camp',
-            'MINING_CAMP': 'mining_camp',
-            'FISHING_VILLAGE': 'fishing_village',
-            
-            # Legacy/fallback mappings
-            'village': 'medium_village',
-            'town': 'town',
-            'city': 'large_town',
-            'outpost': 'outpost',
-            'hamlet': 'small_village',
-            'settlement': 'medium_village'
+    def get_pattern(self, settlement_type: str, seed: int = None) -> SettlementPattern:
+        """Get a varied pattern for a specific settlement type with randomization"""
+        # Create deterministic random for pattern selection
+        if seed is not None:
+            pattern_random = random.Random(seed)
+        else:
+            pattern_random = random
+        
+        # Define multiple pattern options for each settlement type
+        type_pattern_options = {
+            'VILLAGE': [
+                'small_village',    # 30% - Small rural village
+                'medium_village',   # 50% - Standard village  
+                'large_village'     # 20% - Large prosperous village
+            ],
+            'TOWN': [
+                'large_village',    # 20% - Large village that's almost a town
+                'town',            # 60% - Standard town
+                'large_town'       # 20% - Major town/small city
+            ],
+            'DESERT_OUTPOST': [
+                'outpost',         # 40% - Tiny desert outpost
+                'desert_outpost'   # 60% - Standard desert outpost
+            ],
+            'SNOW_SETTLEMENT': [
+                'outpost',         # 30% - Small snow outpost
+                'snow_settlement'  # 70% - Standard snow settlement
+            ],
+            'SWAMP_VILLAGE': [
+                'small_village',   # 30% - Small swamp hamlet
+                'swamp_village'    # 70% - Standard swamp village
+            ],
+            'FOREST_CAMP': [
+                'outpost',         # 40% - Small forest outpost
+                'forest_camp'      # 60% - Standard forest camp
+            ],
+            'MINING_CAMP': [
+                'outpost',         # 30% - Small mining outpost
+                'mining_camp'      # 70% - Standard mining camp
+            ],
+            'FISHING_VILLAGE': [
+                'small_village',   # 30% - Small fishing hamlet
+                'fishing_village'  # 70% - Standard fishing village
+            ]
         }
         
-        pattern_name = type_mapping.get(settlement_type.upper(), 'small_village')
-        return self.patterns.get(pattern_name, self.patterns['small_village'])
+        # Get pattern options for this settlement type
+        pattern_options = type_pattern_options.get(settlement_type.upper(), ['medium_village'])
+        
+        # Define weighted selection for variety
+        pattern_weights = {
+            'VILLAGE': [0.3, 0.5, 0.2],           # small, medium, large
+            'TOWN': [0.2, 0.6, 0.2],              # large_village, town, large_town
+            'DESERT_OUTPOST': [0.4, 0.6],         # outpost, desert_outpost
+            'SNOW_SETTLEMENT': [0.3, 0.7],        # outpost, snow_settlement
+            'SWAMP_VILLAGE': [0.3, 0.7],          # small_village, swamp_village
+            'FOREST_CAMP': [0.4, 0.6],            # outpost, forest_camp
+            'MINING_CAMP': [0.3, 0.7],            # outpost, mining_camp
+            'FISHING_VILLAGE': [0.3, 0.7]         # small_village, fishing_village
+        }
+        
+        # Select pattern based on weights
+        weights = pattern_weights.get(settlement_type.upper(), [1.0])
+        selected_pattern = pattern_random.choices(pattern_options, weights=weights)[0]
+        
+        return self.patterns.get(selected_pattern, self.patterns['small_village'])
     
     def adapt_pattern_to_biome(self, pattern: SettlementPattern, biome: str) -> SettlementPattern:
         """Adapt a settlement pattern to a specific biome"""

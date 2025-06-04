@@ -1,0 +1,34 @@
+Settlement: VILLAGE (PLAINS biome)
+Architectural Style: Classic Village Style
+Location: (5, 5), Size: 16x16
+==================
+|,,,##,,###,##,,,|
+|,┌─##┌─###┌##┐,,|
+|,│▓▓#│▓###│▓▓│,,|
+|###▒##▒#####▒###|
+|################|
+|,┌═##,,###,##─┐,|
+|,│▓##,▓▓#▓,##▓│,|
+|##▒###▓▓#▓###▒##|
+|################|
+|######▓▓#▓######|
+|,,,##,,###,##,,,|
+|################|
+|################|
+|,│▓##│▓###,##▓│,|
+|,└▒##└▒###,##▒┘,|
+|,,,##,,###,##,,,|
+==================
+
+Legend:
+█ ┌┐└┘─│ = Walls and corners
+▒ = Doors
+▓ = Interior (brick floors)
+# = Stone roads/paths
+~ = Water
+, = Dirt
+. = Grass
+∙ = Sand (desert)
+* = Snow
+♦ = Forest floor
+≈ = Swamp
