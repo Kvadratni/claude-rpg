@@ -352,10 +352,10 @@ class LevelRendererMixin:
             rotated_roof = pygame.transform.rotate(roof_texture, 45)
             scaled_roof = pygame.transform.scale(rotated_roof, (self.tile_width, self.tile_height))
             
-            # FIXED: Position roof at proper height above interior floors
-            # Interior roofs should be at wall height above the floor, not just slightly elevated
+            # FIXED: Position interior roofs lower than wall roofs
+            # Use half wall height instead of full wall height for interior roofs
             wall_height = 48
-            roof_y = screen_y - self.tile_height // 2 - wall_height
+            roof_y = screen_y - self.tile_height // 2 - (wall_height // 2)
             roof_rect = scaled_roof.get_rect()
             roof_rect.center = (screen_x, roof_y)
             surface.blit(scaled_roof, roof_rect)
@@ -364,7 +364,7 @@ class LevelRendererMixin:
             roof_surface = pygame.Surface((self.tile_width, self.tile_height), pygame.SRCALPHA)
             roof_surface.fill((80, 40, 20))  # Dark brown
             wall_height = 48
-            roof_y = screen_y - self.tile_height // 2 - wall_height
+            roof_y = screen_y - self.tile_height // 2 - (wall_height // 2)
             roof_rect = roof_surface.get_rect()
             roof_rect.center = (screen_x, roof_y)
             surface.blit(roof_surface, roof_rect)
