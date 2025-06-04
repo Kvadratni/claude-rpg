@@ -362,6 +362,22 @@ class MCPSSEServer:
             return {"error": "Player not available", "success": False}
         
         player = self.game.player
+        
+        # Get inventory count safely
+        inventory_count = 0
+        if hasattr(player, 'inventory'):
+            if hasattr(player.inventory, 'items'):
+                inventory_count = len(player.inventory.items)
+            elif hasattr(player.inventory, '__len__'):
+                inventory_count = len(player.inventory)
+        
+        # Get equipped items safely
+        equipped_items = {}
+        if hasattr(player, 'equipped_weapon') and player.equipped_weapon:
+            equipped_items['weapon'] = player.equipped_weapon.name
+        if hasattr(player, 'equipped_armor') and player.equipped_armor:
+            equipped_items['armor'] = player.equipped_armor.name
+        
         return {
             "success": True,
             "player": {
@@ -370,12 +386,16 @@ class MCPSSEServer:
                 "level": getattr(player, 'level', 1),
                 "experience": getattr(player, 'experience', 0),
                 "gold": getattr(player, 'gold', 0),
+                "attack_damage": getattr(player, 'attack_damage', 25),
+                "defense": getattr(player, 'defense', 5),
+                "stamina": getattr(player, 'stamina', 50),
+                "max_stamina": getattr(player, 'max_stamina', 50),
                 "position": {
                     "x": getattr(player, 'x', 0),
                     "y": getattr(player, 'y', 0)
                 },
-                "inventory_count": len(getattr(player, 'inventory', [])),
-                "equipped_items": getattr(player, 'equipped_items', {})
+                "inventory_count": inventory_count,
+                "equipped_items": equipped_items
             }
         }
     
@@ -434,24 +454,45 @@ class MCPSSEServer:
             item_data = self._get_item_data(item_name)
             
             for _ in range(quantity):
+                # Create item with proper parameters
                 item = Item(
                     x=player.x, 
                     y=player.y, 
-                    item_type=item_data["type"],
                     name=item_name,
+                    item_type=item_data["type"],
+                    effect=item_data.get("effect", {}),
+                    value=item_data.get("value", 10),
                     asset_loader=self.game.asset_loader
                 )
                 
-                # Add to player inventory
-                if hasattr(player, 'inventory') and player.inventory:
-                    if hasattr(player.inventory, 'add_item'):
-                        player.inventory.add_item(item)
-                    elif hasattr(player.inventory, 'append'):
-                        player.inventory.append(item)
+                # Add to player inventory using the player's add_item method
+                if hasattr(player, 'add_item'):
+                    success = player.add_item(item)
+                    if not success:
+                        return {
+                            "success": False,
+                            "error": "Player inventory is full",
+                            "item_name": item_name,
+                            "quantity": quantity
+                        }
+                else:
+                    # Fallback - try direct inventory access
+                    if hasattr(player, 'inventory') and hasattr(player.inventory, 'add_item'):
+                        success = player.inventory.add_item(item)
+                        if not success:
+                            return {
+                                "success": False,
+                                "error": "Player inventory is full",
+                                "item_name": item_name,
+                                "quantity": quantity
+                            }
                     else:
-                        # Fallback - try to add to items list
-                        if hasattr(player.inventory, 'items'):
-                            player.inventory.items.append(item)
+                        return {
+                            "success": False,
+                            "error": "Could not access player inventory",
+                            "item_name": item_name,
+                            "quantity": quantity
+                        }
             
             # Send message to game log
             if hasattr(self.game, 'game_log') and self.game.game_log:
@@ -469,6 +510,8 @@ class MCPSSEServer:
             
         except Exception as e:
             print(f"❌ [MCP] Failed to give item: {e}")
+            import traceback
+            traceback.print_exc()
             return {
                 "success": False,
                 "error": f"Failed to give {item_name}: {str(e)}",
@@ -480,18 +523,23 @@ class MCPSSEServer:
         """Get item data based on item name"""
         # Simple item mapping - in a real game this would come from a database
         item_map = {
-            "health potion": {"type": "consumable", "effect": "heal", "value": 50},
-            "mana potion": {"type": "consumable", "effect": "mana", "value": 30},
-            "sword": {"type": "weapon", "damage": 10, "durability": 100},
-            "shield": {"type": "armor", "defense": 5, "durability": 100},
-            "gold": {"type": "currency", "value": 1},
-            "bread": {"type": "consumable", "effect": "heal", "value": 10},
-            "apple": {"type": "consumable", "effect": "heal", "value": 5},
-            "key": {"type": "key", "opens": "door"},
+            "health potion": {"type": "consumable", "effect": {"health": 50}, "value": 25},
+            "mana potion": {"type": "consumable", "effect": {"mana": 30}, "value": 20},
+            "stamina potion": {"type": "consumable", "effect": {"stamina": 30}, "value": 20},
+            "sword": {"type": "weapon", "effect": {"damage": 10}, "value": 100},
+            "iron sword": {"type": "weapon", "effect": {"damage": 15}, "value": 150},
+            "shield": {"type": "armor", "effect": {"defense": 5}, "value": 80},
+            "leather armor": {"type": "armor", "effect": {"defense": 8}, "value": 120},
+            "gold": {"type": "currency", "effect": {"value": 1}, "value": 1},
+            "bread": {"type": "consumable", "effect": {"health": 10}, "value": 5},
+            "apple": {"type": "consumable", "effect": {"health": 5}, "value": 2},
+            "key": {"type": "key", "effect": {"opens": "door"}, "value": 50},
+            "antidote": {"type": "consumable", "effect": {"cure_poison": True}, "value": 35},
+            "strength potion": {"type": "consumable", "effect": {"damage_boost": 10, "duration": 60}, "value": 50},
         }
         
         # Default to consumable if not found
-        return item_map.get(item_name.lower(), {"type": "consumable", "effect": "heal", "value": 10})
+        return item_map.get(item_name.lower(), {"type": "consumable", "effect": {"health": 10}, "value": 10})
     
     async def _create_quest(self, quest_data: Dict[str, Any]) -> Dict[str, Any]:
         """Create a new quest"""
