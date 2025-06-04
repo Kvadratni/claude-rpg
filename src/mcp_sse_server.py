@@ -543,6 +543,8 @@ class MCPSSEServer:
     
     async def _create_quest(self, quest_data: Dict[str, Any]) -> Dict[str, Any]:
         """Create a new quest with dynamic spawning support"""
+        import re  # Import re module at the top of the function
+        
         try:
             # Get quest manager from game
             quest_manager = getattr(self.game, 'quest_manager', None)
@@ -568,7 +570,6 @@ class MCPSSEServer:
                 
                 if "collect" in obj_lower or "bring" in obj_lower or "find" in obj_lower:
                     # Extract item name and quantity
-                    import re
                     numbers = re.findall(r'\d+', obj_text)
                     quantity = int(numbers[0]) if numbers else 1
                     
