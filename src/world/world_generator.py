@@ -106,36 +106,137 @@ class WorldGenerator:
             print(f"  🏘️  Generating {settlement_type} settlement (FINAL OVERRIDE STEP)...")
             settlement_data = self.settlement_manager.generate_settlement_in_chunk(chunk_x, chunk_y, settlement_type)
             
+            # Calculate local settlement coordinates
+            start_x, start_y, end_x, end_y = chunk.get_world_bounds()
+            settlement_world_x = settlement_data['world_x']
+            settlement_world_y = settlement_data['world_y']
+            local_settlement_x = settlement_world_x - start_x
+            local_settlement_y = settlement_world_y - start_y
+            
             # HARDCORE OVERRIDE: Clear and replace the settlement area completely
             buildings_placed = self._override_area_with_settlement(chunk, settlement_data, settlement_type)
             print(f"  🏗️  Settlement override complete: {buildings_placed} buildings placed")
             
-            # Add settlement NPCs after area override
+            # Add settlement NPCs after area override - FIXED: Place inside actual buildings
             if 'npcs' in settlement_data:
-                start_x, start_y, end_x, end_y = chunk.get_world_bounds()
                 npcs_added = 0
                 
-                for npc_data in settlement_data['npcs']:
-                    local_npc_x = npc_data['x'] - start_x
-                    local_npc_y = npc_data['y'] - start_y
-                    
-                    # Ensure NPC is within chunk bounds
-                    local_npc_x = max(1, min(Chunk.CHUNK_SIZE - 2, local_npc_x))
-                    local_npc_y = max(1, min(Chunk.CHUNK_SIZE - 2, local_npc_y))
-                    
-                    npc_entity = {
-                        'type': 'npc',
-                        'name': npc_data['name'],
-                        'building': npc_data.get('building', 'Unknown Building'),
-                        'has_shop': npc_data.get('has_shop', False),
-                        'x': local_npc_x,
-                        'y': local_npc_y,
-                        'id': f"npc_{npc_data['name'].lower().replace(' ', '_')}_{chunk_x}_{chunk_y}"
-                    }
-                    chunk.add_entity(npc_entity)
-                    npcs_added += 1
+                # Get settlement pattern for building positions
+                base_pattern = self.pattern_generator.get_pattern(settlement_type)
+                dominant_biome = self._get_dominant_biome_in_area(chunk, local_settlement_x, local_settlement_y, 
+                                                                base_pattern.width, base_pattern.height)
+                current_settlement_pattern = self.pattern_generator.adapt_pattern_to_biome(base_pattern, dominant_biome)
                 
-                print(f"  👥 Added {npcs_added} NPCs to settlement")
+                # Get the actual buildings that were placed by the pattern
+                building_positions = []
+                if hasattr(current_settlement_pattern, 'get_building_positions'):
+                    for building_info in current_settlement_pattern.get_building_positions():
+                        building_x = local_settlement_x + building_info['x']
+                        building_y = local_settlement_y + building_info['y']
+                        building_width = building_info['width']
+                        building_height = building_info['height']
+                        
+                        # Ensure building is within chunk bounds
+                        if (building_x + building_width <= Chunk.CHUNK_SIZE and 
+                            building_y + building_height <= Chunk.CHUNK_SIZE):
+                            building_positions.append({
+                                'x': building_x,
+                                'y': building_y,
+                                'width': building_width,
+                                'height': building_height,
+                                'center_x': building_x + building_width // 2,
+                                'center_y': building_y + building_height // 2
+                            })
+                
+                print(f"  🏠 Found {len(building_positions)} actual buildings for NPC placement")
+                
+                # Place NPCs inside actual buildings
+                for i, npc_data in enumerate(settlement_data['npcs']):
+                    if i < len(building_positions):
+                        # Place NPC in the center of the corresponding building
+                        building = building_positions[i]
+                        local_npc_x = building['center_x']
+                        local_npc_y = building['center_y']
+                        
+                        # Ensure NPC is within chunk bounds
+                        local_npc_x = max(1, min(Chunk.CHUNK_SIZE - 2, local_npc_x))
+                        local_npc_y = max(1, min(Chunk.CHUNK_SIZE - 2, local_npc_y))
+                        
+                        npc_entity = {
+                            'type': 'npc',
+                            'name': npc_data['name'],
+                            'building': npc_data.get('building', 'Unknown Building'),
+                            'has_shop': npc_data.get('has_shop', False),
+                            'x': local_npc_x,
+                            'y': local_npc_y,
+                            'id': f"npc_{npc_data['name'].lower().replace(' ', '_')}_{chunk_x}_{chunk_y}"
+                        }
+                        chunk.add_entity(npc_entity)
+                        npcs_added += 1
+                        
+                        print(f"    👤 Placed {npc_data['name']} inside building at ({local_npc_x}, {local_npc_y})")
+                    else:
+                        # If we have more NPCs than buildings, place them near the settlement center
+                        center_x = local_settlement_x + current_settlement_pattern.width // 2
+                        center_y = local_settlement_y + current_settlement_pattern.height // 2
+                        
+                        # Add some randomness around the center
+                        import random
+                        npc_random = random.Random(hash((self.world_seed, chunk_x, chunk_y, i)))
+                        offset_x = npc_random.randint(-3, 3)
+                        offset_y = npc_random.randint(-3, 3)
+                        
+                        local_npc_x = max(1, min(Chunk.CHUNK_SIZE - 2, center_x + offset_x))
+                        local_npc_y = max(1, min(Chunk.CHUNK_SIZE - 2, center_y + offset_y))
+                        
+                        npc_entity = {
+                            'type': 'npc',
+                            'name': npc_data['name'],
+                            'building': 'Town Square',
+                            'has_shop': npc_data.get('has_shop', False),
+                            'x': local_npc_x,
+                            'y': local_npc_y,
+                            'id': f"npc_{npc_data['name'].lower().replace(' ', '_')}_{chunk_x}_{chunk_y}"
+                        }
+                        chunk.add_entity(npc_entity)
+                        npcs_added += 1
+                        
+                        print(f"    👤 Placed {npc_data['name']} near town center at ({local_npc_x}, {local_npc_y})")
+                
+                print(f"  👥 Added {npcs_added} NPCs to settlement (placed inside buildings)")
+                
+                # Add some guard NPCs outside buildings for atmosphere
+                if settlement_type in ['VILLAGE', 'TOWN'] and len(building_positions) > 2:
+                    guards_to_add = min(2, len(building_positions) // 3)  # 1 guard per 3 buildings, max 2
+                    guard_random = random.Random(hash((self.world_seed, chunk_x, chunk_y, "guards")))
+                    
+                    for guard_num in range(guards_to_add):
+                        # Place guard near a random building entrance
+                        building = guard_random.choice(building_positions)
+                        
+                        # Place guard outside the building (near door area)
+                        guard_x = building['x'] + building['width'] // 2
+                        guard_y = building['y'] + building['height'] + 1  # Just outside the building
+                        
+                        # Ensure guard is within chunk bounds
+                        guard_x = max(1, min(Chunk.CHUNK_SIZE - 2, guard_x))
+                        guard_y = max(1, min(Chunk.CHUNK_SIZE - 2, guard_y))
+                        
+                        guard_entity = {
+                            'type': 'npc',
+                            'name': f'Town Guard {guard_num + 1}',
+                            'building': 'Guard Post',
+                            'has_shop': False,
+                            'x': guard_x,
+                            'y': guard_y,
+                            'id': f"guard_{guard_num}_{chunk_x}_{chunk_y}"
+                        }
+                        chunk.add_entity(guard_entity)
+                        npcs_added += 1
+                        
+                        print(f"    🛡️  Placed guard outside building at ({guard_x}, {guard_y})")
+                    
+                    print(f"  🛡️  Added {guards_to_add} guard NPCs outside buildings")
         else:
             print(f"  ❌ No settlement for chunk ({chunk_x}, {chunk_y})")
         

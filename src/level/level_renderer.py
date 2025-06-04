@@ -349,12 +349,15 @@ class LevelRendererMixin:
                     if self.is_player_under_roof(check_x, check_y):
                         return False  # Player is under roof, so show entities
                     
-                    # Check if entity is in front of the building (lower Y coordinate)
-                    # In isometric view, entities with lower Y are in front and should be visible
-                    if entity_y < check_y:
-                        return False  # Entity is in front of building, keep it visible
+                    # FIXED: More strict check for entities being "behind" buildings
+                    # Only hide entities if they are clearly behind the building AND
+                    # the building is between the entity and the player
+                    if entity_y > check_y and entity_y > player_y:
+                        # Entity is behind the wall and behind the player - hide it
+                        return True
                     
-                    return True  # Wall has roof and entity is behind it
+                    # Don't hide entities that are in front or to the sides
+                    return False
         
         return False
     
