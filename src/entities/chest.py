@@ -233,6 +233,11 @@ class Chest(Entity):
                 
                 self.loot_items.append(item)
     
+    def add_item(self, item):
+        """Add an item to the chest's loot"""
+        self.loot_items.append(item)
+        return True
+    
     def interact(self, player):
         """Open the chest and give loot to player"""
         if self.is_opened:

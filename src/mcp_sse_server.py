@@ -591,13 +591,31 @@ class MCPSSEServer:
                     
                     # Determine spawn location based on quest description
                     direction = "North"  # Default
-                    if "north" in description.lower():
+                    if "north" in description.lower() or "northern" in description.lower():
                         direction = "North"
-                    elif "south" in description.lower():
+                    elif "south" in description.lower() or "southern" in description.lower():
                         direction = "South"
-                    elif "east" in description.lower():
+                    elif "east" in description.lower() or "eastern" in description.lower():
                         direction = "East"
-                    elif "west" in description.lower():
+                    elif "west" in description.lower() or "western" in description.lower():
+                        direction = "West"
+                    elif "northeast" in description.lower():
+                        direction = "Northeast"
+                    elif "northwest" in description.lower():
+                        direction = "Northwest"
+                    elif "southeast" in description.lower():
+                        direction = "Southeast"
+                    elif "southwest" in description.lower():
+                        direction = "Southwest"
+                    
+                    # Also check the objective text for direction clues
+                    if "north" in obj_lower or "northern" in obj_lower:
+                        direction = "North"
+                    elif "south" in obj_lower or "southern" in obj_lower:
+                        direction = "South"
+                    elif "east" in obj_lower or "eastern" in obj_lower:
+                        direction = "East"
+                    elif "west" in obj_lower or "western" in obj_lower:
                         direction = "West"
                     
                     # Determine what to spawn based on context
@@ -639,14 +657,32 @@ class MCPSSEServer:
                     })
                     
                     # Spawn enemies
-                    direction = "North"
-                    if "north" in description.lower():
+                    direction = "North"  # Default
+                    if "north" in description.lower() or "northern" in description.lower():
                         direction = "North"
-                    elif "south" in description.lower():
+                    elif "south" in description.lower() or "southern" in description.lower():
                         direction = "South"
-                    elif "east" in description.lower():
+                    elif "east" in description.lower() or "eastern" in description.lower():
                         direction = "East"
-                    elif "west" in description.lower():
+                    elif "west" in description.lower() or "western" in description.lower():
+                        direction = "West"
+                    elif "northeast" in description.lower():
+                        direction = "Northeast"
+                    elif "northwest" in description.lower():
+                        direction = "Northwest"
+                    elif "southeast" in description.lower():
+                        direction = "Southeast"
+                    elif "southwest" in description.lower():
+                        direction = "Southwest"
+                    
+                    # Also check the objective text for direction clues
+                    if "north" in obj_lower or "northern" in obj_lower:
+                        direction = "North"
+                    elif "south" in obj_lower or "southern" in obj_lower:
+                        direction = "South"
+                    elif "east" in obj_lower or "eastern" in obj_lower:
+                        direction = "East"
+                    elif "west" in obj_lower or "western" in obj_lower:
                         direction = "West"
                     
                     spawn_data["spawns"].append({
@@ -685,11 +721,19 @@ class MCPSSEServer:
             
             quest_id = quest_manager.create_dynamic_quest(quest_info)
             
+            # Return information including spawn directions for AI context
+            spawn_directions = []
+            for spawn in spawn_data.get("spawns", []):
+                spawn_directions.append(f"{spawn['type']} {spawn['direction'].lower()}")
+            
+            direction_text = ", ".join(spawn_directions) if spawn_directions else "nearby"
+            
             return {
                 "success": True,
                 "message": f"Created quest: {title}",
                 "quest_id": quest_id,
                 "quest": quest_info,
+                "spawn_info": f"Spawned {direction_text}",
                 "action": "quest_created"
             }
             
