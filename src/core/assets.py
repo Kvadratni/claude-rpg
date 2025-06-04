@@ -8,7 +8,8 @@ import os
 class AssetLoader:
     """Handles loading and managing game assets"""
     
-    def __init__(self):
+    def __init__(self, settings=None):
+        self.settings = settings
         self.images = {}
         self.sounds = {}
         self.fonts = {}

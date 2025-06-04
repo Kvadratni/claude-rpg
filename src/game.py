@@ -52,7 +52,7 @@ class Game:
         
         # Initialize systems
         self.save_system = SaveSystem()
-        self.asset_loader = AssetLoader()
+        self.asset_loader = AssetLoader(self.settings)  # Pass settings to asset loader
         self.game_log = GameLog()
         
         # Initialize MCP server
