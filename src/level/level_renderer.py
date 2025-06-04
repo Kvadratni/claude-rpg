@@ -80,9 +80,9 @@ class LevelRendererMixin:
                 if not player_building_bounds or entity_building_bounds != player_building_bounds:
                     should_render_entity = False
             else:
-                # FIXED: Entity is outside buildings - check if it's hidden behind a building with roof
-                # In isometric view, entities behind buildings (higher Y values) should be hidden by roofs
-                should_render_entity = not self.is_entity_hidden_behind_building(entity_x, entity_y)
+                # Entity is outside buildings - check if it's hidden by a roof (but not if it's the player)
+                if entity != self.player:
+                    should_render_entity = not self.is_entity_hidden_by_roof(entity_x, entity_y)
             
             if should_render_entity:
                 entity.render(game_surface, self.camera_x, self.camera_y, self.iso_renderer)
@@ -143,7 +143,9 @@ class LevelRendererMixin:
             building_bounds = self.get_building_bounds(x, y)
             if building_bounds:
                 player_in_building = self.is_player_in_building(building_bounds)
-                should_render_roof = not player_in_building
+                # Also check if player is under the roof of this building
+                player_under_roof = self.is_player_under_roof(x, y)
+                should_render_roof = not player_in_building and not player_under_roof
         
         # ALWAYS render floor tile first (even under walls)
         floor_sprite = None
@@ -322,44 +324,47 @@ class LevelRendererMixin:
             return self.get_building_bounds(x, y)
         return None
     
-    def is_entity_hidden_behind_building(self, entity_x, entity_y):
-        """Check if an entity is hidden behind a building with a roof from the player's perspective"""
-        player_x = int(self.player.x)
-        player_y = int(self.player.y)
-        
-        # In isometric view, entities are hidden if there's a building with roof between them and the player
-        # We need to check the line of sight from player to entity
-        
-        # Only check entities that are "behind" buildings (higher Y values in isometric)
-        # If entity is in front of or at same level as player, it's not hidden
-        if entity_y <= player_y:
-            return False
-        
-        # Check for buildings with roofs between player and entity
-        # Sample points along the line from player to entity
-        dx = entity_x - player_x
-        dy = entity_y - player_y
-        distance = max(abs(dx), abs(dy))
-        
-        if distance <= 1:
-            return False  # Too close to be hidden
-        
-        # Check several points along the line
-        for i in range(1, distance):
-            t = i / distance
-            check_x = int(player_x + dx * t)
-            check_y = int(player_y + dy * t)
+    def is_entity_hidden_by_roof(self, entity_x, entity_y):
+        """Check if an entity is hidden by a roof tile (simple and fast)"""
+        # Check if there's a wall tile adjacent to the entity that would have a roof
+        # Only check immediate adjacent tiles for performance
+        for dx, dy in [(0, 0), (-1, 0), (1, 0), (0, -1), (0, 1)]:
+            check_x = entity_x + dx
+            check_y = entity_y + dy
             
-            # Check if there's a building at this position
-            building_bounds = self.get_building_bounds_at(check_x, check_y)
-            if building_bounds:
-                # Check if this building has a roof (player is outside it)
-                player_in_this_building = self.is_player_in_building(building_bounds)
-                if not player_in_this_building:
-                    # Player is outside this building, so it has a roof that blocks the entity
-                    return True
+            # Get tile type at this position
+            if hasattr(self, 'get_tile'):
+                tile_type = self.get_tile(check_x, check_y)
+            else:
+                if not (0 <= check_y < len(self.tiles) and 0 <= check_x < len(self.tiles[0])):
+                    continue
+                tile_type = self.tiles[check_y][check_x]
+            
+            # Check if this is a wall tile that has a roof
+            if hasattr(self, 'wall_renderer') and self.wall_renderer.is_wall_tile(tile_type):
+                # Simple check: if player is not at this wall position, it has a roof
+                player_x, player_y = int(self.player.x), int(self.player.y)
+                if not (check_x == player_x and check_y == player_y):
+                    # Check if player is under this building's roof
+                    if self.is_player_under_roof(check_x, check_y):
+                        return False  # Player is under roof, so show entities
+                    
+                    # Check if entity is in front of the building (lower Y coordinate)
+                    # In isometric view, entities with lower Y are in front and should be visible
+                    if entity_y < check_y:
+                        return False  # Entity is in front of building, keep it visible
+                    
+                    return True  # Wall has roof and entity is behind it
         
         return False
+    
+    def is_player_under_roof(self, wall_x, wall_y):
+        """Check if player is positioned under a roof tile"""
+        player_x, player_y = int(self.player.x), int(self.player.y)
+        
+        # Check if player is within 1 tile of this wall
+        distance = max(abs(player_x - wall_x), abs(player_y - wall_y))
+        return distance <= 1
     
     def render_roof_tile(self, surface, screen_x, screen_y):
         """Render a roof tile at the given position"""
