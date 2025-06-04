@@ -12,6 +12,14 @@ from .core.assets import AssetLoader
 from .settings import Settings
 from .core.game_log import GameLog
 
+# Try to import MCP server, but don't fail if dependencies are missing
+try:
+    from .mcp_sse_server import MCPSSEServer as GameMCPServer
+    MCP_AVAILABLE = True
+except ImportError:
+    GameMCPServer = None
+    MCP_AVAILABLE = False
+
 class Game:
     """Main game class that controls the game flow"""
     
@@ -46,6 +54,10 @@ class Game:
         self.save_system = SaveSystem()
         self.asset_loader = AssetLoader()
         self.game_log = GameLog()
+        
+        # Initialize MCP server
+        self.mcp_server = None
+        self.start_mcp_server()
         
         # Initialize game components
         self.menu = MainMenu(self)
@@ -299,8 +311,47 @@ class Game:
     
     def run(self):
         """Main game loop"""
-        while self.running:
-            self.handle_events()
-            self.update()
-            self.render()
-            self.clock.tick(60)  # 60 FPS
+        try:
+            while self.running:
+                self.handle_events()
+                self.update()
+                self.render()
+                self.clock.tick(60)  # 60 FPS
+        finally:
+            # Cleanup on exit
+            self.stop_mcp_server()
+    
+    def start_mcp_server(self):
+        """Start the MCP server for AI NPC communication"""
+        if not MCP_AVAILABLE:
+            self.game_log.add_message("⚠️ MCP Server disabled (missing dependencies)", "system")
+            print("MCP Server disabled: FastAPI/uvicorn not installed")
+            return
+            
+        try:
+            self.mcp_server = GameMCPServer(self, host="localhost", port=39301)
+            self.mcp_server.start_server()
+            
+            server_info = self.mcp_server.get_server_info()
+            if server_info:
+                self.game_log.add_message("🌐 MCP Server started for AI NPCs", "system")
+                self.game_log.add_message(f"📡 Endpoint: {server_info['sse_endpoint']}", "system")
+                print(f"MCP Server started: {server_info['sse_endpoint']}")
+            else:
+                self.game_log.add_message("⚠️ MCP Server started but info unavailable", "system")
+                
+        except Exception as e:
+            self.game_log.add_message(f"❌ MCP Server failed to start: {e}", "system")
+            print(f"MCP Server error: {e}")
+    
+    def stop_mcp_server(self):
+        """Stop the MCP server"""
+        if self.mcp_server:
+            self.mcp_server.stop_server()
+            self.game_log.add_message("🔌 MCP Server stopped", "system")
+    
+    def get_mcp_server_info(self):
+        """Get MCP server connection information"""
+        if self.mcp_server:
+            return self.mcp_server.get_server_info()
+        return None
