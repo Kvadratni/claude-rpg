@@ -146,29 +146,29 @@ class MCPSSEServer:
             },
             "create_quest": {
                 "name": "create_quest",
-                "description": "Create a new quest for the player",
+                "description": "Create a quest that you've heard about from travelers. Use this IMMEDIATELY when players accept quests from you.",
                 "inputSchema": {
                     "type": "object",
                     "properties": {
                         "title": {
                             "type": "string",
-                            "description": "Quest title"
+                            "description": "Quest title (e.g., 'Retrieve the Stolen Ring')"
                         },
                         "description": {
-                            "type": "string",
-                            "description": "Quest description"
-                        },
-                        "reward": {
-                            "type": "string",
-                            "description": "Quest reward description"
+                            "type": "string", 
+                            "description": "Quest description mentioning the location and direction (e.g., 'Bandits to the north have stolen a merchant's ring')"
                         },
                         "objectives": {
                             "type": "array",
                             "items": {"type": "string"},
-                            "description": "List of quest objectives"
+                            "description": "List of quest objectives (e.g., ['Collect 1 ring', 'Defeat bandits'])"
+                        },
+                        "reward": {
+                            "type": "string",
+                            "description": "Quest reward description (e.g., '50 gold and experience')"
                         }
                     },
-                    "required": ["title", "description"]
+                    "required": ["title", "description", "objectives"]
                 }
             },
             "get_world_info": {
