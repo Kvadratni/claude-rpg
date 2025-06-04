@@ -14,6 +14,7 @@ try:
     from ..door_pathfinder import DoorPathfinder
     from ..door_renderer import DoorRenderer
     from ..wall_renderer import WallRenderer
+    from ..roof_renderer import RoofRenderer
     from ..entities.spawning import SpawningMixin
 except ImportError:
     # Fallback for direct execution
@@ -23,6 +24,7 @@ except ImportError:
     from src.door_pathfinder import DoorPathfinder
     from src.door_renderer import DoorRenderer
     from src.wall_renderer import WallRenderer
+    from src.roof_renderer import RoofRenderer
     from src.entities.spawning import SpawningMixin
 
 
@@ -74,6 +76,9 @@ class LevelBase(SpawningMixin):
         
         # Wall rendering system
         self.wall_renderer = WallRenderer(self)
+        
+        # Roof rendering system
+        self.roof_renderer = RoofRenderer(self)
         
         # Camera
         self.camera_x = 0

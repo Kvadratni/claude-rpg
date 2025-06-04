@@ -325,11 +325,11 @@ class DoorRenderer:
             pygame.draw.polygon(surface, (0, 0, 100), face_points, 2)  # Dark blue border
     
     def render_stone_face(self, surface, face_points, face_direction):
-        """Render a single door face with stone texture (for top face)"""
-        # Get wall texture for the top face
-        wall_texture = self.asset_loader.get_image("wall_texture")
+        """Render a single door face with roof texture (for top face when roofs are visible)"""
+        # Get roof texture for the top face (to match wall rendering)
+        roof_texture = self.asset_loader.get_image("roof_texture")
         
-        if wall_texture and len(face_points) == 4:
+        if roof_texture and len(face_points) == 4:
             # Create a temporary surface for the face
             min_x = min(p[0] for p in face_points)
             max_x = max(p[0] for p in face_points)
@@ -343,8 +343,9 @@ class DoorRenderer:
                 # Create face surface
                 face_surface = pygame.Surface((face_width, face_height), pygame.SRCALPHA)
                 
-                # Scale wall texture to fit the face
-                scaled_texture = pygame.transform.scale(wall_texture, (face_width, face_height))
+                # FIXED: Rotate roof texture 45 degrees to match isometric orientation
+                rotated_texture = pygame.transform.rotate(roof_texture, 45)
+                scaled_texture = pygame.transform.scale(rotated_texture, (face_width, face_height))
                 
                 # Apply normal lighting for top face
                 tinted_texture = scaled_texture
@@ -367,7 +368,7 @@ class DoorRenderer:
                 # Draw border (subtle, like walls)
                 pygame.draw.polygon(surface, (100, 100, 100), face_points, 1)
         else:
-            # Fallback to stone color for top face
-            color = (160, 140, 120)  # Stone color
+            # Fallback to roof color for top face
+            color = (80, 40, 20)  # Dark brown roof color
             pygame.draw.polygon(surface, color, face_points)
-            pygame.draw.polygon(surface, (100, 80, 60), face_points, 1)
+            pygame.draw.polygon(surface, (60, 30, 15), face_points, 1)

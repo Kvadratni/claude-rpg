@@ -50,6 +50,7 @@ class AssetLoader:
             "archway_texture": "archway_texture_tall.png",  # Updated to use tall archway texture for better wall face fit
             "wall_door": "wall_door.png",  # Wall texture showing an open door for side/back faces
             "brick_tile": "brick_tile.png",  # Added brick tile for building interiors
+            "roof_texture": "roof_texture.png",  # Added roof texture for building roofs
             "sand_tile": "sand_tile.png",
             "snow_tile": "snow_tile.png",
             "forest_floor_tile": "forest_floor_tile.png",
@@ -205,6 +206,7 @@ class AssetLoader:
             "archway_texture": (160, 140, 120),  # Stone archway color
             "wall_door": (120, 100, 80),  # Open door wall color (slightly darker than archway)
             "brick_tile": (150, 80, 60),  # Reddish-brown for brick
+            "roof_texture": (60, 40, 20),  # Dark brown for roof
             "sand_tile": (220, 180, 120),  # Sandy beige
             "snow_tile": (240, 240, 255),  # Snowy white
             "forest_floor_tile": (80, 60, 40),  # Dark forest floor
