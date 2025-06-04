@@ -168,9 +168,8 @@ class LevelRendererMixin:
                 # Render walls with roof texture as top face
                 self.render_wall_with_roof_top(surface, screen_x, screen_y, tile_type, x, y)
             elif tile_type == self.TILE_DOOR and hasattr(self, 'door_renderer'):
+                # Door renderer already includes roof texture on top - no need to add extra roof
                 self.door_renderer.render_door_tile(surface, screen_x, screen_y, tile_type, self, self.tile_width, self.tile_height)
-                # Add roof on top of door too
-                self.render_roof_tile(surface, screen_x, screen_y)
             else:
                 # For interior floors, render the roof at floor level (not wall height)
                 self.render_roof_tile_at_floor_level(surface, screen_x, screen_y)
@@ -352,10 +351,10 @@ class LevelRendererMixin:
             rotated_roof = pygame.transform.rotate(roof_texture, 45)
             scaled_roof = pygame.transform.scale(rotated_roof, (self.tile_width, self.tile_height))
             
-            # FIXED: Position interior roofs lower than wall roofs
-            # Use half wall height instead of full wall height for interior roofs
+            # FIXED: Position interior roofs at three-quarters wall height
+            # Use 3/4 wall height instead of 1/2 wall height for interior roofs
             wall_height = 48
-            roof_y = screen_y - self.tile_height // 2 - (wall_height // 2)
+            roof_y = screen_y - self.tile_height // 2 - (wall_height * 3 // 4)
             roof_rect = scaled_roof.get_rect()
             roof_rect.center = (screen_x, roof_y)
             surface.blit(scaled_roof, roof_rect)
@@ -364,7 +363,7 @@ class LevelRendererMixin:
             roof_surface = pygame.Surface((self.tile_width, self.tile_height), pygame.SRCALPHA)
             roof_surface.fill((80, 40, 20))  # Dark brown
             wall_height = 48
-            roof_y = screen_y - self.tile_height // 2 - (wall_height // 2)
+            roof_y = screen_y - self.tile_height // 2 - (wall_height * 3 // 4)
             roof_rect = roof_surface.get_rect()
             roof_rect.center = (screen_x, roof_y)
             surface.blit(roof_surface, roof_rect)
