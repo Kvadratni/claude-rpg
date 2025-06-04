@@ -65,7 +65,7 @@ class LevelRendererMixin:
         
         # Render entities to game surface with building visibility logic
         for entity in sorted_entities:
-            # Check if entity should be visible (not hidden by roof)
+            # Check if entity should be visible (not hidden by roof or building)
             should_render_entity = True
             
             # Check if entity is inside a building
@@ -79,6 +79,10 @@ class LevelRendererMixin:
                 # Hide entity if player is not in the same building
                 if not player_building_bounds or entity_building_bounds != player_building_bounds:
                     should_render_entity = False
+            else:
+                # FIXED: Entity is outside buildings - check if it's hidden behind a building with roof
+                # In isometric view, entities behind buildings (higher Y values) should be hidden by roofs
+                should_render_entity = not self.is_entity_hidden_behind_building(entity_x, entity_y)
             
             if should_render_entity:
                 entity.render(game_surface, self.camera_x, self.camera_y, self.iso_renderer)
@@ -318,13 +322,53 @@ class LevelRendererMixin:
             return self.get_building_bounds(x, y)
         return None
     
+    def is_entity_hidden_behind_building(self, entity_x, entity_y):
+        """Check if an entity is hidden behind a building with a roof from the player's perspective"""
+        player_x = int(self.player.x)
+        player_y = int(self.player.y)
+        
+        # In isometric view, entities are hidden if there's a building with roof between them and the player
+        # We need to check the line of sight from player to entity
+        
+        # Only check entities that are "behind" buildings (higher Y values in isometric)
+        # If entity is in front of or at same level as player, it's not hidden
+        if entity_y <= player_y:
+            return False
+        
+        # Check for buildings with roofs between player and entity
+        # Sample points along the line from player to entity
+        dx = entity_x - player_x
+        dy = entity_y - player_y
+        distance = max(abs(dx), abs(dy))
+        
+        if distance <= 1:
+            return False  # Too close to be hidden
+        
+        # Check several points along the line
+        for i in range(1, distance):
+            t = i / distance
+            check_x = int(player_x + dx * t)
+            check_y = int(player_y + dy * t)
+            
+            # Check if there's a building at this position
+            building_bounds = self.get_building_bounds_at(check_x, check_y)
+            if building_bounds:
+                # Check if this building has a roof (player is outside it)
+                player_in_this_building = self.is_player_in_building(building_bounds)
+                if not player_in_this_building:
+                    # Player is outside this building, so it has a roof that blocks the entity
+                    return True
+        
+        return False
+    
     def render_roof_tile(self, surface, screen_x, screen_y):
         """Render a roof tile at the given position"""
         roof_texture = self.asset_loader.get_image('roof_texture')
         if roof_texture:
             # FIXED: Rotate the roof texture 45 degrees to match isometric tiles
             rotated_roof = pygame.transform.rotate(roof_texture, 45)
-            scaled_roof = pygame.transform.scale(rotated_roof, (self.tile_width, self.tile_height))
+            # FIXED: Make roof tiles slightly bigger to eliminate gaps (2% larger)
+            scaled_roof = pygame.transform.scale(rotated_roof, (int(self.tile_width * 1.02), int(self.tile_height * 1.02)))
             
             # Position roof to match wall renderer positioning
             # Wall renderer uses: floor_y - tile_height // 2 - wall_height
@@ -335,7 +379,7 @@ class LevelRendererMixin:
             surface.blit(scaled_roof, roof_rect)
         else:
             # Fallback: simple dark rectangle (also rotated for consistency)
-            roof_surface = pygame.Surface((self.tile_width, self.tile_height), pygame.SRCALPHA)
+            roof_surface = pygame.Surface((int(self.tile_width * 1.02), int(self.tile_height * 1.02)), pygame.SRCALPHA)
             roof_surface.fill((80, 40, 20))  # Dark brown
             wall_height = 48
             roof_y = screen_y - self.tile_height // 2 - wall_height
@@ -349,7 +393,8 @@ class LevelRendererMixin:
         if roof_texture:
             # FIXED: Rotate the roof texture 45 degrees to match isometric tiles
             rotated_roof = pygame.transform.rotate(roof_texture, 45)
-            scaled_roof = pygame.transform.scale(rotated_roof, (self.tile_width, self.tile_height))
+            # FIXED: Make roof tiles slightly bigger to eliminate gaps (2% larger)
+            scaled_roof = pygame.transform.scale(rotated_roof, (int(self.tile_width * 1.02), int(self.tile_height * 1.02)))
             
             # FIXED: Position interior roofs slightly lower (2px down from 3/4 height)
             wall_height = 48
@@ -359,7 +404,7 @@ class LevelRendererMixin:
             surface.blit(scaled_roof, roof_rect)
         else:
             # Fallback: simple dark rectangle (also rotated for consistency)
-            roof_surface = pygame.Surface((self.tile_width, self.tile_height), pygame.SRCALPHA)
+            roof_surface = pygame.Surface((int(self.tile_width * 1.02), int(self.tile_height * 1.02)), pygame.SRCALPHA)
             roof_surface.fill((80, 40, 20))  # Dark brown
             wall_height = 48
             roof_y = screen_y - self.tile_height // 2 - (wall_height * 3 // 4) + 2
