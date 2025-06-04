@@ -87,9 +87,14 @@ class Game:
         # Create the first level
         self.current_level = Level("village", self.player, self.asset_loader, self)
         
-        # Initialize quest system
+        # Initialize quest system with level reference
         from .quest_system import QuestManager
-        self.quest_manager = QuestManager(self.player, self.game_log)
+        self.quest_manager = QuestManager(self.player, self.game_log, self.current_level)
+        
+        # Initialize quest log UI
+        from .ui.quest_log import QuestLog
+        self.quest_log = QuestLog(self.asset_loader)
+        self.quest_log.set_quest_manager(self.quest_manager)
         
         # Start tutorial quest automatically
         self.quest_manager.start_quest("tutorial")
@@ -108,6 +113,20 @@ class Game:
             # Create player and level from saved data
             self.player = Player.from_save_data(game_data["player"], self.asset_loader, self.game_log)
             self.current_level = Level.from_save_data(game_data["level"], self.player, self.asset_loader, self)
+            
+            # Initialize quest system
+            from .quest_system import QuestManager
+            self.quest_manager = QuestManager(self.player, self.game_log, self.current_level)
+            
+            # Initialize quest log UI
+            from .ui.quest_log import QuestLog
+            self.quest_log = QuestLog(self.asset_loader)
+            self.quest_log.set_quest_manager(self.quest_manager)
+            
+            # Load quest data if available
+            if "quests" in game_data:
+                self.quest_manager.load_save_data(game_data["quests"])
+            
             self.state = Game.STATE_PLAYING
             self.game_log.add_message(f"Game loaded: {save_name}", "system")
             return True
@@ -120,6 +139,11 @@ class Game:
                 "player": self.player.get_save_data(),
                 "level": self.current_level.get_save_data()
             }
+            
+            # Save quest data if available
+            if hasattr(self, 'quest_manager'):
+                game_data["quests"] = self.quest_manager.get_save_data()
+            
             return self.save_system.save_game(save_name, game_data)
         return False
     
@@ -175,6 +199,10 @@ class Game:
                         audio = getattr(self.asset_loader, 'audio_manager', None)
                         if audio:
                             audio.pause_music()
+                    elif event.key == pygame.K_q:
+                        # Toggle quest log
+                        if hasattr(self, 'quest_log'):
+                            self.quest_log.toggle()
                     elif event.key == pygame.K_i:
                         # Get audio manager
                         audio = getattr(self.asset_loader, 'audio_manager', None)
@@ -193,6 +221,10 @@ class Game:
                         # Toggle fullscreen with Cmd+Shift+F (Meta is Cmd on Mac)
                         self.toggle_fullscreen()
                 else:
+                    # Handle quest log input first
+                    if hasattr(self, 'quest_log') and self.quest_log.handle_input(event):
+                        continue  # Quest log consumed the event
+                    
                     self.current_level.handle_event(event)
             elif self.state == Game.STATE_PAUSED:
                 self.menu.handle_event(event)
@@ -283,8 +315,19 @@ class Game:
         elif self.state == Game.STATE_PLAYING:
             self.current_level.render(self.screen)
             
+            # Render compass in top-right corner
+            from .ui.compass import Compass
+            if not hasattr(self, 'compass'):
+                self.compass = Compass(self.asset_loader)
+            self.compass.set_position(self.width, self.height)
+            self.compass.render(self.screen)
+            
             # Render player UI overlays
             self.player.render_inventory(self.screen)
+            
+            # Render quest log
+            if hasattr(self, 'quest_log'):
+                self.quest_log.render(self.screen)
             
             # AI chat windows are now rendered in level_renderer.py
             

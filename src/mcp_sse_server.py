@@ -542,13 +542,166 @@ class MCPSSEServer:
         return item_map.get(item_name.lower(), {"type": "consumable", "effect": {"health": 10}, "value": 10})
     
     async def _create_quest(self, quest_data: Dict[str, Any]) -> Dict[str, Any]:
-        """Create a new quest"""
-        return {
-            "success": True,
-            "message": f"Created quest: {quest_data['title']}",
-            "quest": quest_data,
-            "action": "quest_created"
-        }
+        """Create a new quest with dynamic spawning support"""
+        try:
+            # Get quest manager from game
+            quest_manager = getattr(self.game, 'quest_manager', None)
+            if not quest_manager:
+                return {
+                    "success": False,
+                    "error": "Quest system not available",
+                    "quest": quest_data
+                }
+            
+            # Parse quest data and add spawn information
+            title = quest_data.get("title", "Unknown Quest")
+            description = quest_data.get("description", "A mysterious quest...")
+            objectives = quest_data.get("objectives", [])
+            reward = quest_data.get("reward", "experience and gold")
+            
+            # Convert objectives from string list to proper format
+            formatted_objectives = []
+            spawn_data = {"spawns": []}
+            
+            for obj_text in objectives:
+                obj_lower = obj_text.lower()
+                
+                if "collect" in obj_lower or "bring" in obj_lower or "find" in obj_lower:
+                    # Extract item name and quantity
+                    import re
+                    numbers = re.findall(r'\d+', obj_text)
+                    quantity = int(numbers[0]) if numbers else 1
+                    
+                    # Try to extract item name
+                    item_name = "ring"  # Default
+                    if "ring" in obj_lower:
+                        item_name = "ring"
+                    elif "sword" in obj_lower:
+                        item_name = "sword"
+                    elif "potion" in obj_lower:
+                        item_name = "health potion"
+                    elif "herb" in obj_lower:
+                        item_name = "healing herb"
+                    
+                    formatted_objectives.append({
+                        "type": "collect",
+                        "target": item_name,
+                        "target": quantity
+                    })
+                    
+                    # Determine spawn location based on quest description
+                    direction = "North"  # Default
+                    if "north" in description.lower():
+                        direction = "North"
+                    elif "south" in description.lower():
+                        direction = "South"
+                    elif "east" in description.lower():
+                        direction = "East"
+                    elif "west" in description.lower():
+                        direction = "West"
+                    
+                    # Determine what to spawn based on context
+                    if "bandit" in description.lower() or "thief" in description.lower():
+                        spawn_data["spawns"].append({
+                            "type": "bandit",
+                            "count": 1,
+                            "direction": direction,
+                            "distance": (25, 45),
+                            "items": [item_name]
+                        })
+                    else:
+                        # Spawn item directly or in a chest
+                        spawn_data["spawns"].append({
+                            "type": "chest",
+                            "count": 1,
+                            "direction": direction,
+                            "distance": (20, 35),
+                            "items": [item_name]
+                        })
+                
+                elif "kill" in obj_lower or "defeat" in obj_lower:
+                    # Extract enemy type and quantity
+                    numbers = re.findall(r'\d+', obj_text)
+                    quantity = int(numbers[0]) if numbers else 1
+                    
+                    enemy_type = "bandit"  # Default
+                    if "bandit" in obj_lower:
+                        enemy_type = "bandit"
+                    elif "goblin" in obj_lower:
+                        enemy_type = "goblin"
+                    elif "orc" in obj_lower:
+                        enemy_type = "orc"
+                    
+                    formatted_objectives.append({
+                        "type": "kill",
+                        "target": enemy_type,
+                        "target": quantity
+                    })
+                    
+                    # Spawn enemies
+                    direction = "North"
+                    if "north" in description.lower():
+                        direction = "North"
+                    elif "south" in description.lower():
+                        direction = "South"
+                    elif "east" in description.lower():
+                        direction = "East"
+                    elif "west" in description.lower():
+                        direction = "West"
+                    
+                    spawn_data["spawns"].append({
+                        "type": enemy_type,
+                        "count": quantity,
+                        "direction": direction,
+                        "distance": (30, 50),
+                        "items": []
+                    })
+            
+            # Parse rewards
+            formatted_rewards = {}
+            if "gold" in reward.lower():
+                numbers = re.findall(r'\d+', reward)
+                formatted_rewards["gold"] = int(numbers[0]) if numbers else 50
+            else:
+                formatted_rewards["gold"] = 50
+            
+            if "experience" in reward.lower():
+                numbers = re.findall(r'\d+', reward)
+                formatted_rewards["experience"] = int(numbers[0]) if numbers else 100
+            else:
+                formatted_rewards["experience"] = 100
+            
+            if "potion" in reward.lower():
+                formatted_rewards["item"] = "health potion"
+            
+            # Create the quest
+            quest_info = {
+                "title": title,
+                "description": description,
+                "objectives": formatted_objectives,
+                "rewards": formatted_rewards,
+                "spawn_data": spawn_data
+            }
+            
+            quest_id = quest_manager.create_dynamic_quest(quest_info)
+            
+            return {
+                "success": True,
+                "message": f"Created quest: {title}",
+                "quest_id": quest_id,
+                "quest": quest_info,
+                "action": "quest_created"
+            }
+            
+        except Exception as e:
+            print(f"❌ [MCP] Failed to create quest: {e}")
+            import traceback
+            traceback.print_exc()
+            return {
+                "success": False,
+                "error": f"Failed to create quest: {str(e)}",
+                "quest": quest_data
+            }
     
     async def _get_world_info(self) -> Dict[str, Any]:
         """Get world information"""
