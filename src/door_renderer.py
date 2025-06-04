@@ -365,10 +365,14 @@ class DoorRenderer:
                 # Blit the textured face to the main surface
                 surface.blit(face_surface, (min_x, min_y))
                 
-                # Draw border (subtle, like walls)
-                pygame.draw.polygon(surface, (100, 100, 100), face_points, 1)
+                # FIXED: Don't draw border on roof faces to avoid grid lines
+                # Only draw borders on side faces, not top faces (roofs)
+                if face_direction != "top":
+                    pygame.draw.polygon(surface, (100, 100, 100), face_points, 1)
         else:
             # Fallback to roof color for top face
             color = (80, 40, 20)  # Dark brown roof color
             pygame.draw.polygon(surface, color, face_points)
-            pygame.draw.polygon(surface, (60, 30, 15), face_points, 1)
+            # FIXED: Don't draw border on roof faces in fallback either
+            if face_direction != "top":
+                pygame.draw.polygon(surface, (60, 30, 15), face_points, 1)

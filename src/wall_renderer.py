@@ -455,13 +455,17 @@ class WallRenderer:
                 # Blit the textured face to the main surface
                 surface.blit(face_surface, (min_x, min_y))
                 
-                # Draw border
-                pygame.draw.polygon(surface, (100, 100, 100), face_points, 1)
+                # FIXED: Don't draw border on roof faces to avoid grid lines
+                # Only draw borders on side faces, not top faces (roofs)
+                if face_direction != "top":
+                    pygame.draw.polygon(surface, (100, 100, 100), face_points, 1)
         else:
             # Fallback to solid color rendering
             color = (80, 40, 20)  # Dark brown fallback for roof
             pygame.draw.polygon(surface, color, face_points)
-            pygame.draw.polygon(surface, (100, 100, 100), face_points, 1)
+            # FIXED: Don't draw border on roof faces in fallback either
+            if face_direction != "top":
+                pygame.draw.polygon(surface, (100, 100, 100), face_points, 1)
     
     def render_flat_wall(self, surface, screen_x, screen_y, tile_type, world_x, world_y):
         """Render walls using flat isometric surfaces with texture support"""
