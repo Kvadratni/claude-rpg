@@ -197,12 +197,29 @@ class BaseAINPC(Entity):
                 return ""
         
         try:
-            # Send the message
+            # Clear any pending output first
+            import select
+            import time
+            
+            # Drain any existing output to ensure clean state
+            while True:
+                ready, _, _ = select.select([self.goose_process.stdout], [], [], 0.1)
+                if not ready:
+                    break
+                line = self.goose_process.stdout.readline()
+                if not line:
+                    break
+                print(f"🔧 [BaseAINPC] Drained: {line.strip()}")
+            
+            # Send the message with clear context
             full_message = f"{message}\n"
             print(f"🔧 [BaseAINPC] Sending to session: '{message}'")
             
             self.goose_process.stdin.write(full_message)
             self.goose_process.stdin.flush()
+            
+            # Small delay to ensure message is processed
+            time.sleep(0.2)
             
             # Improved response reading with better completion detection
             response = self._read_complete_response()
@@ -234,10 +251,11 @@ class BaseAINPC(Entity):
             "What would you like to do next?",
             "How can I help you?",
             "Is there anything else",
-            "───",  # Tool execution separator
             "Safe travels!",  # Common NPC ending
             "Good luck!",  # Common NPC ending
             "Let me know!",  # Common NPC ending
+            "feel free to",  # Common NPC phrase
+            "anything else I can",  # Common NPC phrase
         ]
         
         while time.time() - start_time < timeout:

@@ -73,26 +73,26 @@ class LevelRendererMixin:
         # Render bottom UI panel (equipment, inventory button, game log)
         self.render_ui(screen)
         
-        # Render shops on top of everything
+        # Render dialogue window 
+        if self.player.current_dialogue and self.player.current_dialogue.show:
+            self.player.current_dialogue.render(screen)
+        
+        # Render AI chat window 
+        if hasattr(self.player, 'current_ai_chat') and self.player.current_ai_chat and self.player.current_ai_chat.is_active:
+            self.player.current_ai_chat.render(screen)
+        
+        # Render shops on top of everything (including chat windows) - HIGHEST PRIORITY
         for npc in self.npcs:
-            if hasattr(npc, 'shop') and npc.shop:
+            if hasattr(npc, 'shop') and npc.shop and npc.shop.show:
                 # Set player items for sell mode
                 npc.shop.set_player_items(self.player.inventory.items)
                 npc.shop.render(screen)
         
-        # Render player's current shop (from MCP system)
-        if hasattr(self.player, 'current_shop') and self.player.current_shop:
+        # Render player's current shop (from MCP system) - ABSOLUTE HIGHEST PRIORITY
+        if hasattr(self.player, 'current_shop') and self.player.current_shop and self.player.current_shop.show:
             # Set player items for sell mode
             self.player.current_shop.set_player_items(self.player.inventory.items)
             self.player.current_shop.render(screen)
-        
-        # Render dialogue window on top of everything
-        if self.player.current_dialogue and self.player.current_dialogue.show:
-            self.player.current_dialogue.render(screen)
-        
-        # Render AI chat window on top of everything
-        if hasattr(self.player, 'current_ai_chat') and self.player.current_ai_chat and self.player.current_ai_chat.is_active:
-            self.player.current_ai_chat.render(screen)
     
     def render_tile_at_position(self, surface, x, y):
         """Render a single tile with new flat surface wall system"""
