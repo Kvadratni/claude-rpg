@@ -47,6 +47,8 @@ class AssetLoader:
             "door_tile": "door.png",  # Fixed: use door.png instead of door_tile.png
             "door_tile_isometric": "door.png",  # Added for isometric door rendering
             "door": "door.png",  # Added door texture for front face
+            "archway_texture": "archway_texture_tall.png",  # Updated to use tall archway texture for better wall face fit
+            "wall_door": "wall_door.png",  # Wall texture showing an open door for side/back faces
             "brick_tile": "brick_tile.png",  # Added brick tile for building interiors
             "sand_tile": "sand_tile.png",
             "snow_tile": "snow_tile.png",
@@ -200,6 +202,8 @@ class AssetLoader:
             "door_tile": (139, 69, 19),  # Brown for door
             "door_tile_isometric": (139, 69, 19),  # Brown for isometric door
             "door": (139, 69, 19),  # Brown for door texture
+            "archway_texture": (160, 140, 120),  # Stone archway color
+            "wall_door": (120, 100, 80),  # Open door wall color (slightly darker than archway)
             "brick_tile": (150, 80, 60),  # Reddish-brown for brick
             "sand_tile": (220, 180, 120),  # Sandy beige
             "snow_tile": (240, 240, 255),  # Snowy white

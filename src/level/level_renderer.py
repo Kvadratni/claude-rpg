@@ -120,6 +120,9 @@ class LevelRendererMixin:
                 floor_sprite = self.tile_sprites.get(self.TILE_STONE)  # Stone under doors
             else:
                 floor_sprite = self.tile_sprites.get(self.TILE_BRICK)  # Brick under walls (interior)
+        elif tile_type == self.TILE_DOOR:
+            # Render stone floor under doors
+            floor_sprite = self.tile_sprites.get(self.TILE_STONE)
         else:
             # Normal floor tiles - use .get() to avoid KeyError
             floor_sprite = self.tile_sprites.get(tile_type)
