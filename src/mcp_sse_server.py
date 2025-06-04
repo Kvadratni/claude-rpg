@@ -11,6 +11,7 @@ import logging
 import threading
 import time
 import uuid
+import random
 from typing import Dict, Any, Optional, List
 
 try:
@@ -43,9 +44,25 @@ class MCPSSEServer:
         self.server_thread = None
         self.server_info = None
         
+        # Initialize item registry for asset-aware quest generation
+        self.item_registry = None
+        self._initialize_item_registry()
+        
         self._setup_middleware()
         self._setup_routes()
         self._setup_tools()
+    
+    def _initialize_item_registry(self):
+        """Initialize the item registry with game assets"""
+        try:
+            from .item_registry import ItemRegistry
+            asset_loader = getattr(self.game, 'asset_loader', None)
+            self.item_registry = ItemRegistry(asset_loader)
+            self.item_registry.print_registry_info()
+            print("✅ [MCP] Item registry initialized for asset-aware quests")
+        except Exception as e:
+            print(f"⚠️  [MCP] Failed to initialize item registry: {e}")
+            self.item_registry = None
     
     def _setup_middleware(self):
         """Setup CORS and other middleware"""
@@ -520,8 +537,21 @@ class MCPSSEServer:
             }
     
     def _get_item_data(self, item_name: str) -> Dict[str, Any]:
-        """Get item data based on item name"""
-        # Simple item mapping - in a real game this would come from a database
+        """Get item data based on item name - now uses item registry"""
+        # Try to use item registry first
+        if self.item_registry:
+            # Resolve the item name to canonical form
+            canonical_name = self.item_registry.resolve_item_name(item_name)
+            if canonical_name:
+                item_data = self.item_registry.get_item_data(canonical_name)
+                if item_data:
+                    return {
+                        "type": item_data["type"],
+                        "effect": item_data["effect"],
+                        "value": item_data["value"]
+                    }
+        
+        # Fallback to legacy item mapping
         item_map = {
             "health potion": {"type": "consumable", "effect": {"health": 50}, "value": 25},
             "mana potion": {"type": "consumable", "effect": {"mana": 30}, "value": 20},
@@ -536,6 +566,9 @@ class MCPSSEServer:
             "key": {"type": "key", "effect": {"opens": "door"}, "value": 50},
             "antidote": {"type": "consumable", "effect": {"cure_poison": True}, "value": 35},
             "strength potion": {"type": "consumable", "effect": {"damage_boost": 10, "duration": 60}, "value": 50},
+            "gold ring": {"type": "misc", "effect": {"magic_resistance": 5}, "value": 250},
+            "magic scroll": {"type": "misc", "effect": {"spell_power": 15}, "value": 200},
+            "crystal gem": {"type": "misc", "effect": {"value": 100}, "value": 150},
         }
         
         # Default to consumable if not found
@@ -573,16 +606,8 @@ class MCPSSEServer:
                     numbers = re.findall(r'\d+', obj_text)
                     quantity = int(numbers[0]) if numbers else 1
                     
-                    # Try to extract item name
-                    item_name = "ring"  # Default
-                    if "ring" in obj_lower:
-                        item_name = "ring"
-                    elif "sword" in obj_lower:
-                        item_name = "sword"
-                    elif "potion" in obj_lower:
-                        item_name = "health potion"
-                    elif "herb" in obj_lower:
-                        item_name = "healing herb"
+                    # Use asset-aware item selection
+                    item_name = self._select_quest_item(obj_text, "collect")
                     
                     formatted_objectives.append({
                         "type": "collect",
@@ -747,6 +772,117 @@ class MCPSSEServer:
                 "error": f"Failed to create quest: {str(e)}",
                 "quest": quest_data
             }
+    
+    def _select_quest_item(self, objective_text: str, quest_type: str = "collect") -> str:
+        """Select an appropriate item for a quest using asset-aware matching"""
+        if not self.item_registry:
+            # Fallback to old hardcoded system
+            return self._fallback_item_selection(objective_text)
+        
+        try:
+            # Extract potential item mentions from the objective text
+            extracted_item = self._extract_item_from_text(objective_text)
+            
+            if extracted_item:
+                # Try to find matching items in registry
+                matching_items = self.item_registry.find_similar_items(extracted_item)
+                
+                if matching_items:
+                    # Use the best match
+                    selected_item = matching_items[0]
+                    print(f"🎯 [MCP] Matched '{extracted_item}' to existing item: {selected_item}")
+                    return selected_item
+            
+            # If no specific match, select by category
+            suitable_items = self.item_registry.get_suitable_quest_items(quest_type)
+            if suitable_items:
+                # Prefer quest items for collection quests
+                if quest_type == "collect":
+                    quest_items = [item for item in suitable_items if "quest_items" in self.item_registry.get_item_data(item).get("category", "")]
+                    if quest_items:
+                        selected_item = random.choice(quest_items)
+                        print(f"🎲 [MCP] Selected random quest item: {selected_item}")
+                        return selected_item
+                
+                # Otherwise pick any suitable item
+                selected_item = random.choice(suitable_items)
+                print(f"🎲 [MCP] Selected random suitable item: {selected_item}")
+                return selected_item
+            
+            # Last resort: guaranteed fallback
+            fallback_item = self.item_registry.get_guaranteed_fallback_item()
+            print(f"⚠️  [MCP] Using fallback item: {fallback_item}")
+            return fallback_item
+            
+        except Exception as e:
+            print(f"❌ [MCP] Error in item selection: {e}")
+            return self.item_registry.get_guaranteed_fallback_item() if self.item_registry else "Health Potion"
+    
+    def _extract_item_from_text(self, text: str) -> Optional[str]:
+        """Extract item intent from quest text using keyword matching"""
+        text_lower = text.lower()
+        
+        # Direct item mentions with priority order
+        item_keywords = {
+            # Weapons (high priority for combat-related quests)
+            "sword": ["sword", "blade", "steel", "iron sword"],
+            "axe": ["axe", "hatchet"],
+            "dagger": ["dagger", "knife", "blade"],
+            "bow": ["bow", "crossbow", "ranged"],
+            "staff": ["staff", "rod", "wand"],
+            "hammer": ["hammer", "mace", "club"],
+            
+            # Armor
+            "armor": ["armor", "protection", "mail", "plate"],
+            "shield": ["shield", "buckler"],
+            
+            # Consumables  
+            "potion": ["potion", "elixir", "brew", "drink"],
+            "health potion": ["health", "healing", "red potion"],
+            "mana potion": ["mana", "magic potion", "blue potion"],
+            "antidote": ["antidote", "poison cure"],
+            
+            # Quest items (high priority)
+            "ring": ["ring", "band", "jewelry", "golden ring"],
+            "scroll": ["scroll", "tome", "document", "parchment", "letter"],
+            "gem": ["gem", "crystal", "stone", "jewel"],
+            "key": ["key", "opener"],
+            
+            # Generic categories
+            "weapon": ["weapon", "armament"],
+            "treasure": ["treasure", "valuable", "precious"]
+        }
+        
+        # Find the best match with longest keyword match first
+        best_match = None
+        best_length = 0
+        
+        for item_type, keywords in item_keywords.items():
+            for keyword in keywords:
+                if keyword in text_lower:
+                    if len(keyword) > best_length:
+                        best_match = item_type
+                        best_length = len(keyword)
+        
+        return best_match
+    
+    def _fallback_item_selection(self, objective_text: str) -> str:
+        """Fallback item selection when registry is not available"""
+        obj_lower = objective_text.lower()
+        
+        # Old hardcoded system
+        if "ring" in obj_lower:
+            return "Gold Ring"
+        elif "sword" in obj_lower:
+            return "Iron Sword"
+        elif "potion" in obj_lower:
+            return "Health Potion"
+        elif "scroll" in obj_lower:
+            return "Magic Scroll"
+        elif "gem" in obj_lower or "crystal" in obj_lower:
+            return "Crystal Gem"
+        else:
+            return "Health Potion"  # Safe fallback
     
     async def _get_world_info(self) -> Dict[str, Any]:
         """Get world information"""
