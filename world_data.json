@@ -1,0 +1,95 @@
+{
+  "locations": {
+    "village": {
+      "name": "Village",
+      "type": "settlement",
+      "description": "A peaceful village surrounded by forests",
+      "npcs": ["Village Elder", "Master Merchant", "Innkeeper", "Master Smith"],
+      "shops": ["Master Merchant", "Innkeeper", "Master Smith"],
+      "services": ["inn", "blacksmith", "general_store"]
+    },
+    "forest": {
+      "name": "Dark Forest",
+      "type": "wilderness",
+      "description": "A mysterious forest with dangerous creatures",
+      "enemies": ["Wolf", "Goblin", "Spider"],
+      "resources": ["herbs", "wood"]
+    },
+    "dungeon": {
+      "name": "Ancient Dungeon",
+      "type": "dungeon",
+      "description": "An old dungeon filled with treasures and monsters",
+      "levels": 3,
+      "enemies": ["Skeleton", "Orc", "Dragon"]
+    }
+  },
+  "npcs": {
+    "Village Elder": {
+      "location": "village",
+      "role": "quest_giver",
+      "status": "available",
+      "has_quest": true
+    },
+    "Master Merchant": {
+      "location": "village",
+      "role": "shopkeeper",
+      "status": "available",
+      "shop_type": "general"
+    },
+    "Innkeeper": {
+      "location": "village",
+      "role": "innkeeper",
+      "status": "available",
+      "shop_type": "inn"
+    },
+    "Master Smith": {
+      "location": "village",
+      "role": "blacksmith",
+      "status": "available",
+      "shop_type": "weapons_armor"
+    }
+  },
+  "active_quests": [
+    {
+      "id": "tutorial",
+      "title": "Welcome to the Village",
+      "description": "Explore the village and meet the locals",
+      "giver": "Village Elder",
+      "status": "active",
+      "objectives": [
+        "Talk to the Village Elder",
+        "Visit the Master Merchant",
+        "Rest at the Inn"
+      ]
+    }
+  ],
+  "player_location": "village",
+  "time_of_day": "afternoon",
+  "weather": "clear",
+  "nearby_npcs": ["Innkeeper", "Master Merchant", "Master Smith"],
+  "relationships": {
+    "innkeeper": {
+      "player": {
+        "reputation": 10,
+        "trust": 60,
+        "last_interaction": "2024-12-05T10:30:00Z",
+        "relationship_type": "friendly"
+      }
+    },
+    "master_merchant": {
+      "player": {
+        "reputation": 5,
+        "trust": 50,
+        "last_interaction": null,
+        "relationship_type": "neutral"
+      }
+    }
+  },
+  "world_events": [
+    {
+      "type": "market_day",
+      "description": "The village market is bustling with activity",
+      "active": true
+    }
+  ]
+}

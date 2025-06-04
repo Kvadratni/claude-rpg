@@ -53,9 +53,24 @@ class RPGMCPServer:
     
     def __init__(self):
         self.server = Server("rpg-game-server")
-        self.game_state_file = Path("game_state.json")
-        self.actions_queue_file = Path("mcp_actions_queue.json")
-        self.world_data_file = Path("world_data.json")
+        
+        # Use game directory for state files (not current working directory)
+        game_dir = Path.cwd()
+        # If we're running from a different location, try to find the game directory
+        if not (game_dir / "src").exists():
+            # Look for the game directory in common locations
+            possible_dirs = [
+                Path.home() / "Development" / "claude-rpg-goose-npcs",
+                Path("/Users/mnovich/Development/claude-rpg-goose-npcs"),
+            ]
+            for possible_dir in possible_dirs:
+                if possible_dir.exists() and (possible_dir / "src").exists():
+                    game_dir = possible_dir
+                    break
+        
+        self.game_state_file = game_dir / "game_state.json"
+        self.actions_queue_file = game_dir / "mcp_actions_queue.json"
+        self.world_data_file = game_dir / "world_data.json"
         
         # Initialize action queue
         self.pending_actions: List[GameAction] = []
@@ -484,20 +499,31 @@ class RPGMCPServer:
         logger.info("Starting RPG MCP Server...")
         
         async with stdio_server() as (read_stream, write_stream):
+            # Create a basic ServerCapabilities object
+            from mcp.server.models import ServerCapabilities
+            capabilities = ServerCapabilities(
+                tools={"listChanged": True},
+                resources={"subscribe": True, "listChanged": True},
+            )
+            
             await self.server.run(
                 read_stream,
                 write_stream,
                 InitializationOptions(
                     server_name="rpg-game-server",
                     server_version="1.0.0",
-                    capabilities=self.server.get_capabilities(),
+                    capabilities=capabilities,
                 ),
             )
 
-async def main():
-    """Main entry point"""
+async def async_main():
+    """Async main entry point"""
     server = RPGMCPServer()
     await server.run()
 
+def main():
+    """Synchronous main entry point for console script"""
+    asyncio.run(async_main())
+
 if __name__ == "__main__":
-    asyncio.run(main())
+    main()

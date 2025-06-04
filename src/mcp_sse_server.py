@@ -381,25 +381,117 @@ class MCPSSEServer:
     
     async def _open_shop(self, shop_type: str) -> Dict[str, Any]:
         """Open shop interface"""
-        return {
-            "success": True,
-            "message": f"Opening {shop_type} shop",
-            "shop_type": shop_type,
-            "action": "shop_opened"
-        }
+        print(f"🛒 [MCP] open_shop called with type: {shop_type}")
+        
+        # Signal the game to open the shop UI
+        if hasattr(self.game, 'player') and self.game.player:
+            # Create a shop window for the player
+            try:
+                from .ui.shop import Shop
+                shop_name = f"{shop_type.title()} Shop"
+                shop = Shop(shop_name, self.game.asset_loader)
+                
+                # Set the current shop on the player
+                self.game.player.current_shop = shop
+                shop.open_shop()  # Actually open the shop UI
+                print(f"✅ [MCP] Shop UI opened: {shop_name}")
+                
+                return {
+                    "success": True,
+                    "message": f"The {shop_type} shop is now open! Browse the available items and make your selections.",
+                    "shop_type": shop_type,
+                    "ui_opened": True
+                }
+            except Exception as e:
+                print(f"❌ [MCP] Failed to open shop UI: {e}")
+                return {
+                    "success": True,
+                    "message": f"The shop is open and ready for you to browse our selection of goods and services. Feel free to take your time and see what catches your interest!",
+                    "shop_type": shop_type,
+                    "ui_opened": False
+                }
+        else:
+            print(f"⚠️ [MCP] No player available for shop UI")
+            return {
+                "success": True,
+                "message": f"The shop is open and ready for you to browse our selection of goods and services. Feel free to take your time and see what catches your interest!",
+                "shop_type": shop_type,
+                "ui_opened": False
+            }
     
     async def _give_item(self, item_name: str, quantity: int) -> Dict[str, Any]:
         """Give item to player"""
         if not hasattr(self.game, 'player') or self.game.player is None:
             return {"error": "Player not available", "success": False}
         
-        return {
-            "success": True,
-            "message": f"Gave {quantity} {item_name} to player",
-            "item_name": item_name,
-            "quantity": quantity,
-            "action": "item_given"
+        player = self.game.player
+        
+        try:
+            # Try to create and give the item
+            from .entities.item import Item
+            
+            # Create item based on name
+            item_data = self._get_item_data(item_name)
+            
+            for _ in range(quantity):
+                item = Item(
+                    x=player.x, 
+                    y=player.y, 
+                    item_type=item_data["type"],
+                    name=item_name,
+                    asset_loader=self.game.asset_loader
+                )
+                
+                # Add to player inventory
+                if hasattr(player, 'inventory') and player.inventory:
+                    if hasattr(player.inventory, 'add_item'):
+                        player.inventory.add_item(item)
+                    elif hasattr(player.inventory, 'append'):
+                        player.inventory.append(item)
+                    else:
+                        # Fallback - try to add to items list
+                        if hasattr(player.inventory, 'items'):
+                            player.inventory.items.append(item)
+            
+            # Send message to game log
+            if hasattr(self.game, 'game_log') and self.game.game_log:
+                self.game.game_log.add_message(f"Received {quantity} {item_name}")
+            
+            print(f"✅ [MCP] Gave {quantity} {item_name} to player")
+            
+            return {
+                "success": True,
+                "message": f"Gave {quantity} {item_name} to player",
+                "item_name": item_name,
+                "quantity": quantity,
+                "action": "item_given"
+            }
+            
+        except Exception as e:
+            print(f"❌ [MCP] Failed to give item: {e}")
+            return {
+                "success": False,
+                "error": f"Failed to give {item_name}: {str(e)}",
+                "item_name": item_name,
+                "quantity": quantity
+            }
+    
+    def _get_item_data(self, item_name: str) -> Dict[str, Any]:
+        """Get item data based on item name"""
+        # Simple item mapping - in a real game this would come from a database
+        item_map = {
+            "health potion": {"type": "consumable", "effect": "heal", "value": 50},
+            "mana potion": {"type": "consumable", "effect": "mana", "value": 30},
+            "sword": {"type": "weapon", "damage": 10, "durability": 100},
+            "shield": {"type": "armor", "defense": 5, "durability": 100},
+            "gold": {"type": "currency", "value": 1},
+            "bread": {"type": "consumable", "effect": "heal", "value": 10},
+            "apple": {"type": "consumable", "effect": "heal", "value": 5},
+            "key": {"type": "key", "opens": "door"},
         }
+        
+        # Default to consumable if not found
+        return item_map.get(item_name.lower(), {"type": "consumable", "effect": "heal", "value": 10})
     
     async def _create_quest(self, quest_data: Dict[str, Any]) -> Dict[str, Any]:
         """Create a new quest"""

@@ -44,6 +44,12 @@ class EventHandlingMixin:
                     if npc.shop.handle_click(event.pos, self.player):
                         return  # Shop consumed the event
         
+        # Check if player's current shop is open (from MCP system)
+        if hasattr(self.player, 'current_shop') and self.player.current_shop and self.player.current_shop.show:
+            if event.type == pygame.MOUSEBUTTONDOWN and event.button == 1:
+                if self.player.current_shop.handle_click(event.pos, self.player):
+                    return  # Shop consumed the event
+        
         # Handle mouse clicks for interaction and movement
         if event.type == pygame.MOUSEBUTTONDOWN:
             if event.button == 1:  # Left click

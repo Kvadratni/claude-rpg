@@ -50,16 +50,16 @@ Respond as the Master Merchant in 1-2 sentences, staying true to your enthusiast
             "I have potions, weapons, and rare artifacts from distant lands!"
         ]
         
-        super().__init__(x, y, "Master Merchant", dialog=dialog, 
-                        asset_loader=asset_loader, **kwargs)
-        
-        # Set up shop
-        self.has_shop = True
-        self.shop_items = [
+        # Shop items for Master Merchant
+        shop_items = [
             {"name": "Health Potion", "price": 50, "type": "consumable"},
             {"name": "Iron Sword", "price": 200, "type": "weapon"},
             {"name": "Leather Armor", "price": 150, "type": "armor"}
         ]
+        
+        super().__init__(x, y, "Master Merchant", dialog=dialog, 
+                        asset_loader=asset_loader, has_shop=True, 
+                        shop_items=shop_items, **kwargs)
     
     def _get_sprite_name(self) -> Optional[str]:
         """Get sprite name for Master Merchant"""

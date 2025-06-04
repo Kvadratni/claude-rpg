@@ -18,7 +18,7 @@ class BaseAINPC(Entity):
     recipe: Optional[Dict[str, Any]] = None
     
     def __init__(self, x: int, y: int, name: str, dialog: Optional[List[str]] = None, 
-                 asset_loader=None, **kwargs):
+                 asset_loader=None, has_shop: bool = False, shop_items: Optional[List] = None, **kwargs):
         super().__init__(x, y, name, "npc")
         self.dialog = dialog or ["Hello, traveler!"]
         self.asset_loader = asset_loader
@@ -27,10 +27,23 @@ class BaseAINPC(Entity):
         self.ai_enabled = bool(self.recipe)
         self.use_fallback = False
         
+        # Shop attributes (compatibility with regular NPC class)
+        self.has_shop = has_shop
+        self.shop_items = shop_items or []
+        self.shop = None
+        
+        # Create shop if this NPC is a shopkeeper
+        if self.has_shop:
+            from ..ui.shop import Shop
+            shop_name = f"{self.name}'s Shop"
+            self.shop = Shop(shop_name, asset_loader)
+        
+        # Track first interaction for better AI responses
+        self.first_interaction = True
+        
         # Session management
         self.goose_process = None
         self.session_initialized = False
-        self.first_interaction = True  # Track if this is the first interaction
         
         # MCP integration
         self.npc_id = f"{self.name.lower().replace(' ', '_')}_{id(self)}"
@@ -39,7 +52,7 @@ class BaseAINPC(Entity):
         self.create_npc_sprite()
     
     def send_ai_message(self, message: str, context: str = "") -> str:
-        """Send message to AI using embedded recipe"""
+        """Send message to AI using embedded recipe with one-shot execution"""
         print(f"🔧 [BaseAINPC] send_ai_message for {self.name}: '{message}'")
         
         if not self.recipe or self.use_fallback:
@@ -109,10 +122,10 @@ class BaseAINPC(Entity):
             "Blacksmith": "recipes/blacksmith.yaml",
             "Innkeeper": "recipes/innkeeper.yaml",
             "Healer": "recipes/healer.yaml",
-            "High Priest": "recipes/healer.yaml",  # Use healer recipe for priest
+            "High Priest": "recipes/healer.yaml",
             "Caravan Master": "recipes/caravan_master.yaml",
-            "Mine Foreman": "recipes/blacksmith.yaml",  # Use blacksmith recipe for foreman
-            "Harbor Master": "recipes/master_merchant.yaml",  # Use merchant recipe for harbor master
+            "Mine Foreman": "recipes/blacksmith.yaml",
+            "Harbor Master": "recipes/master_merchant.yaml",
             "Master Herbalist": "recipes/master_herbalist.yaml",
             "Tavern Keeper": "recipes/tavern_keeper.yaml",
             "Forest Ranger": "recipes/forest_ranger.yaml"
@@ -124,11 +137,11 @@ class BaseAINPC(Entity):
             return False
         
         try:
-            # Start Goose process with recipe - provide default context parameter only
+            # Start Goose process with recipe
             cmd = [
                 "goose", "run",
                 "--recipe", recipe_file,
-                "--params", "context=You are in a fantasy RPG village",  # Provide default context
+                "--params", "context=You are in a fantasy RPG village",  # Default context for initialization
                 "--interactive",
                 "--name", self.session_name
             ]
@@ -154,12 +167,12 @@ class BaseAINPC(Entity):
                 stdout=subprocess.PIPE,
                 stderr=subprocess.PIPE,
                 text=True,
-                bufsize=1  # Line buffered
+                bufsize=0  # Unbuffered for real-time reading
             )
             
             # Wait for initialization and check if process is still running
             import time
-            time.sleep(3)  # Give it more time to start
+            time.sleep(3)  # Give it time to start
             
             if self.goose_process.poll() is not None:
                 # Process has terminated
@@ -176,7 +189,7 @@ class BaseAINPC(Entity):
             return False
     
     def _send_message_to_session(self, message: str, context: str) -> str:
-        """Send a message to the existing Goose session"""
+        """Send a message to the existing Goose session with improved completion detection"""
         if not self.goose_process or self.goose_process.poll() is not None:
             print(f"❌ [BaseAINPC] Session is not active, reinitializing")
             self.session_initialized = False
@@ -191,30 +204,8 @@ class BaseAINPC(Entity):
             self.goose_process.stdin.write(full_message)
             self.goose_process.stdin.flush()
             
-            # Read response (this is tricky with interactive processes)
-            # We'll read until we get a response or timeout
-            import select
-            import time
-            
-            response_lines = []
-            start_time = time.time()
-            timeout = 10  # 10 second timeout
-            
-            while time.time() - start_time < timeout:
-                # Check if there's data to read
-                if select.select([self.goose_process.stdout], [], [], 0.1)[0]:
-                    line = self.goose_process.stdout.readline()
-                    if line:
-                        response_lines.append(line.strip())
-                        # Look for end of response (you might need to adjust this)
-                        if len(response_lines) > 5:  # Assume response is complete after several lines
-                            break
-                else:
-                    time.sleep(0.1)
-            
-            # Parse the response
-            full_output = '\n'.join(response_lines)
-            response = self._parse_goose_output(full_output)
+            # Improved response reading with better completion detection
+            response = self._read_complete_response()
             cleaned = self._clean_response(response)
             
             print(f"🔧 [BaseAINPC] Session response: '{cleaned}'")
@@ -224,9 +215,85 @@ class BaseAINPC(Entity):
             print(f"❌ [BaseAINPC] Error sending message to session: {e}")
             return ""
     
+    def _read_complete_response(self) -> str:
+        """Read response from Goose session with improved completion detection"""
+        import select
+        import time
+        
+        response_lines = []
+        start_time = time.time()
+        timeout = 30  # 30 second timeout
+        last_activity_time = start_time
+        idle_threshold = 1.5  # Reduced idle time
+        
+        print(f"🔧 [BaseAINPC] Reading response with improved completion detection...")
+        
+        # Look for specific completion signals
+        completion_signals = [
+            "Goose is running! Enter your instructions",
+            "What would you like to do next?",
+            "How can I help you?",
+            "Is there anything else",
+            "───",  # Tool execution separator
+            "Safe travels!",  # Common NPC ending
+            "Good luck!",  # Common NPC ending
+            "Let me know!",  # Common NPC ending
+        ]
+        
+        while time.time() - start_time < timeout:
+            # Check if there's data to read
+            ready, _, _ = select.select([self.goose_process.stdout], [], [], 0.1)
+            
+            if ready:
+                # Data is available
+                line = self.goose_process.stdout.readline()
+                if line:
+                    line_stripped = line.strip()
+                    if line_stripped:  # Only add non-empty lines
+                        response_lines.append(line_stripped)
+                        last_activity_time = time.time()
+                        print(f"🔧 [BaseAINPC] Read line: {line_stripped[:100]}...")
+                        
+                        # Check for completion signals
+                        for signal in completion_signals:
+                            if signal.lower() in line_stripped.lower():
+                                print(f"🔧 [BaseAINPC] Detected completion signal: {signal}")
+                                # Give a small buffer to catch any remaining output
+                                time.sleep(0.3)
+                                # Read any remaining lines
+                                while True:
+                                    ready_final, _, _ = select.select([self.goose_process.stdout], [], [], 0.1)
+                                    if ready_final:
+                                        final_line = self.goose_process.stdout.readline()
+                                        if final_line and final_line.strip():
+                                            response_lines.append(final_line.strip())
+                                        else:
+                                            break
+                                    else:
+                                        break
+                                # Parse and return immediately
+                                full_output = '\n'.join(response_lines)
+                                response = self._parse_goose_output(full_output)
+                                print(f"🔧 [BaseAINPC] Complete response read: {len(response_lines)} lines")
+                                return response
+            else:
+                # No data available - check if we've been idle long enough
+                if response_lines and (time.time() - last_activity_time) > idle_threshold:
+                    print(f"🔧 [BaseAINPC] No new output for {idle_threshold}s, assuming response complete")
+                    break
+                
+                time.sleep(0.1)
+        
+        # Parse the complete response
+        full_output = '\n'.join(response_lines)
+        response = self._parse_goose_output(full_output)
+        
+        print(f"🔧 [BaseAINPC] Complete response read: {len(response_lines)} lines")
+        return response
+    
     def cleanup_session(self):
         """Clean up the Goose session"""
-        if self.goose_process:
+        if hasattr(self, 'goose_process') and self.goose_process:
             try:
                 self.goose_process.stdin.write("exit\n")
                 self.goose_process.stdin.flush()
@@ -265,12 +332,30 @@ class BaseAINPC(Entity):
             r'Enter your instructions',
             r'Closing session\. Recorded to',  # Filter out session closing messages
             r'Session recorded to',            # Alternative session message format
-            r'\.jsonl\.$'                      # Lines ending with .jsonl
+            r'\.jsonl\.$',                     # Lines ending with .jsonl
+            r'^───.*───$',                     # Tool execution separators
+            r'^\s*[a-z_]+:\s*$',              # Tool parameter names (like "shop_type:")
+            r'^\s*-\s*$',                     # Empty list items
+            r'^starting session',             # Session start messages
         ]
+        
+        in_tool_output = False
         
         for line in lines:
             line = line.strip()
             if not line:
+                continue
+            
+            # Detect tool output sections
+            if line.startswith('───') and line.endswith('───'):
+                in_tool_output = True
+                continue
+            elif in_tool_output and not line.startswith(('shop_type:', 'description:', 'objectives:', 'reward:', 'title:', '-')):
+                # We've moved past tool parameters to actual response
+                in_tool_output = False
+                
+            # Skip tool parameter lines
+            if in_tool_output:
                 continue
                 
             # Check if line matches any skip pattern
@@ -499,7 +584,9 @@ class BaseAINPC(Entity):
             "ai_enabled": self.ai_enabled,
             "conversation_history": self.conversation_history,
             "use_fallback": self.use_fallback,
-            "first_interaction": self.first_interaction
+            "first_interaction": self.first_interaction,
+            "has_shop": self.has_shop,
+            "shop_items": self.shop_items
         })
         return data
     
@@ -510,7 +597,9 @@ class BaseAINPC(Entity):
     @classmethod
     def from_save_data(cls, data, asset_loader=None):
         """Create NPC from save data"""
-        npc = cls(data["x"], data["y"], asset_loader=asset_loader)
+        npc = cls(data["x"], data["y"], asset_loader=asset_loader, 
+                 has_shop=data.get("has_shop", False), 
+                 shop_items=data.get("shop_items", []))
         npc.dialog = data.get("dialog", npc.dialog)
         npc.ai_enabled = data.get("ai_enabled", npc.ai_enabled)
         npc.conversation_history = data.get("conversation_history", [])

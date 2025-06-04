@@ -49,6 +49,7 @@ class Player:
         self.dialog_text = ""
         self.current_dialogue = None  # For dialogue windows
         self.current_ai_chat = None   # For AI chat windows
+        self.current_shop = None      # For shop windows
         
         # Create player sprite
         self.create_sprite()

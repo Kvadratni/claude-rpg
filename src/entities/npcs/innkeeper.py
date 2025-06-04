@@ -21,8 +21,17 @@ class InnkeeperNPC(BaseAINPC):
             "I hear many interesting tales from my guests."
         ]
         
+        # Shop items for Innkeeper (food and lodging)
+        shop_items = [
+            {"name": "Room for the Night", "price": 10, "type": "service"},
+            {"name": "Hot Meal", "price": 5, "type": "consumable"},
+            {"name": "Ale", "price": 3, "type": "consumable"},
+            {"name": "Bread", "price": 2, "type": "consumable"}
+        ]
+        
         super().__init__(x, y, "Innkeeper", dialog=dialog, 
-                        asset_loader=asset_loader, **kwargs)
+                        asset_loader=asset_loader, has_shop=True,
+                        shop_items=shop_items, **kwargs)
     
     def _get_sprite_name(self):
         """Get sprite name for Innkeeper"""

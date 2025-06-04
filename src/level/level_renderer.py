@@ -80,6 +80,12 @@ class LevelRendererMixin:
                 npc.shop.set_player_items(self.player.inventory.items)
                 npc.shop.render(screen)
         
+        # Render player's current shop (from MCP system)
+        if hasattr(self.player, 'current_shop') and self.player.current_shop:
+            # Set player items for sell mode
+            self.player.current_shop.set_player_items(self.player.inventory.items)
+            self.player.current_shop.render(screen)
+        
         # Render dialogue window on top of everything
         if self.player.current_dialogue and self.player.current_dialogue.show:
             self.player.current_dialogue.render(screen)

@@ -1,0 +1,37 @@
+{
+  "player": {
+    "name": "Player",
+    "level": 5,
+    "hp": 85,
+    "max_hp": 100,
+    "experience": 1250,
+    "gold": 150,
+    "location": "village",
+    "inventory": [
+      {"name": "Health Potion", "quantity": 3, "type": "consumable"},
+      {"name": "Iron Sword", "quantity": 1, "type": "weapon"},
+      {"name": "Leather Armor", "quantity": 1, "type": "armor"},
+      {"name": "Bread", "quantity": 5, "type": "consumable"}
+    ],
+    "equipment": {
+      "weapon": "Iron Sword",
+      "armor": "Leather Armor",
+      "shield": null
+    },
+    "active_quests": [
+      {
+        "id": "tutorial",
+        "title": "Welcome to the Village",
+        "description": "Explore the village and talk to the NPCs",
+        "status": "active",
+        "objectives": ["Talk to the Village Elder", "Visit the shops"]
+      }
+    ]
+  },
+  "game_settings": {
+    "difficulty": "normal",
+    "sound_enabled": true,
+    "music_enabled": true
+  },
+  "timestamp": 1733356800
+}

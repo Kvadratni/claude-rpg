@@ -21,8 +21,17 @@ class MasterSmithNPC(BaseAINPC):
             "Every blade I forge is a work of art."
         ]
         
+        # Shop items for Master Smith
+        shop_items = [
+            {"name": "Steel Sword", "price": 300, "type": "weapon"},
+            {"name": "Iron Shield", "price": 200, "type": "armor"},
+            {"name": "Chain Mail", "price": 250, "type": "armor"},
+            {"name": "Battle Axe", "price": 350, "type": "weapon"}
+        ]
+        
         super().__init__(x, y, "Master Smith", dialog=dialog, 
-                        asset_loader=asset_loader, **kwargs)
+                        asset_loader=asset_loader, has_shop=True,
+                        shop_items=shop_items, **kwargs)
     
     def _get_sprite_name(self):
         """Get sprite name for Master Smith"""
