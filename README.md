@@ -9,9 +9,9 @@ An immersive isometric RPG game featuring combat, exploration, inventory managem
 
 **Watch the AI NPCs in action!** See how they dynamically create quests, spawn objects in the world, and interact intelligently with players.
 
-https://github.com/user-attachments/assets/your-video-id-here
+[🎥 **Watch Full Gameplay Demo**](video/AI-NPC-RPG.mp4)
 
-*[AI-NPC-RPG.mp4](video/AI-NPC-RPG.mp4) - Full gameplay demonstration*
+*Click above to download and watch the complete AI NPC demonstration video*
 
 ### AI Development Team
 - **Programming**: Goose AI agent using Claude 4 Sonnet
