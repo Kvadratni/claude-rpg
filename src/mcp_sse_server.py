@@ -587,7 +587,7 @@ class MCPSSEServer:
                     formatted_objectives.append({
                         "type": "collect",
                         "target": item_name,
-                        "target": quantity
+                        "count": quantity
                     })
                     
                     # Determine spawn location based on quest description
@@ -654,7 +654,7 @@ class MCPSSEServer:
                     formatted_objectives.append({
                         "type": "kill",
                         "target": enemy_type,
-                        "target": quantity
+                        "count": quantity
                     })
                     
                     # Spawn enemies

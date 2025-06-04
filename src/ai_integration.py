@@ -15,17 +15,31 @@ from typing import List, Dict, Optional, Tuple
 class GooseRecipeIntegration:
     """Handles communication with Goose CLI via subprocess"""
     
-    def __init__(self, npc_name: str):
+    def __init__(self, npc_name: str, settings=None):
         self.npc_name = npc_name
         self.conversation_history = []
         self.session_name = f"npc_{npc_name.lower().replace(' ', '_')}"
+        self.settings = settings
         
     def send_message(self, message: str, context: str = "") -> str:
         """Send message to AI and get response using session approach"""
         try:
-            # Set up environment with GPT-4.1 as the chosen model
+            # Set up environment - use model from settings or environment
             env = os.environ.copy()
-            env["GOOSE_MODEL"] = "goose-gpt-4-1"
+            
+            # Get model from settings first, then environment, then default
+            model = None
+            if self.settings:
+                model = self.settings.get_ai_model()
+            
+            if not model:
+                model = os.environ.get("GOOSE_MODEL")
+            
+            if not model:
+                model = "gpt-4o"  # Default fallback
+            
+            env["GOOSE_MODEL"] = model
+            print(f"🤖 [AI] Using model: {model} for {self.npc_name}")
             
             # Create a comprehensive NPC prompt
             npc_prompt = self._create_npc_prompt(message, context)
@@ -505,11 +519,11 @@ except ImportError as e:
 class EnhancedGooseRecipeIntegration(GooseRecipeIntegration):
     """Enhanced version with recipe support and fallback AI"""
     
-    def __init__(self, npc_name: str, game_recipe_manager=None):
+    def __init__(self, npc_name: str, game_recipe_manager=None, settings=None):
         print(f"🔧 [EnhancedGooseRecipeIntegration] Initializing for {npc_name}")
         print(f"🔧 [EnhancedGooseRecipeIntegration] RECIPES_AVAILABLE: {RECIPES_AVAILABLE}")
         
-        super().__init__(npc_name)
+        super().__init__(npc_name, settings)
         self.fallback_ai = FallbackAI(npc_name)
         self.use_fallback = False
         
