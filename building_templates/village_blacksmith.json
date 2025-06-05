@@ -1,0 +1,126 @@
+{
+  "name": "village_blacksmith",
+  "width": 8,
+  "height": 8,
+  "building_type": "blacksmith",
+  "tiles": [
+    [
+      1,
+      1,
+      1,
+      1,
+      1,
+      1,
+      1,
+      1
+    ],
+    [
+      1,
+      3,
+      3,
+      3,
+      3,
+      3,
+      3,
+      1
+    ],
+    [
+      1,
+      3,
+      4,
+      4,
+      3,
+      3,
+      3,
+      1
+    ],
+    [
+      1,
+      3,
+      3,
+      3,
+      3,
+      3,
+      3,
+      1
+    ],
+    [
+      1,
+      3,
+      3,
+      3,
+      3,
+      3,
+      3,
+      1
+    ],
+    [
+      1,
+      3,
+      3,
+      3,
+      3,
+      3,
+      3,
+      1
+    ],
+    [
+      1,
+      3,
+      3,
+      3,
+      3,
+      3,
+      3,
+      1
+    ],
+    [
+      1,
+      1,
+      1,
+      1,
+      2,
+      1,
+      1,
+      1
+    ]
+  ],
+  "npc_spawns": [
+    {
+      "x": 3,
+      "y": 3,
+      "npc_type": "blacksmith",
+      "name": "Blacksmith",
+      "has_shop": true,
+      "dialog": [
+        "The forge burns hot today!",
+        "I craft the finest weapons and armor!",
+        "What do you need forged?"
+      ],
+      "importance": "high"
+    }
+  ],
+  "furniture_positions": [
+    [
+      5,
+      2,
+      "weapon_rack"
+    ],
+    [
+      6,
+      5,
+      "tool_rack"
+    ],
+    [
+      1,
+      5,
+      "storage"
+    ]
+  ],
+  "description": "A blacksmith shop with forge and crafting area",
+  "min_settlement_size": "medium",
+  "biome_compatibility": [
+    "all"
+  ],
+  "importance": "high"
+}

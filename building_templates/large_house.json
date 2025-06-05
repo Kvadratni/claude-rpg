@@ -1,0 +1,158 @@
+{
+  "name": "large_house",
+  "width": 10,
+  "height": 8,
+  "building_type": "house",
+  "tiles": [
+    [
+      1,
+      1,
+      1,
+      1,
+      1,
+      1,
+      1,
+      1,
+      1,
+      1
+    ],
+    [
+      1,
+      3,
+      3,
+      3,
+      3,
+      3,
+      3,
+      3,
+      3,
+      1
+    ],
+    [
+      1,
+      3,
+      3,
+      3,
+      3,
+      3,
+      3,
+      3,
+      3,
+      1
+    ],
+    [
+      1,
+      3,
+      3,
+      3,
+      3,
+      3,
+      3,
+      3,
+      3,
+      1
+    ],
+    [
+      1,
+      1,
+      1,
+      1,
+      1,
+      2,
+      1,
+      1,
+      1,
+      1
+    ],
+    [
+      1,
+      3,
+      3,
+      3,
+      3,
+      3,
+      3,
+      3,
+      3,
+      1
+    ],
+    [
+      1,
+      3,
+      3,
+      3,
+      3,
+      3,
+      3,
+      3,
+      3,
+      1
+    ],
+    [
+      1,
+      1,
+      1,
+      1,
+      1,
+      2,
+      1,
+      1,
+      1,
+      1
+    ]
+  ],
+  "npc_spawns": [
+    {
+      "x": 3,
+      "y": 2,
+      "npc_type": "noble",
+      "name": "House Owner",
+      "has_shop": false,
+      "dialog": [
+        "Welcome to my estate!",
+        "I am a person of some standing in this community."
+      ],
+      "importance": "medium"
+    },
+    {
+      "x": 7,
+      "y": 6,
+      "npc_type": "servant",
+      "name": "House Servant",
+      "has_shop": false,
+      "dialog": [
+        "Good day to you!",
+        "I maintain this fine household."
+      ],
+      "importance": "low"
+    }
+  ],
+  "furniture_positions": [
+    [
+      2,
+      2,
+      "fancy_bed"
+    ],
+    [
+      7,
+      2,
+      "desk"
+    ],
+    [
+      2,
+      6,
+      "kitchen"
+    ],
+    [
+      8,
+      6,
+      "storage"
+    ]
+  ],
+  "description": "A large house for wealthy residents with multiple rooms",
+  "min_settlement_size": "medium",
+  "biome_compatibility": [
+    "all"
+  ],
+  "importance": "medium"
+}
