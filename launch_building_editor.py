@@ -1,44 +1,67 @@
 #!/usr/bin/env python3
 """
 Building Template Editor Launcher
-Launch the building template editor for creating and editing building templates.
+Launch the enhanced building template editor for creating and editing building templates.
 """
 
 import sys
 import os
 
-# Add the src directory to the Python path
-sys.path.insert(0, os.path.join(os.path.dirname(__file__), 'src'))
+# Add the project root to the Python path
+project_root = os.path.dirname(os.path.abspath(__file__))
+sys.path.insert(0, project_root)
 
 try:
-    # Import directly without relative imports
-    import sys
-    sys.path.append('src')
-    from ui.building_editor import BuildingEditor
+    # Import the enhanced building editor
+    from enhanced_building_editor import EnhancedBuildingEditor
     
     def main():
-        print("🏗️  Building Template Editor")
-        print("=" * 40)
-        print("Controls:")
-        print("  1-5: Select tools (Wall, Door, Floor, NPC Spawn, Furniture)")
+        print("🏗️  Enhanced Building Template Editor")
+        print("=" * 50)
+        print("🎯 New Features:")
+        print("  📋 Template Browser (Ctrl+O)")
+        print("  🏷️  Template Properties (Ctrl+P)")
+        print("  🪟 Window Walls (Tool 2)")
+        print("  👥 Advanced NPC Configuration")
+        print("  🗑️  Easy NPC Removal")
+        print()
+        print("🎮 Controls:")
+        print("  1-6: Select tools (Wall, Window, Door, Floor, NPC, Furniture)")
         print("  E: Erase tool")
-        print("  Left Click: Place selected tool")
-        print("  Right Click: Remove/erase")
-        print("  Ctrl+S: Save template")
+        print("  Left Click: Place/Edit")
+        print("  Right Click: Remove")
+        print("  Drag: Paint mode")
         print("  Ctrl+N: New template")
+        print("  Ctrl+O: Open template browser")
+        print("  Ctrl+S: Save template")
+        print("  Ctrl+P: Template properties")
         print("  ESC: Close dialogs")
-        print("=" * 40)
+        print("=" * 50)
         
-        # Create and run the editor
-        editor = BuildingEditor(screen_width=1400, screen_height=900)
+        # Create and run the enhanced editor
+        editor = EnhancedBuildingEditor(screen_width=1400, screen_height=900)
         editor.run()
         
-        print("Building editor closed.")
+        print("Enhanced building editor closed.")
 
     if __name__ == "__main__":
         main()
 
 except ImportError as e:
-    print(f"Error importing building editor: {e}")
-    print("Make sure pygame is installed: pip install pygame")
-    sys.exit(1)
+    print(f"❌ Error importing enhanced building editor: {e}")
+    print()
+    print("🔧 Troubleshooting:")
+    print("1. Make sure pygame is installed: pip install pygame")
+    print("2. Try running directly: python enhanced_building_editor.py")
+    print("3. Check that enhanced_building_editor.py exists in this directory")
+    print()
+    
+    # Fallback to check if the basic building editor exists
+    try:
+        from src.ui.building_editor import BuildingEditor
+        print("📋 Found basic building editor, launching that instead...")
+        editor = BuildingEditor(screen_width=1400, screen_height=900)
+        editor.run()
+    except ImportError:
+        print("❌ No building editor found. Please check your installation.")
+        sys.exit(1)
