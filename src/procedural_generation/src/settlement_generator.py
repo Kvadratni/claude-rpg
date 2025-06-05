@@ -25,7 +25,7 @@ class SettlementGenerator:
                 {'name': 'Guard House', 'size': (6, 5), 'npc': 'Guard Captain', 'has_shop': False}  # Reduced from 8x6
             ],
             'biomes': ['PLAINS', 'FOREST'],
-            'safe_radius': 70  # Increased from 20 - twice the settlement size (35*2)
+            'safe_radius': 100  # Increased from 70 - much larger safe zone for main village
         },
         'DESERT_OUTPOST': {
             'size': (28, 28),  # Increased from 20x20
@@ -35,7 +35,7 @@ class SettlementGenerator:
                 {'name': 'Caravan Rest', 'size': (8, 5), 'npc': 'Desert Guide', 'has_shop': False}  # Reduced from 10x6
             ],
             'biomes': ['DESERT'],
-            'safe_radius': 56  # Increased from 15 - twice the settlement size (28*2)
+            'safe_radius': 80  # Increased from 56 - larger safe zone for desert outpost
         },
         'SNOW_SETTLEMENT': {
             'size': (25, 25),  # Increased from 18x18
@@ -45,7 +45,7 @@ class SettlementGenerator:
                 {'name': 'Warm Lodge', 'size': (7, 6), 'npc': 'Lodge Keeper', 'has_shop': False}  # Reduced from 10x8
             ],
             'biomes': ['SNOW'],
-            'safe_radius': 50  # Increased from 15 - twice the settlement size (25*2)
+            'safe_radius': 75  # Increased from 50 - larger safe zone for snow settlement
         },
         'TRADING_POST': {
             'size': (22, 22),  # Increased from 15x15
@@ -55,7 +55,7 @@ class SettlementGenerator:
                 {'name': 'Stable', 'size': (6, 5), 'npc': 'Stable Master', 'has_shop': False}  # Reduced from 8x6
             ],
             'biomes': ['PLAINS', 'FOREST', 'DESERT'],
-            'safe_radius': 44  # Increased from 12 - twice the settlement size (22*2)
+            'safe_radius': 70  # Increased from 44 - larger safe zone for trading post
         },
         'MINING_CAMP': {
             'size': (30, 30),  # Increased from 20x20
@@ -66,7 +66,7 @@ class SettlementGenerator:
                 {'name': 'Ore Storage', 'size': (6, 5)}  # Reduced from 8x6
             ],
             'biomes': ['SNOW', 'DESERT'],
-            'safe_radius': 60  # Increased from 15 - twice the settlement size (30*2)
+            'safe_radius': 90  # Increased from 60 - larger safe zone for mining camp
         },
         'FISHING_VILLAGE': {
             'size': (30, 30),  # Increased from 22x22
@@ -77,7 +77,7 @@ class SettlementGenerator:
                 {'name': 'Net Storage', 'size': (5, 4)}  # Reduced from 6x6
             ],
             'biomes': ['PLAINS', 'FOREST'],  # Near water areas
-            'safe_radius': 60  # Increased from 18 - twice the settlement size (30*2)
+            'safe_radius': 85  # Increased from 60 - larger safe zone for fishing village
         }
     }
     
@@ -246,8 +246,8 @@ class SettlementGenerator:
         # Mark area as occupied
         self.occupied_areas.append((x, y, settlement_width, settlement_height))
         
-        # Add safe zone with larger radius for better enemy exclusion
-        safe_radius = template_config.get('safe_radius', 35)  # Increased from 15 to 35
+        # Add safe zone with much larger radius for better enemy exclusion
+        safe_radius = template_config.get('safe_radius', 60)  # Increased from 35 to 60
         center_x = x + settlement_width // 2
         center_y = y + settlement_height // 2
         self.settlement_safe_zones.append((center_x, center_y, safe_radius))
