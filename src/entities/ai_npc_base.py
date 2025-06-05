@@ -555,6 +555,7 @@ class BaseAINPC(Entity):
             if sprite_name:
                 npc_image = self.asset_loader.get_image(sprite_name)
                 if npc_image:
+                    print(f"✅ [BaseAINPC] Loaded sprite '{sprite_name}' for {self.name}")
                     self.sprite = pygame.transform.scale(npc_image, (size, size))
                     self.direction_sprites = [
                         self.sprite,  # Down (0)
@@ -563,6 +564,12 @@ class BaseAINPC(Entity):
                         self.sprite   # Right (3)
                     ]
                     return
+                else:
+                    print(f"⚠️  [BaseAINPC] Failed to load sprite '{sprite_name}' for {self.name}, using fallback")
+            else:
+                print(f"⚠️  [BaseAINPC] No sprite name provided for {self.name}, using fallback")
+        else:
+            print(f"⚠️  [BaseAINPC] No asset loader for {self.name}, using fallback")
         
         # Fallback to generated sprite
         self._create_generated_sprite(size)
