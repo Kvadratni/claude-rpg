@@ -10,7 +10,7 @@ from .base import Entity
 class NPC(Entity):
     """Non-player character with optional AI support"""
     
-    def __init__(self, x, y, name, dialog=None, shop_items=None, asset_loader=None, has_shop=False):
+    def __init__(self, x, y, name, dialog=None, shop_items=None, asset_loader=None, has_shop=False, auto_create_sprite=True):
         super().__init__(x, y, name, "npc")
         self.dialog = dialog or ["Hello, traveler!"]
         self.shop_items = shop_items or []
@@ -32,8 +32,9 @@ class NPC(Entity):
             shop_name = f"{self.name}'s Shop"
             self.shop = Shop(shop_name, asset_loader)
         
-        # Create NPC sprite
-        self.create_npc_sprite()
+        # Create NPC sprite (unless disabled)
+        if auto_create_sprite:
+            self.create_npc_sprite()
     
     def enable_ai(self, player_ref, game_context):
         """Enable AI for this NPC"""
@@ -125,7 +126,41 @@ class NPC(Entity):
         """Create NPC sprite with support for all new NPC types"""
         size = 48  # Increased from 32 to 48
         
-        # Try to use loaded sprite first
+        print(f"🎨 Creating sprite for NPC '{self.name}'")
+        print(f"   - Has is_background attribute: {hasattr(self, 'is_background')}")
+        if hasattr(self, 'is_background'):
+            print(f"   - is_background value: {self.is_background}")
+        print(f"   - Has asset_loader: {self.asset_loader is not None}")
+        
+        # Check if this is a background NPC - use generic sprite
+        if hasattr(self, 'is_background') and self.is_background:
+            print(f"   🎭 Background NPC detected: '{self.name}'")
+            if self.asset_loader:
+                print(f"   🔍 Looking for 'generic_npc' asset...")
+                generic_npc_image = self.asset_loader.get_image('generic_npc')
+                print(f"   📦 generic_npc asset found: {generic_npc_image is not None}")
+                if generic_npc_image:
+                    print(f"   📏 Original asset size: {generic_npc_image.get_size()}")
+                    # Create base sprite
+                    self.sprite = pygame.transform.scale(generic_npc_image, (size, size))
+                    print(f"   ✅ Scaled to: {self.sprite.get_size()}")
+                    # Create direction sprites - mirror for left movement
+                    self.direction_sprites = [
+                        self.sprite,  # Down (0)
+                        pygame.transform.flip(self.sprite, True, False),  # Left (1) - mirrored
+                        self.sprite,  # Up (2)
+                        self.sprite   # Right (3) - original (facing right)
+                    ]
+                    print(f"   🎉 Successfully loaded generic sprite for background NPC '{self.name}'")
+                    return
+                else:
+                    print(f"   ❌ Failed to load generic_npc sprite for background NPC '{self.name}', falling back to generated sprite")
+            else:
+                print(f"   ❌ No asset_loader available for background NPC '{self.name}'")
+        else:
+            print(f"   👤 Interactive NPC detected: '{self.name}'")
+        
+        # Try to use loaded sprite first for interactive NPCs
         if self.asset_loader:
             # Map NPC names to sprite assets - EXPANDED MAPPING
             sprite_mappings = {

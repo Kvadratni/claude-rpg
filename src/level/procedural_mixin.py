@@ -484,19 +484,32 @@ class ProceduralGenerationMixin:
             print(f"        ⚠️  No AI class found for {npc_name}, creating AI-ready regular NPC")
             from ..entities.npc import NPC
             
+            # Check if this is a background NPC (non-interactive)
+            is_background = entity_data.get('is_background', False)
+            
+            # Create NPC with data from chunk (don't auto-create sprite yet)
             npc = NPC(
                 x=world_x,
                 y=world_y,
                 name=npc_name,
-                dialog=None,  # Will be set by NPC class based on name
+                dialog=entity_data.get('dialog', None),  # Background NPCs will have empty dialog
                 shop_items=None,
                 asset_loader=self.asset_loader,
-                has_shop=has_shop
+                has_shop=has_shop,
+                auto_create_sprite=False  # We'll create it manually after setting flags
             )
             
-            # Mark as AI-ready so it will be enabled on first interaction
-            npc.ai_ready = True
+            # Set background flag BEFORE creating sprite
+            if is_background:
+                npc.is_background = True
+                npc.dialog = ["..."]  # Minimal dialog to avoid errors
+            else:
+                # Mark as AI-ready so it will be enabled on first interaction
+                npc.ai_ready = True
             
+            # Now create the sprite with the correct flag set
+            npc.create_npc_sprite()
+                
             return npc
             
         except Exception as e:

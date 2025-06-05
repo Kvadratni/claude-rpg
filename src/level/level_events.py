@@ -124,10 +124,22 @@ class EventHandlingMixin:
                 clicked_entity = enemy
                 break
         
-        # Check NPCs for info
+        # Check NPCs for info (only if visible and interactive)
         if not clicked_entity:
             for npc in self.npcs:
                 if abs(world_x - npc.x) < 1.2 and abs(world_y - npc.y) < 1.2:
+                    # Check if NPC is visible (not hidden by building roof)
+                    if not self._is_npc_visible_for_interaction(npc):
+                        continue  # Skip hidden NPCs
+                    
+                    # Allow inspection of background NPCs, but show different info
+                    if hasattr(npc, 'is_background') and npc.is_background:
+                        if self.player.game_log:
+                            # Show basic info for background NPCs
+                            self.player.game_log.add_message(f"{npc.name} (Background NPC)", "system")
+                        clicked_entity = npc
+                        break
+                    
                     if self.player.game_log:
                         # Just show NPC info on right-click, not dialog
                         npc_info = f"{npc.name}"
@@ -197,9 +209,28 @@ class EventHandlingMixin:
         # Check if clicking on an entity for interaction (no movement)
         clicked_entity = None
         
-        # Check NPCs (must be within interaction range)
+        # Check NPCs (must be within interaction range AND visible AND interactive)
         for npc in self.npcs:
             if abs(world_x - npc.x) < 1.2 and abs(world_y - npc.y) < 1.2:
+                # Check if NPC is visible (not hidden by building roof)
+                if not self._is_npc_visible_for_interaction(npc):
+                    continue  # Skip hidden NPCs
+                
+                # Handle background NPCs differently
+                if hasattr(npc, 'is_background') and npc.is_background:
+                    # Background NPCs give minimal response
+                    if self.player.game_log:
+                        responses = [
+                            f"{npc.name} nods briefly.",
+                            f"{npc.name} looks busy.",
+                            f"{npc.name} gives a polite wave.",
+                            f"{npc.name} is going about their day."
+                        ]
+                        import random
+                        response = random.choice(responses)
+                        self.player.game_log.add_message(response, "dialog")
+                    return  # Don't allow full interaction
+                
                 dist = math.sqrt((self.player.x - npc.x)**2 + (self.player.y - npc.y)**2)
                 if dist < 2.0:  # Only interact if close enough
                     clicked_entity = npc
@@ -287,3 +318,45 @@ class EventHandlingMixin:
         # Interact with clicked entity
         if clicked_entity and hasattr(clicked_entity, 'interact'):
             clicked_entity.interact(self.player)
+    
+    def _is_npc_visible_for_interaction(self, npc):
+        """
+        Check if NPC is visible for interaction (not hidden by building roof)
+        Uses the same logic as the rendering system
+        """
+        npc_x, npc_y = int(npc.x), int(npc.y)
+        player_x, player_y = int(self.player.x), int(self.player.y)
+        
+        # Check if NPC is inside a building
+        if hasattr(self, 'get_tile'):
+            npc_tile_type = self.get_tile(npc_x, npc_y)
+        else:
+            if 0 <= npc_y < len(self.tiles) and 0 <= npc_x < len(self.tiles[0]):
+                npc_tile_type = self.tiles[npc_y][npc_x]
+            else:
+                return True  # Default to visible if we can't check
+        
+        # Check if NPC is on a building tile (interior floor or wall)
+        is_npc_in_building = (npc_tile_type == self.TILE_BRICK or 
+                             (hasattr(self, 'wall_renderer') and 
+                              self.wall_renderer.is_wall_tile(npc_tile_type)) or
+                             npc_tile_type == self.TILE_DOOR)
+        
+        if is_npc_in_building:
+            # NPC is inside a building - check if player is close to this building
+            npc_building_bounds = self.get_building_bounds_at(npc_x, npc_y)
+            if npc_building_bounds:
+                min_x, min_y, max_x, max_y = npc_building_bounds
+                
+                # Check if player is within 0.75 tiles of the building bounds (same as rendering logic)
+                expanded_min_x = min_x - 0.75
+                expanded_max_x = max_x + 0.75
+                expanded_min_y = min_y - 0.75
+                expanded_max_y = max_y + 0.75
+                
+                # NPC is visible if player is close to the building
+                return (expanded_min_x <= player_x <= expanded_max_x and 
+                        expanded_min_y <= player_y <= expanded_max_y)
+        
+        # NPC is not in a building, so it's always visible
+        return True

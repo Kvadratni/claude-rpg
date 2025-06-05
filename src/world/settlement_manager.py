@@ -220,13 +220,25 @@ class ChunkSettlementManager:
         buildings_with_npcs = [b for b in config['buildings'] if 'npc' in b]
         buildings_with_npcs.sort(key=lambda b: {'high': 3, 'medium': 2, 'low': 1}.get(b.get('importance', 'low'), 1), reverse=True)
         
-        # Scale NPCs based on settlement size - smaller settlements get fewer NPCs
-        max_npcs = self._get_max_npcs_for_settlement(settlement_type)
-        npcs_to_place = min(len(buildings_with_npcs), max_npcs)
+        # Scale NPCs based on settlement size - split between interactive and background
+        npc_limits = {
+            'VILLAGE': (3, 4),           # 3 interactive + 4 background = 7 total
+            'TOWN': (6, 8),              # 6 interactive + 8 background = 14 total  
+            'DESERT_OUTPOST': (2, 2),    # 2 interactive + 2 background = 4 total
+            'SNOW_SETTLEMENT': (3, 3),   # 3 interactive + 3 background = 6 total
+            'SWAMP_VILLAGE': (3, 3),     # 3 interactive + 3 background = 6 total
+            'FOREST_CAMP': (2, 2),       # 2 interactive + 2 background = 4 total
+            'MINING_CAMP': (3, 4),       # 3 interactive + 4 background = 7 total
+            'FISHING_VILLAGE': (4, 4)    # 4 interactive + 4 background = 8 total
+        }
+        max_interactive, max_background = npc_limits.get(settlement_type, (2, 2))
         
-        print(f"  👥 Settlement {settlement_type}: placing {npcs_to_place}/{len(buildings_with_npcs)} NPCs (max: {max_npcs})")
+        # First, place interactive NPCs (the important ones with shops/services)
+        interactive_npcs_to_place = min(len(buildings_with_npcs), max_interactive)
         
-        for i, building in enumerate(buildings_with_npcs[:npcs_to_place]):
+        print(f"  👥 Settlement {settlement_type}: placing {interactive_npcs_to_place} interactive + {max_background} background NPCs")
+        
+        for i, building in enumerate(buildings_with_npcs[:interactive_npcs_to_place]):
             if 'npc' in building:
                 # Calculate NPC position within the building
                 building_center_x = world_x + settlement_random.randint(2, config['size'][0] - 2)
@@ -244,6 +256,35 @@ class ChunkSettlementManager:
                 }
                 npcs.append(npc_data)
                 building_assignments[building['name']] = npc_data
+        
+        # Second, add background NPCs (simple villagers for atmosphere - non-interactive)
+        background_npc_names = [
+            "Villager", "Farmer", "Worker", "Resident", "Citizen", 
+            "Peasant", "Local", "Townsperson", "Settler", "Dweller"
+        ]
+        
+        for i in range(max_background):
+            # Place background NPCs in random locations within the settlement
+            bg_npc_x = world_x + settlement_random.randint(3, config['size'][0] - 3)
+            bg_npc_y = world_y + settlement_random.randint(3, config['size'][1] - 3)
+            
+            # Choose a random background NPC name
+            bg_npc_name = settlement_random.choice(background_npc_names)
+            if i > 0:  # Add numbers to avoid duplicate names
+                bg_npc_name = f"{bg_npc_name} {i+1}"
+            
+            bg_npc_data = {
+                'name': bg_npc_name,
+                'building': 'Settlement',
+                'has_shop': False,
+                'x': bg_npc_x,
+                'y': bg_npc_y,
+                'is_background': True,  # Flag to identify background NPCs (non-interactive)
+                'dialog': []  # No dialog - they won't be interactive
+            }
+            npcs.append(bg_npc_data)
+            
+        print(f"  👤 Added {interactive_npcs_to_place} interactive + {max_background} background NPCs")
         
         settlement_data = {
             'type': settlement_type,
@@ -268,6 +309,7 @@ class ChunkSettlementManager:
     def _get_max_npcs_for_settlement(self, settlement_type: str) -> int:
         """
         Determine maximum NPCs for settlement type based on size and importance
+        Returns tuple: (interactive_npcs, background_npcs)
         
         Args:
             settlement_type: Type of settlement
@@ -275,17 +317,19 @@ class ChunkSettlementManager:
         Returns:
             Maximum number of NPCs to place
         """
+        # Format: (interactive NPCs, background villagers)
         npc_limits = {
-            'VILLAGE': 6,           # Small villages get 6 key NPCs (Elder, Merchant, Smith, Priest, Innkeeper, Guard)
-            'TOWN': 12,             # Towns get all NPCs
-            'DESERT_OUTPOST': 4,    # Desert outposts are small (Caravan Master, Water Keeper, Guide, Nomad)
-            'SNOW_SETTLEMENT': 5,   # Snow settlements are medium (Ranger, Herbalist, Lodge Keeper, Hunter, Trader)
-            'SWAMP_VILLAGE': 5,     # Swamp villages are medium (Alchemist, Fisherman, Witch, Boat Builder, Gatherer)
-            'FOREST_CAMP': 4,       # Forest camps are small (Woodcutter, Druid, Scout, Tree Keeper)
-            'MINING_CAMP': 5,       # Mining camps are medium (Foreman, Ore Master, Chief, Tool Maker, Assayer)
-            'FISHING_VILLAGE': 6    # Fishing villages are medium-large (Harbor Master, Fish Merchant, Dock Master, Net Weaver, Fisherman, Smoke Master)
+            'VILLAGE': (3, 4),           # 3 interactive + 4 background = 7 total
+            'TOWN': (6, 8),              # 6 interactive + 8 background = 14 total  
+            'DESERT_OUTPOST': (2, 2),    # 2 interactive + 2 background = 4 total
+            'SNOW_SETTLEMENT': (3, 3),   # 3 interactive + 3 background = 6 total
+            'SWAMP_VILLAGE': (3, 3),     # 3 interactive + 3 background = 6 total
+            'FOREST_CAMP': (2, 2),       # 2 interactive + 2 background = 4 total
+            'MINING_CAMP': (3, 4),       # 3 interactive + 4 background = 7 total
+            'FISHING_VILLAGE': (4, 4)    # 4 interactive + 4 background = 8 total
         }
-        return npc_limits.get(settlement_type, 4)  # Default to 4 NPCs
+        interactive, background = npc_limits.get(settlement_type, (2, 2))
+        return interactive + background  # Return total for now, we'll split the logic below
     
     def _generate_npc_dialog(self, npc_name: str, settlement_type: str, building_name: str) -> List[str]:
         """Generate contextual dialog for NPCs based on their role and settlement"""
