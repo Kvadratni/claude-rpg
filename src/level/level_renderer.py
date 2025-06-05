@@ -30,6 +30,10 @@ class LevelRendererMixin:
         game_surface = pygame.Surface((screen_width, game_area_height))
         game_surface.fill((0, 0, 0))
         
+        # OPTIMIZATION: Cache player building detection for this frame
+        player_x, player_y = int(self.player.x), int(self.player.y)
+        self._player_nearby_buildings = self._get_buildings_near_player(player_x, player_y)
+        
         # Calculate visible tile range - much larger rendering area
         visible_width = (screen_width // self.tile_width) + 10  # Optimized for large worlds
         visible_height = (game_area_height // (self.tile_height // 2)) + 30  # Much larger area
@@ -50,6 +54,9 @@ class LevelRendererMixin:
         for y in range(start_y, end_y):
             for x in range(start_x, end_x):
                 self.render_tile_at_position(game_surface, x, y)
+        
+        # Clear cached building data after rendering
+        self._player_nearby_buildings = None
         
         # Collect all entities for depth sorting
         all_entities = []
@@ -87,21 +94,9 @@ class LevelRendererMixin:
                                    entity_tile_type == self.TILE_DOOR)
             
             if is_entity_in_building and entity != self.player:
-                # Entity is inside a building - check if player is close to this building
-                entity_building_bounds = self.get_building_bounds_at(entity_x, entity_y)
-                if entity_building_bounds:
-                    min_x, min_y, max_x, max_y = entity_building_bounds
-                    
-                    # Check if player is within 2 tiles of the building bounds (same as roof logic)
-                    expanded_min_x = min_x - 2
-                    expanded_max_x = max_x + 2
-                    expanded_min_y = min_y - 2
-                    expanded_max_y = max_y + 2
-                    
-                    # Only show entity if player is close to the building
-                    if not (expanded_min_x <= player_x <= expanded_max_x and 
-                            expanded_min_y <= player_y <= expanded_max_y):
-                        should_render_entity = False
+                # Entity is inside a building - check if player is close using cached data
+                if not self._is_player_near_building_tile(entity_x, entity_y):
+                    should_render_entity = False
             
             if should_render_entity:
                 entity.render(game_surface, self.camera_x, self.camera_y, self.iso_renderer)
@@ -155,25 +150,11 @@ class LevelRendererMixin:
         
         # Determine if this tile is part of a building and if player is close to the building
         is_building_tile = self.is_building_tile(x, y, tile_type)
-        should_render_roof = True  # Default to showing roof
+        should_render_roof = False  # Default to NO roof
         
         if is_building_tile:
-            # Check if player is close to ANY part of this building
-            building_bounds = self.get_building_bounds(x, y)
-            if building_bounds:
-                player_x, player_y = int(self.player.x), int(self.player.y)
-                min_x, min_y, max_x, max_y = building_bounds
-                
-                # Check if player is within 2 tiles of the building bounds (expanded detection area)
-                expanded_min_x = min_x - 2
-                expanded_max_x = max_x + 2
-                expanded_min_y = min_y - 2
-                expanded_max_y = max_y + 2
-                
-                # If player is within the expanded building area, flatten the whole building
-                if (expanded_min_x <= player_x <= expanded_max_x and 
-                    expanded_min_y <= player_y <= expanded_max_y):
-                    should_render_roof = False  # Flatten the whole building
+            # OPTIMIZATION: Use cached building detection instead of expensive bounds calculation
+            should_render_roof = not self._is_player_near_building_tile(x, y)
         
         # ALWAYS render floor tile first (even under walls)
         floor_sprite = None
@@ -510,3 +491,59 @@ class LevelRendererMixin:
             door_rect = door_surface.get_rect()
             door_rect.center = (screen_x, screen_y)
             surface.blit(door_surface, door_rect)
+    
+    def _get_buildings_near_player(self, player_x, player_y):
+        """
+        OPTIMIZATION: Get all buildings near player once per frame
+        Returns a set of building bounds that are close to the player
+        """
+        nearby_buildings = set()
+        
+        # Only check a small area around the player (5x5 tiles)
+        search_radius = 5
+        for dy in range(-search_radius, search_radius + 1):
+            for dx in range(-search_radius, search_radius + 1):
+                check_x = player_x + dx
+                check_y = player_y + dy
+                
+                # Get tile type
+                if hasattr(self, 'get_tile'):
+                    tile_type = self.get_tile(check_x, check_y)
+                else:
+                    if not (0 <= check_y < len(self.tiles) and 0 <= check_x < len(self.tiles[0])):
+                        continue
+                    tile_type = self.tiles[check_y][check_x]
+                
+                # If this is a building tile, get its bounds
+                if self.is_building_tile(check_x, check_y, tile_type):
+                    building_bounds = self.get_building_bounds(check_x, check_y)
+                    if building_bounds:
+                        min_x, min_y, max_x, max_y = building_bounds
+                        
+                        # Check if player is within 0.75 tiles of the building bounds
+                        expanded_min_x = min_x - 0.75
+                        expanded_max_x = max_x + 0.75
+                        expanded_min_y = min_y - 0.75
+                        expanded_max_y = max_y + 0.75
+                        
+                        # If player is close to this building, add it to nearby buildings
+                        if (expanded_min_x <= player_x <= expanded_max_x and 
+                            expanded_min_y <= player_y <= expanded_max_y):
+                            nearby_buildings.add(building_bounds)
+        
+        return nearby_buildings
+    
+    def _is_player_near_building_tile(self, tile_x, tile_y):
+        """
+        OPTIMIZATION: Check if player is near this building tile using cached data
+        """
+        if not hasattr(self, '_player_nearby_buildings') or self._player_nearby_buildings is None:
+            return False
+        
+        # Check if this tile belongs to any of the nearby buildings
+        for building_bounds in self._player_nearby_buildings:
+            min_x, min_y, max_x, max_y = building_bounds
+            if min_x <= tile_x <= max_x and min_y <= tile_y <= max_y:
+                return True
+        
+        return False
