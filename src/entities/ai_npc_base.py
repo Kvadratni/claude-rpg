@@ -6,6 +6,7 @@ import subprocess
 import os
 import tempfile
 import re
+import random
 import pygame
 from typing import Dict, List, Optional, Any
 from .base import Entity
@@ -73,13 +74,21 @@ class BaseAINPC(Entity):
                     print(f"✅ [BaseAINPC] AI response for {self.name}: '{response[:50]}...'")
                     return response
             
-            # For subsequent interactions, require a proper response
+            # For subsequent interactions, check if response is adequate
+            # Consider tool usage as adequate even if no text response
             if response and len(response.strip()) > 0:
+                # Good text response
                 self.conversation_history.append({"player": message, "npc": response})
                 print(f"✅ [BaseAINPC] AI response for {self.name}: '{response[:50]}...'")
                 return response
+            elif hasattr(self, 'tools_used_in_response') and self.tools_used_in_response:
+                # No text response but tools were used - provide generic acknowledgment
+                tool_response = self._generate_tool_response(message, self.tools_used_in_response)
+                self.conversation_history.append({"player": message, "npc": tool_response})
+                print(f"✅ [BaseAINPC] AI used tools {self.tools_used_in_response}, providing generic response: '{tool_response}'")
+                return tool_response
             else:
-                # Only switch to fallback after first interaction if response is inadequate
+                # No response and no tools used - switch to fallback
                 print(f"⚠️  [BaseAINPC] AI response inadequate, switching to fallback")
                 self.use_fallback = True
                 return self._fallback_response(message)
@@ -333,6 +342,9 @@ class BaseAINPC(Entity):
         lines = clean_output.strip().split('\n')
         response_lines = []
         
+        # Check if tools were used (for tool-only responses)
+        self.tools_used_in_response = self._detect_tool_usage(clean_output)
+        
         # Skip system messages and find the actual AI response
         skip_patterns = [
             r'Loading recipe:',
@@ -391,7 +403,90 @@ class BaseAINPC(Entity):
         
         response = ' '.join(response_lines) if response_lines else ""
         print(f"🔧 [BaseAINPC] Extracted response: '{response}'")
+        print(f"🔧 [BaseAINPC] Tools used: {self.tools_used_in_response}")
         return response
+    
+    def _detect_tool_usage(self, output: str) -> List[str]:
+        """Detect which tools were used in the AI response"""
+        tools_used = []
+        
+        # Look for tool usage patterns in the output
+        tool_patterns = {
+            'open_shop': [r'open_shop', r'Shop UI opened', r'shop.*opened'],
+            'give_item': [r'give_item', r'Gave.*to player', r'item.*given'],
+            'create_quest': [r'create_quest', r'Created quest', r'quest.*created'],
+            'send_message': [r'send_message', r'message.*sent'],
+            'get_player_info': [r'get_player_info', r'player.*info'],
+            'get_world_info': [r'get_world_info', r'world.*info']
+        }
+        
+        for tool_name, patterns in tool_patterns.items():
+            for pattern in patterns:
+                if re.search(pattern, output, re.IGNORECASE):
+                    if tool_name not in tools_used:
+                        tools_used.append(tool_name)
+                    break
+        
+        return tools_used
+    
+    def _generate_tool_response(self, message: str, tools_used: List[str]) -> str:
+        """Generate appropriate response when AI used tools but provided no text"""
+        message_lower = message.lower()
+        
+        # Generate contextual responses based on tools used and message
+        if 'open_shop' in tools_used:
+            shop_responses = [
+                "My pleasure! Take a look at what I have available.",
+                "Of course! Browse my wares and let me know what interests you.",
+                "Certainly! I've got some fine goods for you to consider.",
+                "Absolutely! See anything that catches your eye?",
+                "Here you go! I think you'll find something useful."
+            ]
+            return random.choice(shop_responses)
+        
+        elif 'give_item' in tools_used:
+            gift_responses = [
+                "There you go! I hope this serves you well.",
+                "My pleasure! This should be useful on your journey.",
+                "Consider it a gift from me to you, traveler.",
+                "Here you are! May it aid you in your adventures.",
+                "I'm happy to help! Use this wisely."
+            ]
+            return random.choice(gift_responses)
+        
+        elif 'create_quest' in tools_used:
+            quest_responses = [
+                "I've heard of some troubles that need addressing. Interested?",
+                "There's work to be done if you're up for it.",
+                "I know of a task that could use someone capable like yourself.",
+                "Perhaps you'd be willing to help with a matter I've heard about?",
+                "There's opportunity for adventure, if you're interested."
+            ]
+            return random.choice(quest_responses)
+        
+        elif 'get_player_info' in tools_used or 'get_world_info' in tools_used:
+            info_responses = [
+                "Let me see... yes, I can help with that.",
+                "Ah, I see. Let me think about what I know.",
+                "Interesting... I might have some insight for you.",
+                "Let me consider what I can tell you about that.",
+                "I believe I can assist you with that information."
+            ]
+            return random.choice(info_responses)
+        
+        # Generic responses for other tools or combinations
+        generic_responses = [
+            "My pleasure to help!",
+            "There you go!",
+            "I'm happy to assist.",
+            "Of course, traveler.",
+            "Certainly! Anything else?",
+            "Glad I could help.",
+            "There we are!",
+            "My pleasure, friend."
+        ]
+        
+        return random.choice(generic_responses)
     
     def _clean_response(self, response: str) -> str:
         """Clean up AI response to be more NPC-like"""
