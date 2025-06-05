@@ -59,6 +59,7 @@ class AssetLoader:
             "goblin_sprite": "goblin_sprite.png",
             "orc_boss_sprite": "orc_boss_sprite.png",
             "npc_shopkeeper": "npc_shopkeeper.png",
+            "generic_npc": "generic_npc.png",  # Added generic NPC for background NPCs
             "trader": "trader.png",
             "elder_npc": "elder_npc.png",  # Added elder NPC
             "village_guard_sprite": "village_guard_sprite.png",  # Added village guard
@@ -215,6 +216,7 @@ class AssetLoader:
             "goblin_sprite": (0, 100, 0),
             "orc_boss_sprite": (139, 0, 0),
             "npc_shopkeeper": (255, 215, 0),
+            "generic_npc": (180, 180, 180),  # Light gray for generic NPCs
             "trader": (210, 180, 140),  # Tan for simple trader
             "elder_npc": (128, 0, 128),  # Purple for elder
             "village_guard_sprite": (70, 130, 180),  # Steel blue for guard
@@ -342,7 +344,15 @@ class AssetLoader:
     
     def get_image(self, name):
         """Get an image by name"""
-        return self.images.get(name)
+        image = self.images.get(name)
+        if name == 'generic_npc':
+            print(f"🖼️  AssetLoader.get_image('{name}') -> {image is not None}")
+            if image:
+                print(f"   📏 Image size: {image.get_size()}")
+            else:
+                print(f"   ❌ Image not found in self.images")
+                print(f"   🔍 Available images: {list(self.images.keys())[:10]}...")  # Show first 10
+        return image
     
     def get_sound(self, name):
         """Get a sound by name - now uses audio manager"""

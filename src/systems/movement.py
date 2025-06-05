@@ -172,9 +172,7 @@ class MovementSystem:
             if distance <= click_radius:
                 # Check if NPC is visible (not hidden by building roof)
                 if level._is_npc_visible_for_interaction(npc):
-                    # Skip background NPCs (non-interactive)
-                    if hasattr(npc, 'is_background') and npc.is_background:
-                        continue  # Skip background NPCs
+                    # Allow targeting both interactive and background NPCs
                     return npc
                 # If NPC is hidden, don't return it (continue checking other entities)
         

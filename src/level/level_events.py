@@ -105,9 +105,13 @@ class EventHandlingMixin:
                     if not self._is_npc_visible_for_interaction(npc):
                         continue  # Skip hidden NPCs
                     
-                    # Skip background NPCs (non-interactive)
+                    # Allow inspection of background NPCs, but show different info
                     if hasattr(npc, 'is_background') and npc.is_background:
-                        continue  # Skip background NPCs
+                        if self.player.game_log:
+                            # Show basic info for background NPCs
+                            self.player.game_log.add_message(f"{npc.name} (Background NPC)", "system")
+                        clicked_entity = npc
+                        break
                     
                     if self.player.game_log:
                         # Just show NPC info on right-click, not dialog
@@ -185,9 +189,20 @@ class EventHandlingMixin:
                 if not self._is_npc_visible_for_interaction(npc):
                     continue  # Skip hidden NPCs
                 
-                # Skip background NPCs (non-interactive)
+                # Handle background NPCs differently
                 if hasattr(npc, 'is_background') and npc.is_background:
-                    continue  # Skip background NPCs
+                    # Background NPCs give minimal response
+                    if self.player.game_log:
+                        responses = [
+                            f"{npc.name} nods briefly.",
+                            f"{npc.name} looks busy.",
+                            f"{npc.name} gives a polite wave.",
+                            f"{npc.name} is going about their day."
+                        ]
+                        import random
+                        response = random.choice(responses)
+                        self.player.game_log.add_message(response, "dialog")
+                    return  # Don't allow full interaction
                 
                 dist = math.sqrt((self.player.x - npc.x)**2 + (self.player.y - npc.y)**2)
                 if dist < 2.0:  # Only interact if close enough

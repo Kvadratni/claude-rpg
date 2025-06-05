@@ -167,8 +167,11 @@ class WorldGenerator:
                             'name': npc_data['name'],
                             'building': npc_data.get('building', 'Unknown Building'),
                             'has_shop': npc_data.get('has_shop', False),
+                            'is_background': npc_data.get('is_background', False),  # Copy is_background flag
                             'x': local_npc_x,
                             'y': local_npc_y,
+                            'world_x': start_x + local_npc_x,  # Add world coordinates for chunked_level.py
+                            'world_y': start_y + local_npc_y,
                             'id': f"npc_{npc_data['name'].lower().replace(' ', '_')}_{chunk_x}_{chunk_y}"
                         }
                         chunk.add_entity(npc_entity)
@@ -193,8 +196,11 @@ class WorldGenerator:
                             'name': npc_data['name'],
                             'building': 'Town Square',
                             'has_shop': npc_data.get('has_shop', False),
+                            'is_background': npc_data.get('is_background', False),  # Copy is_background flag
                             'x': local_npc_x,
                             'y': local_npc_y,
+                            'world_x': start_x + local_npc_x,  # Add world coordinates for chunked_level.py
+                            'world_y': start_y + local_npc_y,
                             'id': f"npc_{npc_data['name'].lower().replace(' ', '_')}_{chunk_x}_{chunk_y}"
                         }
                         chunk.add_entity(npc_entity)
@@ -226,8 +232,11 @@ class WorldGenerator:
                             'name': 'Guard',  # Use simple name that maps to village_guard_sprite
                             'building': 'Guard Post',
                             'has_shop': False,
+                            'is_background': False,  # Guards are interactive NPCs
                             'x': guard_x,
                             'y': guard_y,
+                            'world_x': start_x + guard_x,  # Add world coordinates for chunked_level.py
+                            'world_y': start_y + guard_y,
                             'id': f"guard_{guard_num}_{chunk_x}_{chunk_y}"
                         }
                         chunk.add_entity(guard_entity)

@@ -419,7 +419,7 @@ class ProceduralGenerationMixin:
             # Check if this is a background NPC (non-interactive)
             is_background = entity_data.get('is_background', False)
             
-            # Create NPC with data from chunk
+            # Create NPC with data from chunk (don't auto-create sprite yet)
             npc = NPC(
                 x=world_x,
                 y=world_y,
@@ -427,13 +427,17 @@ class ProceduralGenerationMixin:
                 dialog=entity_data.get('dialog', None),  # Background NPCs will have empty dialog
                 shop_items=None,
                 asset_loader=self.asset_loader,
-                has_shop=entity_data.get('has_shop', False)
+                has_shop=entity_data.get('has_shop', False),
+                auto_create_sprite=False  # We'll create it manually after setting flags
             )
             
-            # Mark background NPCs as non-interactive
+            # Set background flag BEFORE creating sprite
             if is_background:
                 npc.is_background = True
                 npc.dialog = ["..."]  # Minimal dialog to avoid errors
+            
+            # Now create the sprite with the correct flag set
+            npc.create_npc_sprite()
                 
             return npc
         except Exception as e:

@@ -96,22 +96,47 @@ class ChunkedLevel(LevelBase):
             
             elif entity_data['type'] == 'npc':
                 try:
+                    print(f"🏗️  Creating NPC from entity_data:")
+                    print(f"   - Name: {entity_data.get('name', 'UNKNOWN')}")
+                    print(f"   - Position: ({entity_data.get('world_x', 'N/A')}, {entity_data.get('world_y', 'N/A')})")
+                    print(f"   - Has is_background: {'is_background' in entity_data}")
+                    if 'is_background' in entity_data:
+                        print(f"   - is_background value: {entity_data['is_background']}")
+                    print(f"   - Has building: {'building' in entity_data}")
+                    print(f"   - Has shop: {'has_shop' in entity_data}")
+                    
                     from ..entities.npc import NPC
                     npc = NPC(
                         entity_data['world_x'],
                         entity_data['world_y'], 
                         entity_data['name'],
-                        asset_loader=self.asset_loader
+                        asset_loader=self.asset_loader,
+                        auto_create_sprite=False  # We'll create it after setting properties
                     )
+                    print(f"   ✅ NPC object created: {npc.name}")
+                    
                     # Set additional NPC properties
                     if 'building' in entity_data:
                         npc.building = entity_data['building']
+                        print(f"   🏠 Set building: {npc.building}")
                     if 'has_shop' in entity_data:
                         npc.has_shop = entity_data['has_shop']
+                        print(f"   🛒 Set has_shop: {npc.has_shop}")
+                    if 'is_background' in entity_data:
+                        npc.is_background = entity_data['is_background']
+                        print(f"   🎭 Set is_background: {npc.is_background}")
+                    
+                    # Now create the sprite with all properties set
+                    print(f"   🎨 Creating sprite for NPC...")
+                    npc.create_npc_sprite()
+                    print(f"   ✅ Sprite created successfully")
                     
                     self.npcs.append(npc)
+                    print(f"   📋 Added NPC to level: {npc.name}")
                 except Exception as e:
-                    print(f"Warning: Failed to create NPC entity: {e}")
+                    print(f"   ❌ Warning: Failed to create NPC entity: {e}")
+                    import traceback
+                    traceback.print_exc()
             
             elif entity_data['type'] == 'enemy':
                 try:
