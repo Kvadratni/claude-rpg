@@ -541,7 +541,7 @@ class WorldGenerator:
     def _create_building_on_chunk(self, chunk: Chunk, start_x: int, start_y: int, 
                                  width: int, height: int, building_random: random.Random) -> int:
         """
-        Create a building structure on the chunk tiles - FIXED VERSION
+        Create a building structure on the chunk tiles - IMPROVED VERSION
         
         Args:
             chunk: Chunk to modify
@@ -556,14 +556,14 @@ class WorldGenerator:
         
         print(f"            Creating {width}x{height} building at ({start_x}, {start_y})")
         
-        # FIXED: Building interior floor - use brick tiles
+        # STEP 1: Building interior floor - use brick tiles
         for y in range(start_y + 1, start_y + height - 1):
             for x in range(start_x + 1, start_x + width - 1):
                 if 0 <= x < Chunk.CHUNK_SIZE and 0 <= y < Chunk.CHUNK_SIZE:
                     chunk.set_tile(x, y, 13)  # TILE_BRICK
                     tiles_placed += 1
         
-        # FIXED: Building walls with proper corners
+        # STEP 2: Building walls - only regular walls first
         for y in range(start_y, start_y + height):
             for x in range(start_x, start_x + width):
                 if 0 <= x < Chunk.CHUNK_SIZE and 0 <= y < Chunk.CHUNK_SIZE:
@@ -578,7 +578,7 @@ class WorldGenerator:
                     is_left_edge = (x == start_x)
                     is_right_edge = (x == start_x + width - 1)
                     
-                    # Set corner tiles first
+                    # Place corner tiles first
                     if is_top_edge and is_left_edge:
                         chunk.set_tile(x, y, 6)  # TILE_WALL_CORNER_TL
                         tiles_placed += 1
@@ -591,31 +591,148 @@ class WorldGenerator:
                     elif is_bottom_edge and is_right_edge:
                         chunk.set_tile(x, y, 9)  # TILE_WALL_CORNER_BR
                         tiles_placed += 1
-                    # Then set edge walls
+                    # Then set edge walls (no windows yet - we'll add them strategically)
                     elif is_top_edge or is_bottom_edge:
-                        # Horizontal walls with occasional windows
-                        if building_random.random() < 0.2:  # 20% chance for windows
-                            chunk.set_tile(x, y, 14)  # TILE_WALL_WINDOW_HORIZONTAL
-                        else:
-                            chunk.set_tile(x, y, 10)  # TILE_WALL_HORIZONTAL
+                        chunk.set_tile(x, y, 10)  # TILE_WALL_HORIZONTAL
                         tiles_placed += 1
                     elif is_left_edge or is_right_edge:
-                        # Vertical walls with occasional windows
-                        if building_random.random() < 0.15:  # 15% chance for windows
-                            chunk.set_tile(x, y, 15)  # TILE_WALL_WINDOW_VERTICAL
-                        else:
-                            chunk.set_tile(x, y, 11)  # TILE_WALL_VERTICAL
+                        chunk.set_tile(x, y, 11)  # TILE_WALL_VERTICAL
                         tiles_placed += 1
                     else:
                         # Fallback to regular wall
                         chunk.set_tile(x, y, 4)  # TILE_WALL
                         tiles_placed += 1
         
-        # FIXED: Add door(s) with randomized placement on different sides
-        tiles_placed += self._add_randomized_doors_to_chunk(chunk, start_x, start_y, width, height)
+        # STEP 3: Add windows strategically - only on exterior walls, not near corners
+        self._add_strategic_windows(chunk, start_x, start_y, width, height, building_random)
         
-        print(f"            Building created with {tiles_placed} tiles")
+        # STEP 4: Add doors - only on building perimeter, preferably on bottom or sides
+        doors_added = self._add_perimeter_doors(chunk, start_x, start_y, width, height, building_random)
+        tiles_placed += doors_added
+        
+        # STEP 5: Add internal features for larger buildings (multi-room layouts)
+        if width >= 7 and height >= 7:
+            internal_features = self._add_internal_features(chunk, start_x, start_y, width, height, building_random)
+            tiles_placed += internal_features
+        
+        print(f"            Building created with {tiles_placed} tiles, {doors_added} doors")
         return tiles_placed
+    
+    def _add_strategic_windows(self, chunk: Chunk, start_x: int, start_y: int, 
+                              width: int, height: int, building_random: random.Random):
+        """Add windows strategically - only on exterior walls, away from corners"""
+        
+        # Only add windows to buildings that are large enough (at least 5x5)
+        if width < 5 or height < 5:
+            return
+        
+        # Add windows to longer walls, avoiding corners and doors
+        window_chance = 0.3  # 30% chance per eligible wall segment
+        
+        # Top wall windows (avoid corners)
+        for x in range(start_x + 2, start_x + width - 2):
+            if building_random.random() < window_chance:
+                if 0 <= x < Chunk.CHUNK_SIZE and 0 <= start_y < Chunk.CHUNK_SIZE:
+                    chunk.set_tile(x, start_y, 14)  # TILE_WALL_WINDOW_HORIZONTAL
+        
+        # Bottom wall windows (avoid corners)
+        for x in range(start_x + 2, start_x + width - 2):
+            if building_random.random() < window_chance:
+                if 0 <= x < Chunk.CHUNK_SIZE and 0 <= start_y + height - 1 < Chunk.CHUNK_SIZE:
+                    chunk.set_tile(x, start_y + height - 1, 14)  # TILE_WALL_WINDOW_HORIZONTAL
+        
+        # Left wall windows (avoid corners)
+        for y in range(start_y + 2, start_y + height - 2):
+            if building_random.random() < window_chance:
+                if 0 <= start_x < Chunk.CHUNK_SIZE and 0 <= y < Chunk.CHUNK_SIZE:
+                    chunk.set_tile(start_x, y, 15)  # TILE_WALL_WINDOW_VERTICAL
+        
+        # Right wall windows (avoid corners)
+        for y in range(start_y + 2, start_y + height - 2):
+            if building_random.random() < window_chance:
+                if 0 <= start_x + width - 1 < Chunk.CHUNK_SIZE and 0 <= y < Chunk.CHUNK_SIZE:
+                    chunk.set_tile(start_x + width - 1, y, 15)  # TILE_WALL_WINDOW_VERTICAL
+    
+    def _add_perimeter_doors(self, chunk: Chunk, start_x: int, start_y: int, 
+                            width: int, height: int, building_random: random.Random) -> int:
+        """Add doors only on building perimeter - prefer bottom/sides over top"""
+        doors_placed = 0
+        
+        # Define door placement preferences (weighted)
+        door_sides = ['bottom', 'left', 'right', 'top']
+        door_weights = [0.5, 0.2, 0.2, 0.1]  # Strongly prefer bottom doors
+        
+        # Choose a random side for the main door
+        chosen_side = building_random.choices(door_sides, weights=door_weights)[0]
+        
+        # Place door based on chosen side
+        if chosen_side == 'bottom':
+            doors_placed += self._place_door_bottom_chunk(chunk, start_x, start_y, width, height)
+        elif chosen_side == 'top':
+            doors_placed += self._place_door_top_chunk(chunk, start_x, start_y, width, height)
+        elif chosen_side == 'left':
+            doors_placed += self._place_door_left_chunk(chunk, start_x, start_y, width, height)
+        elif chosen_side == 'right':
+            doors_placed += self._place_door_right_chunk(chunk, start_x, start_y, width, height)
+        
+        # For larger buildings, occasionally add a second door on a different side
+        if (width >= 8 or height >= 8) and building_random.random() < 0.3:
+            # Choose a different side for second door
+            remaining_sides = [s for s in door_sides if s != chosen_side]
+            if remaining_sides:
+                second_side = building_random.choice(remaining_sides)
+                if second_side == 'bottom':
+                    doors_placed += self._place_door_bottom_chunk(chunk, start_x, start_y, width, height)
+                elif second_side == 'top':
+                    doors_placed += self._place_door_top_chunk(chunk, start_x, start_y, width, height)
+                elif second_side == 'left':
+                    doors_placed += self._place_door_left_chunk(chunk, start_x, start_y, width, height)
+                elif second_side == 'right':
+                    doors_placed += self._place_door_right_chunk(chunk, start_x, start_y, width, height)
+        
+        return doors_placed
+    
+    def _add_internal_features(self, chunk: Chunk, start_x: int, start_y: int, 
+                              width: int, height: int, building_random: random.Random) -> int:
+        """Add internal features for larger buildings - rooms, internal doorways, etc."""
+        features_placed = 0
+        
+        # Only add internal features to buildings that are large enough
+        if width < 7 or height < 7:
+            return 0
+        
+        # Add internal wall divisions for multi-room buildings
+        if width >= 9 and height >= 7:
+            # Vertical room divider (not full wall - leave gaps for doorways)
+            divider_x = start_x + width // 2
+            for y in range(start_y + 1, start_y + height - 1):
+                # Leave gaps for internal doorways
+                if y == start_y + height // 2:
+                    # Internal doorway - just floor
+                    if 0 <= divider_x < Chunk.CHUNK_SIZE and 0 <= y < Chunk.CHUNK_SIZE:
+                        chunk.set_tile(divider_x, y, 13)  # TILE_BRICK (floor)
+                else:
+                    # Internal wall
+                    if 0 <= divider_x < Chunk.CHUNK_SIZE and 0 <= y < Chunk.CHUNK_SIZE:
+                        chunk.set_tile(divider_x, y, 11)  # TILE_WALL_VERTICAL
+                        features_placed += 1
+        
+        if width >= 7 and height >= 9:
+            # Horizontal room divider
+            divider_y = start_y + height // 2
+            for x in range(start_x + 1, start_x + width - 1):
+                # Leave gaps for internal doorways
+                if x == start_x + width // 2:
+                    # Internal doorway - just floor
+                    if 0 <= x < Chunk.CHUNK_SIZE and 0 <= divider_y < Chunk.CHUNK_SIZE:
+                        chunk.set_tile(x, divider_y, 13)  # TILE_BRICK (floor)
+                else:
+                    # Internal wall
+                    if 0 <= x < Chunk.CHUNK_SIZE and 0 <= divider_y < Chunk.CHUNK_SIZE:
+                        chunk.set_tile(x, divider_y, 10)  # TILE_WALL_HORIZONTAL
+                        features_placed += 1
+        
+        return features_placed
     
     def _add_randomized_doors_to_chunk(self, chunk: Chunk, start_x: int, start_y: int, 
                                       width: int, height: int) -> int:

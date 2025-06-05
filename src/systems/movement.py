@@ -166,11 +166,14 @@ class MovementSystem:
         """Check if click is on an entity - with more forgiving click detection"""
         click_radius = 1.2  # Increased for much more forgiving clicks
         
-        # Check NPCs
+        # Check NPCs (only if visible)
         for npc in level.npcs:
             distance = math.sqrt((npc.x - tile_x - 0.5)**2 + (npc.y - tile_y - 0.5)**2)
             if distance <= click_radius:
-                return npc
+                # Check if NPC is visible (not hidden by building roof)
+                if level._is_npc_visible_for_interaction(npc):
+                    return npc
+                # If NPC is hidden, don't return it (continue checking other entities)
         
         # Check chests
         for chest in level.chests:
