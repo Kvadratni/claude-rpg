@@ -412,23 +412,97 @@ class ProceduralGenerationMixin:
             print(f"  {entity_type}: {old_counts[entity_type]} -> {new_counts[entity_type]}")
     
     def create_npc_from_data(self, entity_data, world_x, world_y):
-        """Create NPC object from entity data"""
+        """Create AI-powered NPC object from entity data"""
         try:
+            npc_name = entity_data.get('name', 'Unknown NPC')
+            has_shop = entity_data.get('has_shop', False)
+            
+            # Map NPC names to their AI classes (same as EnhancedEntitySpawner)
+            ai_npc_mappings = {
+                'Master Merchant': 'MasterMerchantNPC',
+                'Village Elder': 'VillageElderNPC', 
+                'Master Smith': 'MasterSmithNPC',
+                'Innkeeper': 'InnkeeperNPC',
+                'Guard Captain': 'GuardCaptainNPC',
+                'Caravan Master': 'CaravanMasterNPC',
+                'High Priest': 'HealerNPC',  # Use HealerNPC for priests
+                'Mine Foreman': 'BlacksmithNPC',  # Use BlacksmithNPC for miners
+                'Harbor Master': 'MasterMerchantNPC',  # Use MasterMerchantNPC for harbor masters
+                'Master Herbalist': 'HealerNPC',  # Use HealerNPC for herbalists
+                'Archbishop': 'HealerNPC',  # Use HealerNPC for religious figures
+                'Mayor': 'VillageElderNPC',  # Use VillageElderNPC for mayors
+                'Market Master': 'MasterMerchantNPC',  # Use MasterMerchantNPC for market masters
+                'Inn Master': 'InnkeeperNPC',  # Use InnkeeperNPC for inn masters
+                'Weapon Master': 'MasterSmithNPC',  # Use MasterSmithNPC for weapon masters
+                'Court Wizard': 'HealerNPC',  # Use HealerNPC for wizards
+                'Commander': 'GuardCaptainNPC',  # Use GuardCaptainNPC for commanders
+                'Rich Merchant': 'MasterMerchantNPC',  # Use MasterMerchantNPC for rich merchants
+                'Master Woodcutter': 'MasterSmithNPC',  # Use MasterSmithNPC for woodcutters
+                'Forest Druid': 'HealerNPC',  # Use HealerNPC for druids
+                'Scout Leader': 'GuardCaptainNPC',  # Use GuardCaptainNPC for scouts
+                'Tree Keeper': 'HealerNPC',  # Use HealerNPC for nature keepers
+                'Swamp Alchemist': 'HealerNPC',  # Use HealerNPC for alchemists
+                'Fisherman': 'MasterMerchantNPC',  # Use MasterMerchantNPC for fishermen
+                'Swamp Witch': 'HealerNPC',  # Use HealerNPC for witches
+                'Boat Builder': 'MasterSmithNPC',  # Use MasterSmithNPC for builders
+                'Herb Gatherer': 'HealerNPC',  # Use HealerNPC for herb gatherers
+            }
+            
+            ai_class_name = ai_npc_mappings.get(npc_name)
+            
+            if ai_class_name:
+                # Try to import the specific AI NPC class
+                try:
+                    from ..entities.npcs.master_merchant import MasterMerchantNPC
+                    from ..entities.npcs.village_elder import VillageElderNPC
+                    from ..entities.npcs.master_smith import MasterSmithNPC
+                    from ..entities.npcs.innkeeper import InnkeeperNPC
+                    from ..entities.npcs.guard_captain import GuardCaptainNPC
+                    from ..entities.npcs.caravan_master import CaravanMasterNPC
+                    from ..entities.npcs.healer import HealerNPC
+                    from ..entities.npcs.blacksmith import BlacksmithNPC
+                    
+                    # Get the class by name
+                    ai_class = locals()[ai_class_name]
+                    
+                    # Create AI NPC instance
+                    npc = ai_class(world_x, world_y, asset_loader=self.asset_loader)
+                    
+                    # Override name if needed (for cases like High Priest using HealerNPC)
+                    if npc.name != npc_name:
+                        npc.name = npc_name
+                    
+                    print(f"        ✓ Created AI-powered {npc_name} using {ai_class_name}")
+                    return npc
+                    
+                except ImportError as e:
+                    print(f"        ⚠️  Failed to import AI NPC class {ai_class_name}: {e}")
+                    # Fall back to regular NPC with AI-ready flag
+                    pass
+            
+            # Fallback: Create regular NPC but mark it as AI-ready
+            print(f"        ⚠️  No AI class found for {npc_name}, creating AI-ready regular NPC")
             from ..entities.npc import NPC
             
-            # Create NPC with data from chunk
             npc = NPC(
                 x=world_x,
                 y=world_y,
-                name=entity_data.get('name', 'Unknown NPC'),
+                name=npc_name,
                 dialog=None,  # Will be set by NPC class based on name
                 shop_items=None,
                 asset_loader=self.asset_loader,
-                has_shop=entity_data.get('has_shop', False)
+                has_shop=has_shop
             )
+            
+            # Mark as AI-ready so it will be enabled on first interaction
+            npc.ai_ready = True
+            
             return npc
+            
         except Exception as e:
             print(f"Error creating NPC from data: {e}")
+            import traceback
+            traceback.print_exc()
             return None
     
     def create_enemy_from_data(self, entity_data, world_x, world_y):
