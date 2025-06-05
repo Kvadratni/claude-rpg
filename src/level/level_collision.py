@@ -10,6 +10,10 @@ class CollisionMixin:
     
     def check_collision(self, x, y, size=0.4, exclude_entity=None):
         """Check collision with level geometry and entities - improved precision with enhanced door handling"""
+        # For chunk-based procedural worlds, use different collision logic
+        if hasattr(self, 'is_infinite_world') and self.is_infinite_world:
+            return self.check_collision_chunk_based(x, y, size, exclude_entity)
+        
         # Check if the position is within level bounds with proper margin
         margin = size + 0.1
         if x < margin or x >= self.width - margin or y < margin or y >= self.height - margin:
@@ -177,7 +181,7 @@ class CollisionMixin:
             return False
         
         # Special handling for doors - be more lenient around door tiles
-        current_tile = self.tiles[y][x]
+        current_tile = self.get_tile(x, y) if hasattr(self, 'get_tile') else self.tiles[y][x]
         is_door_area = current_tile == self.TILE_DOOR
         
         # Also check adjacent tiles for doors
@@ -186,7 +190,8 @@ class CollisionMixin:
                 for dy in [-1, 0, 1]:
                     check_x, check_y = x + dx, y + dy
                     if (0 <= check_x < self.width and 0 <= check_y < self.height):
-                        if self.tiles[check_y][check_x] == self.TILE_DOOR:
+                        check_tile = self.get_tile(check_x, check_y) if hasattr(self, 'get_tile') else self.tiles[check_y][check_x]
+                        if check_tile == self.TILE_DOOR:
                             is_door_area = True
                             break
                 if is_door_area:
@@ -245,7 +250,8 @@ class CollisionMixin:
                         check_tile_x = tile_x + dx_check
                         check_tile_y = tile_y + dy_check
                         if (0 <= check_tile_x < self.width and 0 <= check_tile_y < self.height):
-                            if self.tiles[check_tile_y][check_tile_x] == self.TILE_DOOR:
+                            check_tile = self.get_tile(check_tile_x, check_tile_y) if hasattr(self, 'get_tile') else self.tiles[check_tile_y][check_tile_x]
+                            if check_tile == self.TILE_DOOR:
                                 is_near_door = True
                                 break
                     if is_near_door:

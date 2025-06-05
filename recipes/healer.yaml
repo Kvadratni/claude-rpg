@@ -18,7 +18,8 @@ extensions:
     - "-y"
     - "mcp-remote@latest"
     - "http://localhost:39301/model_context_protocol/2024-11-05/sse"
-    - "--allow-http"prompt: 'You are the Village Healer, a compassionate medical expert and herbalist
+    - "--allow-http"
+prompt: 'You are the Village Healer, a compassionate medical expert and herbalist
   in a fantasy RPG.
 
 

@@ -93,19 +93,36 @@ class TileManagerMixin:
             # Fallback to a reddish-brown color for brick
             self.tile_sprites[self.TILE_BRICK] = self.iso_renderer.create_diamond_tile((150, 80, 60))
         
-        # Door - try improved isometric version first
-        door_image = self.asset_loader.get_image("door_tile_isometric")
-        if not door_image:
-            door_image = self.asset_loader.get_image("door_tile")
-        
-        if door_image:
-            # Scale door to be taller and more prominent
-            door_height = self.tile_height + 24  # Make doors taller than normal tiles
-            scaled_door = pygame.transform.scale(door_image, (self.tile_width, door_height))
-            
-            # Use the scaled door directly - no need for complex enhancement that might cause issues
-            self.tile_sprites[self.TILE_DOOR] = scaled_door
+        # Door - No longer create door sprites here since we use the door renderer
+        # The door renderer handles all door rendering with archway textures
+        # We don't need a tile sprite for doors anymore
+        pass
+
+        # Load biome-specific tiles
+        sand_image = self.asset_loader.get_image("sand_tile")
+        if sand_image:
+            rotated_sand = pygame.transform.rotate(sand_image, 45)
+            self.tile_sprites[self.TILE_SAND] = pygame.transform.scale(rotated_sand, (self.tile_width, self.tile_height))
         else:
-            # Create enhanced door sprite with proper isometric proportions
-            door_sprite = self.door_renderer.create_enhanced_door_sprite(self.tile_width, self.tile_height)
-            self.tile_sprites[self.TILE_DOOR] = door_sprite
+            self.tile_sprites[self.TILE_SAND] = self.iso_renderer.create_diamond_tile((220, 180, 120))  # Sandy color
+
+        snow_image = self.asset_loader.get_image("snow_tile")
+        if snow_image:
+            rotated_snow = pygame.transform.rotate(snow_image, 45)
+            self.tile_sprites[self.TILE_SNOW] = pygame.transform.scale(rotated_snow, (self.tile_width, self.tile_height))
+        else:
+            self.tile_sprites[self.TILE_SNOW] = self.iso_renderer.create_diamond_tile((240, 240, 255))  # Snowy white
+
+        forest_floor_image = self.asset_loader.get_image("forest_floor_tile")
+        if forest_floor_image:
+            rotated_forest = pygame.transform.rotate(forest_floor_image, 45)
+            self.tile_sprites[self.TILE_FOREST_FLOOR] = pygame.transform.scale(rotated_forest, (self.tile_width, self.tile_height))
+        else:
+            self.tile_sprites[self.TILE_FOREST_FLOOR] = self.iso_renderer.create_diamond_tile((80, 60, 40))  # Dark forest floor
+
+        swamp_image = self.asset_loader.get_image("swamp_tile")
+        if swamp_image:
+            rotated_swamp = pygame.transform.rotate(swamp_image, 45)
+            self.tile_sprites[self.TILE_SWAMP] = pygame.transform.scale(rotated_swamp, (self.tile_width, self.tile_height))
+        else:
+            self.tile_sprites[self.TILE_SWAMP] = self.iso_renderer.create_diamond_tile((60, 80, 50))  # Murky swamp color

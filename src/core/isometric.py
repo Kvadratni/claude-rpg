@@ -24,7 +24,10 @@ class IsometricRenderer:
     
     def iso_to_cart(self, iso_x, iso_y):
         """Convert isometric screen coordinates to Cartesian coordinates"""
-        # Updated to match the corrected cart_to_iso conversion
+        # Inverse of cart_to_iso conversion
+        # From: iso_x = (cart_x - cart_y) * half_tile_width
+        #       iso_y = (cart_x + cart_y) * half_tile_height
+        # Solve for cart_x and cart_y:
         cart_x = (iso_x / self.half_tile_width + iso_y / self.half_tile_height) / 2
         cart_y = (iso_y / self.half_tile_height - iso_x / self.half_tile_width) / 2
         return cart_x, cart_y

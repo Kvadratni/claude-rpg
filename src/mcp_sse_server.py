@@ -20,12 +20,17 @@ try:
     from fastapi.middleware.cors import CORSMiddleware
     import uvicorn
     FASTAPI_AVAILABLE = True
+    
+    # Ensure Request is available for type hints
+    from fastapi import Request as FastAPIRequest
+    
 except ImportError:
     FASTAPI_AVAILABLE = False
     FastAPI = None
     StreamingResponse = None
     CORSMiddleware = None
     uvicorn = None
+    FastAPIRequest = None
 
 logger = logging.getLogger(__name__)
 
@@ -91,7 +96,7 @@ class MCPSSEServer:
             }
         
         @self.app.get("/model_context_protocol/2024-11-05/sse")
-        async def sse_endpoint(request: Request):
+        async def sse_endpoint(request: FastAPIRequest):
             """Server-Sent Events endpoint for MCP communication"""
             return StreamingResponse(
                 self._mcp_sse_stream(request),
@@ -105,7 +110,7 @@ class MCPSSEServer:
             )
         
         @self.app.post("/model_context_protocol/2024-11-05/sse")
-        async def sse_post_endpoint(request: Request):
+        async def sse_post_endpoint(request: FastAPIRequest):
             """Handle MCP messages sent via POST to SSE endpoint"""
             try:
                 message = await request.json()
@@ -218,7 +223,7 @@ class MCPSSEServer:
             }
         }
     
-    async def _mcp_sse_stream(self, request: Request):
+    async def _mcp_sse_stream(self, request: FastAPIRequest):
         """Generate MCP-compliant Server-Sent Events stream"""
         connection_id = str(uuid.uuid4())
         connection_queue = asyncio.Queue()

@@ -3,10 +3,6 @@
 SCRIPT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
 cd "$SCRIPT_DIR"
 
-# Auto-install MCP server if needed
-echo "🔧 Ensuring MCP server is installed..."
-python3 install_mcp.py
-
 # Launch the game
 echo "🚀 Launching RPG game..."
 uv run goose-rpg &

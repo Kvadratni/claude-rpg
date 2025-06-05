@@ -79,13 +79,31 @@ class Game:
         # This would typically load sprites, sounds, etc.
         pass
     
-    def new_game(self):
-        """Start a new game"""
-        # Create player at the village center (story starting point)
-        self.player = Player(100, 102, self.asset_loader, self.game_log)  # Updated to new village center
+    def new_game(self, seed=None):
+        """Start a new game with procedural generation"""
+        # Always use procedural generation
+        level_name = f"Procedural World"
+        if seed:
+            level_name += f" (Seed: {seed})"
         
-        # Create the first level
-        self.current_level = Level("village", self.player, self.asset_loader, self)
+        # Create level first to get optimal spawn location
+        self.current_level = Level(
+            level_name, 
+            None,  # Player will be created after we know spawn location
+            self.asset_loader, 
+            self,
+            seed=seed
+        )
+        
+        # Get optimal player spawn location from procedural generation
+        if hasattr(self.current_level, 'procedural_info') and 'player_spawn' in self.current_level.procedural_info:
+            start_x, start_y = self.current_level.procedural_info['player_spawn']
+        else:
+            start_x, start_y = 100, 100  # Fallback
+        
+        # Create player at optimal location
+        self.player = Player(start_x, start_y, self.asset_loader, self.game_log)
+        self.current_level.player = self.player
         
         # Initialize quest system with level reference
         from .quest_system import QuestManager
@@ -96,25 +114,55 @@ class Game:
         self.quest_log = QuestLog(self.asset_loader)
         self.quest_log.set_quest_manager(self.quest_manager)
         
-        # Start tutorial quest automatically
-        self.quest_manager.start_quest("tutorial")
-        
         # Switch to playing state
         self.state = Game.STATE_PLAYING
         
-        # Log game start with story context
-        self.game_log.add_message("Welcome to Eldermoor Village!", "system")
-        self.game_log.add_message("The village elder seeks your help...", "story")
+        # Log game start
+        self.game_log.add_message("Welcome to your procedurally generated world!", "system")
+        self.game_log.add_message("Explore and discover what awaits you...", "exploration")
+        if seed:
+            self.game_log.add_message(f"World seed: {seed}", "system")
+        self.game_log.add_message(f"You find yourself near a settlement...", "story")
     
     def load_game(self, save_name):
-        """Load a saved game"""
+        """Load a saved game with procedural world support"""
         game_data = self.save_system.load_game(save_name)
         if game_data:
-            # Create player and level from saved data
+            # Create player from saved data
             self.player = Player.from_save_data(game_data["player"], self.asset_loader, self.game_log)
-            self.current_level = Level.from_save_data(game_data["level"], self.player, self.asset_loader, self)
             
-            # Initialize quest system
+            # Check if this is a procedural world
+            level_data = game_data["level"]
+            procedural_info = level_data.get("procedural_info", {})
+            
+            if procedural_info.get("is_procedural", False):
+                # Regenerate procedural world from seed
+                seed = procedural_info.get("seed")
+                level_name = f"Procedural World (Seed: {seed})"
+                
+                print(f"Loading procedural world with seed: {seed}")
+                self.current_level = Level(
+                    level_name,
+                    self.player, 
+                    self.asset_loader, 
+                    self,
+                    seed=seed
+                )
+                
+                self.game_log.add_message(f"Procedural world regenerated from seed: {seed}", "system")
+            else:
+                # Convert old template saves to procedural worlds
+                print("Converting old save to procedural world...")
+                self.current_level = Level(
+                    "Procedural World (Converted)",
+                    self.player, 
+                    self.asset_loader, 
+                    self,
+                    seed=None  # Random seed for converted worlds
+                )
+                self.game_log.add_message("Old save converted to procedural world", "system")
+            
+            # Initialize quest system with level reference
             from .quest_system import QuestManager
             self.quest_manager = QuestManager(self.player, self.game_log, self.current_level)
             
@@ -128,12 +176,11 @@ class Game:
                 self.quest_manager.load_save_data(game_data["quests"])
             
             self.state = Game.STATE_PLAYING
-            self.game_log.add_message(f"Game loaded: {save_name}", "system")
             return True
         return False
     
     def save_game(self, save_name):
-        """Save the current game"""
+        """Save the current game with procedural world support"""
         if self.player and self.current_level:
             game_data = {
                 "player": self.player.get_save_data(),
@@ -143,6 +190,16 @@ class Game:
             # Save quest data if available
             if hasattr(self, 'quest_manager'):
                 game_data["quests"] = self.quest_manager.get_save_data()
+            
+            # Add procedural info if this is a procedural world
+            if hasattr(self.current_level, 'is_procedural_level') and self.current_level.is_procedural_level():
+                procedural_data = self.current_level.get_procedural_save_data()
+                game_data["level"].update(procedural_data)
+                
+                seed = self.current_level.get_procedural_seed()
+                self.game_log.add_message(f"Procedural world saved (Seed: {seed})", "system")
+            else:
+                self.game_log.add_message(f"Game saved: {save_name}", "system")
             
             return self.save_system.save_game(save_name, game_data)
         return False
@@ -220,6 +277,34 @@ class Game:
                     elif event.key == pygame.K_f and (event.mod & pygame.KMOD_META) and (event.mod & pygame.KMOD_SHIFT):
                         # Toggle fullscreen with Cmd+Shift+F (Meta is Cmd on Mac)
                         self.toggle_fullscreen()
+                    elif event.key == pygame.K_d and (event.mod & pygame.KMOD_META):
+                        # Debug info with Cmd+D
+                        self.show_debug_info()
+                    elif event.key == pygame.K_F5:
+                        # Toggle movement mode with F5
+                        if self.player and hasattr(self.player, 'movement_system'):
+                            # Get audio manager
+                            audio = getattr(self.asset_loader, 'audio_manager', None)
+                            if audio:
+                                audio.play_ui_sound("click")
+                            
+                            # Toggle movement mode
+                            new_mode = self.player.movement_system.toggle_movement_mode()
+                            mode_name = "WASD" if new_mode == "wasd" else "Mouse Click"
+                            self.game_log.add_message(f"Movement mode switched to: {mode_name}", "system")
+                            
+                            # Show helpful message
+                            if new_mode == "wasd":
+                                self.game_log.add_message("Use WASD keys to move around", "system")
+                            else:
+                                self.game_log.add_message("Click to move and interact", "system")
+                    elif event.key == pygame.K_F6:
+                        # DEBUG: Refresh current chunk with F6
+                        if (self.player and self.current_level and 
+                            hasattr(self.current_level, 'chunk_manager')):
+                            self.refresh_current_chunk()
+                        else:
+                            self.game_log.add_message("Chunk refresh only works in procedural worlds", "system")
                 else:
                     # Handle quest log input first
                     if hasattr(self, 'quest_log') and self.quest_log.handle_input(event):
@@ -263,6 +348,188 @@ class Game:
             self.settings.apply_audio_settings(self.asset_loader.audio_manager)
         
         print(f"Settings applied: {new_width}x{new_height}, Fullscreen: {fullscreen}")
+    
+    def show_debug_info(self):
+        """Show debug information about the current game state"""
+        if self.current_level and self.player:
+            print("\n=== DEBUG INFO ===")
+            print(f"Player position: ({self.player.x:.1f}, {self.player.y:.1f})")
+            
+            if hasattr(self.current_level, 'is_procedural_level') and self.current_level.is_procedural_level():
+                seed = self.current_level.get_procedural_seed()
+                print(f"Procedural world seed: {seed}")
+                
+                if hasattr(self.current_level, 'chunk_manager'):
+                    chunk_x, chunk_y = self.current_level.chunk_manager.world_to_chunk_coords(self.player.x, self.player.y)
+                    print(f"Player chunk: ({chunk_x}, {chunk_y})")
+                    
+                    # Get current chunk and check for entities
+                    chunk = self.current_level.chunk_manager.get_chunk(chunk_x, chunk_y)
+                    if chunk:
+                        print(f"Current chunk has {len(chunk.entities)} entities")
+                        for entity_data in chunk.entities:
+                            print(f"  - {entity_data['type']}: {entity_data.get('name', 'Unknown')} at ({entity_data['x']}, {entity_data['y']})")
+            
+            print(f"Loaded entities:")
+            print(f"  NPCs: {len(self.current_level.npcs)}")
+            for npc in self.current_level.npcs:
+                print(f"    - {npc.name} at ({npc.x:.1f}, {npc.y:.1f})")
+            print(f"  Enemies: {len(self.current_level.enemies)}")
+            print(f"  Objects: {len(self.current_level.objects)}")
+            print("\n=== DEBUG CONTROLS ===")
+            print("F5 - Toggle movement mode (WASD/Click)")
+            print("F6 - Refresh current chunk")
+            print("Scroll Wheel - Scroll game log")
+            print("Cmd+D - Show this debug info")
+            print("==================\n")
+            
+            self.game_log.add_message("Debug info printed to console", "system")
+    
+    def refresh_current_chunk(self):
+        """DEBUG: Force refresh the current chunk to test settlement override and enemy persistence"""
+        if not (self.player and self.current_level and hasattr(self.current_level, 'chunk_manager')):
+            return
+        
+        # Get audio manager
+        audio = getattr(self.asset_loader, 'audio_manager', None)
+        if audio:
+            audio.play_ui_sound("click")
+        
+        # Get current chunk coordinates
+        chunk_manager = self.current_level.chunk_manager
+        chunk_x, chunk_y = chunk_manager.world_to_chunk_coords(self.player.x, self.player.y)
+        
+        self.game_log.add_message(f"🔄 DEBUG: Refreshing chunk ({chunk_x}, {chunk_y})...", "system")
+        
+        # Store current entity counts for comparison
+        old_counts = {
+            'npcs': len(self.current_level.npcs),
+            'enemies': len(self.current_level.enemies),
+            'objects': len(self.current_level.objects)
+        }
+        
+        try:
+            # CRITICAL: Save current entity states to chunk before refreshing
+            chunk_key = (chunk_x, chunk_y)
+            if chunk_key in chunk_manager.loaded_chunks:
+                current_chunk = chunk_manager.loaded_chunks[chunk_key]
+                
+                # Update chunk with current entity states
+                self._update_chunk_with_current_entities(current_chunk, chunk_x, chunk_y)
+                
+                # Save the updated chunk
+                current_chunk.save_to_file(chunk_manager.world_dir)
+                self.game_log.add_message(f"  💾 Saved current entity states to chunk", "system")
+                
+                # Remove from memory to force reload
+                del chunk_manager.loaded_chunks[chunk_key]
+                self.game_log.add_message(f"  🗑️ Unloaded chunk from memory", "system")
+            
+            # Force reload the chunk (with saved entity states)
+            reloaded_chunk = chunk_manager.get_chunk(chunk_x, chunk_y)
+            self.game_log.add_message(f"  🔄 Reloaded chunk with {len(reloaded_chunk.entities)} entities", "system")
+            
+            # Update entities from the reloaded chunk
+            self.current_level.update_entities_from_chunks()
+            
+            # Report new entity counts
+            new_counts = {
+                'npcs': len(self.current_level.npcs),
+                'enemies': len(self.current_level.enemies),
+                'objects': len(self.current_level.objects)
+            }
+            
+            # Show comparison
+            self.game_log.add_message(f"  📊 Entity changes:", "system")
+            for entity_type, old_count in old_counts.items():
+                new_count = new_counts[entity_type]
+                if new_count != old_count:
+                    change = new_count - old_count
+                    symbol = "+" if change > 0 else ""
+                    self.game_log.add_message(f"    {entity_type.capitalize()}: {old_count} → {new_count} ({symbol}{change})", "system")
+                else:
+                    self.game_log.add_message(f"    {entity_type.capitalize()}: {old_count} (no change)", "system")
+            
+            # Check for settlements
+            npcs_in_chunk = [e for e in reloaded_chunk.entities if e['type'] == 'npc']
+            if npcs_in_chunk:
+                self.game_log.add_message(f"  🏘️ Settlement detected with {len(npcs_in_chunk)} NPCs", "system")
+                for npc_data in npcs_in_chunk:
+                    self.game_log.add_message(f"    - {npc_data['name']} ({npc_data.get('building', 'Unknown Building')})", "system")
+            else:
+                self.game_log.add_message(f"  🌲 Wilderness chunk (no settlement)", "system")
+            
+            self.game_log.add_message("✅ Chunk refresh complete!", "system")
+            
+        except Exception as e:
+            self.game_log.add_message(f"❌ Chunk refresh failed: {e}", "system")
+            print(f"Chunk refresh error: {e}")
+            import traceback
+            traceback.print_exc()
+    
+    def _update_chunk_with_current_entities(self, chunk, chunk_x, chunk_y):
+        """Update chunk data with current entity states"""
+        # Get chunk bounds
+        start_x, start_y, end_x, end_y = chunk.get_world_bounds()
+        
+        # Clear existing entities in chunk
+        chunk.entities.clear()
+        
+        # Add current NPCs to chunk
+        for npc in self.current_level.npcs:
+            # Check if NPC is in this chunk
+            if start_x <= npc.x < end_x and start_y <= npc.y < end_y:
+                local_x = npc.x - start_x
+                local_y = npc.y - start_y
+                
+                npc_data = {
+                    'type': 'npc',
+                    'name': npc.name,
+                    'building': getattr(npc, 'building', 'Unknown Building'),
+                    'has_shop': getattr(npc, 'has_shop', False),
+                    'x': local_x,
+                    'y': local_y,
+                    'id': f"npc_{npc.name.lower().replace(' ', '_')}_{chunk_x}_{chunk_y}"
+                }
+                chunk.add_entity(npc_data)
+        
+        # Add current LIVING enemies to chunk (dead ones are excluded)
+        for enemy in self.current_level.enemies:
+            # Check if enemy is in this chunk and alive
+            if (start_x <= enemy.x < end_x and start_y <= enemy.y < end_y and 
+                enemy.health > 0):
+                local_x = enemy.x - start_x
+                local_y = enemy.y - start_y
+                
+                enemy_data = {
+                    'type': 'enemy',
+                    'name': enemy.name,
+                    'x': local_x,
+                    'y': local_y,
+                    'health': enemy.health,
+                    'max_health': enemy.max_health,
+                    'damage': enemy.damage,
+                    'id': getattr(enemy, 'entity_id', f"{enemy.name}_{int(enemy.x)}_{int(enemy.y)}")
+                }
+                chunk.add_entity(enemy_data)
+        
+        # Add current objects to chunk
+        for obj in self.current_level.objects:
+            # Check if object is in this chunk
+            if start_x <= obj.x < end_x and start_y <= obj.y < end_y:
+                local_x = obj.x - start_x
+                local_y = obj.y - start_y
+                
+                obj_data = {
+                    'type': 'object',
+                    'name': obj.name,
+                    'x': local_x,
+                    'y': local_y,
+                    'id': f"{obj.name}_{obj.x}_{obj.y}"
+                }
+                chunk.add_entity(obj_data)
+        
+        self.game_log.add_message(f"  🔄 Updated chunk with {len(chunk.entities)} current entities", "system")
     
     def update(self):
         """Update game logic"""

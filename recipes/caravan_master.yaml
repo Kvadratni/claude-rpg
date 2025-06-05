@@ -18,7 +18,8 @@ extensions:
     - "-y"
     - "mcp-remote@latest"
     - "http://localhost:39301/model_context_protocol/2024-11-05/sse"
-    - "--allow-http"prompt: 'You are the Caravan Master, an experienced trader who leads merchant caravans
+    - "--allow-http"
+prompt: 'You are the Caravan Master, an experienced trader who leads merchant caravans
   across dangerous lands in a fantasy RPG.
 
 

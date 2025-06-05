@@ -26,7 +26,7 @@ class HealerNPC(BaseAINPC):
     
     def _get_sprite_name(self):
         """Get sprite name for Healer"""
-        return "healer"
+        return "high_priest"  # Use high_priest sprite since no healer sprite exists
     
     def _get_npc_specific_responses(self):
         """Healer specific fallback responses"""

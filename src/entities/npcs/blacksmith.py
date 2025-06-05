@@ -26,7 +26,7 @@ class BlacksmithNPC(BaseAINPC):
     
     def _get_sprite_name(self):
         """Get sprite name for Blacksmith"""
-        return "blacksmith"
+        return "master_smith"  # Use master_smith sprite since no blacksmith sprite exists
     
     def _get_npc_specific_responses(self):
         """Blacksmith specific fallback responses"""
