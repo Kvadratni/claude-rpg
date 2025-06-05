@@ -97,13 +97,17 @@ class EventHandlingMixin:
                 clicked_entity = enemy
                 break
         
-        # Check NPCs for info (only if visible)
+        # Check NPCs for info (only if visible and interactive)
         if not clicked_entity:
             for npc in self.npcs:
                 if abs(world_x - npc.x) < 1.2 and abs(world_y - npc.y) < 1.2:
                     # Check if NPC is visible (not hidden by building roof)
                     if not self._is_npc_visible_for_interaction(npc):
                         continue  # Skip hidden NPCs
+                    
+                    # Skip background NPCs (non-interactive)
+                    if hasattr(npc, 'is_background') and npc.is_background:
+                        continue  # Skip background NPCs
                     
                     if self.player.game_log:
                         # Just show NPC info on right-click, not dialog
@@ -174,12 +178,16 @@ class EventHandlingMixin:
         # Check if clicking on an entity for interaction (no movement)
         clicked_entity = None
         
-        # Check NPCs (must be within interaction range AND visible)
+        # Check NPCs (must be within interaction range AND visible AND interactive)
         for npc in self.npcs:
             if abs(world_x - npc.x) < 1.2 and abs(world_y - npc.y) < 1.2:
                 # Check if NPC is visible (not hidden by building roof)
                 if not self._is_npc_visible_for_interaction(npc):
                     continue  # Skip hidden NPCs
+                
+                # Skip background NPCs (non-interactive)
+                if hasattr(npc, 'is_background') and npc.is_background:
+                    continue  # Skip background NPCs
                 
                 dist = math.sqrt((self.player.x - npc.x)**2 + (self.player.y - npc.y)**2)
                 if dist < 2.0:  # Only interact if close enough

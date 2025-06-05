@@ -416,16 +416,25 @@ class ProceduralGenerationMixin:
         try:
             from ..entities.npc import NPC
             
+            # Check if this is a background NPC (non-interactive)
+            is_background = entity_data.get('is_background', False)
+            
             # Create NPC with data from chunk
             npc = NPC(
                 x=world_x,
                 y=world_y,
                 name=entity_data.get('name', 'Unknown NPC'),
-                dialog=None,  # Will be set by NPC class based on name
+                dialog=entity_data.get('dialog', None),  # Background NPCs will have empty dialog
                 shop_items=None,
                 asset_loader=self.asset_loader,
                 has_shop=entity_data.get('has_shop', False)
             )
+            
+            # Mark background NPCs as non-interactive
+            if is_background:
+                npc.is_background = True
+                npc.dialog = ["..."]  # Minimal dialog to avoid errors
+                
             return npc
         except Exception as e:
             print(f"Error creating NPC from data: {e}")
