@@ -8,7 +8,7 @@ from typing import List, Dict, Tuple, Optional, Any
 
 from .biome_generator import BiomeGenerator
 from .settlement_generator import SettlementGenerator
-from .entity_spawner import EntitySpawner
+from .enhanced_entity_spawner import EnhancedEntitySpawner
 
 
 class ProceduralWorldGenerator:
@@ -36,14 +36,8 @@ class ProceduralWorldGenerator:
         self.biome_generator = BiomeGenerator(width, height, self.seed)
         self.settlement_generator = SettlementGenerator(width, height, self.seed)
         
-        # Use enhanced entity spawner for better logic
-        try:
-            from .enhanced_entity_spawner import EnhancedEntitySpawner
-            self.entity_spawner = EnhancedEntitySpawner(width, height, self.seed)
-        except ImportError:
-            # Fallback to regular entity spawner
-            from .entity_spawner import EntitySpawner
-            self.entity_spawner = EntitySpawner(width, height, self.seed)
+        # Use enhanced entity spawner with AI NPC support
+        self.entity_spawner = EnhancedEntitySpawner(width, height, self.seed)
         
         # Generated data
         self.biome_map = None

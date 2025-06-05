@@ -37,14 +37,14 @@ def test_entity_imports():
         traceback.print_exc()
         return False
 
-def test_entity_spawner_imports():
+def test_enhanced_entity_spawner_imports():
     """Test that EntitySpawner can import entity classes"""
     print("\nTesting EntitySpawner imports...")
     
     try:
-        from src.procedural_generation.src.entity_spawner import EntitySpawner
+        from src.procedural_generation.src.enhanced_entity_spawner import EnhancedEntitySpawner
         
-        spawner = EntitySpawner(50, 50, 12345)
+        spawner = EnhancedEntitySpawner(50, 50, 12345)
         print("✅ EntitySpawner created successfully")
         
         # Test dialog generation
@@ -65,7 +65,7 @@ def main():
     print("=" * 40)
     
     test1 = test_entity_imports()
-    test2 = test_entity_spawner_imports()
+    test2 = test_enhanced_entity_spawner_imports()
     
     if test1 and test2:
         print("\n🎉 All tests passed!")

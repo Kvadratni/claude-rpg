@@ -31,7 +31,7 @@ __author__ = "Goose RPG Development Team"
 from .src.modular_generator import ProceduralWorldGenerator, ProceduralGenerator
 from .src.biome_generator import BiomeGenerator
 from .src.settlement_generator import SettlementGenerator
-from .src.entity_spawner import EntitySpawner
+from .src.enhanced_entity_spawner import EnhancedEntitySpawner
 
 # Legacy compatibility - keep the old monolithic generator available
 try:
@@ -44,6 +44,6 @@ __all__ = [
     'ProceduralGenerator',  # Main interface (alias to ProceduralWorldGenerator)
     'BiomeGenerator',
     'SettlementGenerator', 
-    'EntitySpawner',
+    'EnhancedEntitySpawner',
     'LegacyProceduralGenerator'
 ]

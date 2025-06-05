@@ -526,52 +526,15 @@ class EnhancedEntitySpawner:
                     
                     print(f"        Creating NPC: {npc_name} at ({npc_x}, {npc_y}), has_shop: {has_shop}")
                     
-                    # Import NPC class
-                    try:
-                        from ...entities import NPC
-                        
-                        npc = NPC(npc_x, npc_y, npc_name, dialog=dialog, 
-                                 asset_loader=asset_loader, has_shop=has_shop)
+                    # Create AI-powered NPC based on type
+                    npc = self.create_ai_npc(npc_name, npc_x, npc_y, dialog, has_shop, asset_loader)
+                    if npc:
                         npcs.append(npc)
-                        
                         # Mark NPC position as occupied
                         self.mark_position_occupied(npc_x, npc_y)
-                        
-                        print(f"        ✓ Successfully spawned {npc_name}")
-                        
-                    except ImportError as e:
-                        print(f"        ✗ Failed to import NPC class: {e}")
-                        try:
-                            import sys
-                            import os
-                            sys.path.append(os.path.dirname(os.path.dirname(os.path.dirname(__file__))))
-                            from entities import NPC
-                            
-                            npc = NPC(npc_x, npc_y, npc_name, dialog=dialog, 
-                                     asset_loader=asset_loader, has_shop=has_shop)
-                            npcs.append(npc)
-                            self.mark_position_occupied(npc_x, npc_y)
-                            print(f"        ✓ Successfully spawned {npc_name} (fallback import)")
-                            
-                        except ImportError as e2:
-                            print(f"        ✗ Fallback import also failed: {e2}")
-                            # Create mock NPC for testing
-                            class MockNPC:
-                                def __init__(self, *args, **kwargs):
-                                    self.x = args[0] if args else 0
-                                    self.y = args[1] if len(args) > 1 else 0
-                                    self.name = args[2] if len(args) > 2 else "NPC"
-                                def update(self, level):
-                                    pass
-                            
-                            npc = MockNPC(npc_x, npc_y, npc_name)
-                            npcs.append(npc)
-                            print(f"        ⚠ Created mock NPC {npc_name} for testing")
-                    
-                    except Exception as e:
-                        print(f"        ✗ Unexpected error creating NPC {npc_name}: {e}")
-                        import traceback
-                        traceback.print_exc()
+                        print(f"        ✓ Successfully spawned AI-powered {npc_name}")
+                    else:
+                        print(f"        ✗ Failed to create AI NPC {npc_name}")
                 else:
                     print(f"        No NPC assigned to this building")
         
@@ -733,3 +696,88 @@ class EnhancedEntitySpawner:
         }
         
         return dialogs.get(npc_name, ["Hello, traveler!"])
+    
+    def create_ai_npc(self, npc_name: str, x: int, y: int, dialog: List[str], has_shop: bool, asset_loader: Any):
+        """Create appropriate AI-powered NPC based on name"""
+        try:
+            # Map NPC names to their AI classes
+            ai_npc_mappings = {
+                'Master Merchant': 'MasterMerchantNPC',
+                'Village Elder': 'VillageElderNPC', 
+                'Master Smith': 'MasterSmithNPC',
+                'Innkeeper': 'InnkeeperNPC',
+                'Guard Captain': 'GuardCaptainNPC',
+                'Caravan Master': 'CaravanMasterNPC',
+                'High Priest': 'HealerNPC',  # Use HealerNPC for priests
+                'Mine Foreman': 'BlacksmithNPC',  # Use BlacksmithNPC for miners
+                'Harbor Master': 'MasterMerchantNPC',  # Use MasterMerchantNPC for harbor masters
+                'Master Herbalist': 'HealerNPC',  # Use HealerNPC for herbalists
+            }
+            
+            ai_class_name = ai_npc_mappings.get(npc_name)
+            
+            if ai_class_name:
+                # Try to import the specific AI NPC class
+                try:
+                    from ...entities.npcs.master_merchant import MasterMerchantNPC
+                    from ...entities.npcs.village_elder import VillageElderNPC
+                    from ...entities.npcs.master_smith import MasterSmithNPC
+                    from ...entities.npcs.innkeeper import InnkeeperNPC
+                    from ...entities.npcs.guard_captain import GuardCaptainNPC
+                    from ...entities.npcs.caravan_master import CaravanMasterNPC
+                    from ...entities.npcs.healer import HealerNPC
+                    from ...entities.npcs.blacksmith import BlacksmithNPC
+                    
+                    # Get the class by name
+                    ai_class = locals()[ai_class_name]
+                    
+                    # Create AI NPC instance
+                    npc = ai_class(x, y, asset_loader=asset_loader)
+                    
+                    # Override name if needed (for cases like High Priest using HealerNPC)
+                    if npc.name != npc_name:
+                        npc.name = npc_name
+                    
+                    print(f"        ✓ Created AI-powered {npc_name} using {ai_class_name}")
+                    return npc
+                    
+                except ImportError as e:
+                    print(f"        ⚠️  Failed to import AI NPC class {ai_class_name}: {e}")
+                    # Fall back to regular NPC
+                    pass
+            
+            # Fallback: Create regular NPC but mark it as AI-ready
+            print(f"        ⚠️  No AI class found for {npc_name}, creating AI-ready regular NPC")
+            from ...entities import NPC
+            
+            npc = NPC(x, y, npc_name, dialog=dialog, 
+                     asset_loader=asset_loader, has_shop=has_shop)
+            
+            # Mark as AI-ready so it will be enabled on first interaction
+            npc.ai_ready = True
+            
+            return npc
+            
+        except ImportError as e:
+            print(f"        ✗ Failed to import NPC classes: {e}")
+            # Final fallback - try alternative import path
+            try:
+                import sys
+                import os
+                sys.path.append(os.path.dirname(os.path.dirname(os.path.dirname(__file__))))
+                from entities import NPC
+                
+                npc = NPC(x, y, npc_name, dialog=dialog, 
+                         asset_loader=asset_loader, has_shop=has_shop)
+                npc.ai_ready = True  # Mark as AI-ready
+                return npc
+                
+            except ImportError:
+                print(f"        ✗ All import attempts failed for {npc_name}")
+                return None
+        
+        except Exception as e:
+            print(f"        ✗ Unexpected error creating AI NPC {npc_name}: {e}")
+            import traceback
+            traceback.print_exc()
+            return None

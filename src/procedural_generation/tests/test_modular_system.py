@@ -14,7 +14,7 @@ sys.path.insert(0, os.path.join(os.path.dirname(__file__), '..'))
 # Import the modular components
 from src.biome_generator import BiomeGenerator
 from src.settlement_generator import SettlementGenerator
-from src.entity_spawner import EntitySpawner
+from src.enhanced_entity_spawner import EnhancedEntitySpawner
 from src.modular_generator import ProceduralWorldGenerator
 
 
