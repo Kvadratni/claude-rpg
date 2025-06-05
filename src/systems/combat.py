@@ -58,21 +58,10 @@ class CombatSystem:
         
         return weapon_stamina_costs.get(weapon_name, 8)  # Default to 8 if weapon not found (was 10)
     
-    def attack(self, enemies):
+    def attack(self, enemies, level=None):
         """Attack nearby enemies or use ranged attack"""
-        # Check if player has enough stamina to attack
-        stamina_cost = self.get_weapon_stamina_cost()
-        if self.player.stamina < stamina_cost:
-            if self.player.game_log:
-                weapon_name = self.player.equipped_weapon.name if self.player.equipped_weapon else "fists"
-                self.player.game_log.add_message(f"Not enough stamina to attack with {weapon_name}! (Need {stamina_cost})", "combat")
-            return
-        
         # Get audio manager
         audio = getattr(self.player.asset_loader, 'audio_manager', None) if self.player.asset_loader else None
-        
-        # Consume stamina
-        self.player.stamina -= stamina_cost
         
         # Check if equipped weapon is ranged
         is_ranged_weapon = False
@@ -82,11 +71,66 @@ class CombatSystem:
             is_ranged_weapon = True
         
         if is_ranged_weapon:
+            # Check stamina before ranged attack
+            stamina_cost = self.get_weapon_stamina_cost()
+            if self.player.stamina < stamina_cost:
+                if self.player.game_log:
+                    weapon_name = self.player.equipped_weapon.name if self.player.equipped_weapon else "ranged attack"
+                    self.player.game_log.add_message(f"Not enough stamina to attack with {weapon_name}! (Need {stamina_cost})", "combat")
+                return
+            
+            # Consume stamina for ranged attack
+            self.player.stamina -= stamina_cost
             # Ranged attack - target all enemies within range
             self.ranged_attack(enemies, audio)
         else:
-            # Melee attack - only attack enemies in front of player
-            self.melee_attack(enemies, audio)
+            # Melee attack - check if any enemies are in range first
+            enemies_in_range = []
+            for enemy in enemies:
+                dx = enemy.x - self.player.x
+                dy = enemy.y - self.player.y
+                distance = math.sqrt(dx * dx + dy * dy)
+                if distance <= self.attack_range:
+                    enemies_in_range.append(enemy)
+            
+            if enemies_in_range:
+                # Check stamina before melee attack
+                stamina_cost = self.get_weapon_stamina_cost()
+                if self.player.stamina < stamina_cost:
+                    if self.player.game_log:
+                        weapon_name = self.player.equipped_weapon.name if self.player.equipped_weapon else "fists"
+                        self.player.game_log.add_message(f"Not enough stamina to attack with {weapon_name}! (Need {stamina_cost})", "combat")
+                    return
+                
+                # Consume stamina for melee attack
+                self.player.stamina -= stamina_cost
+                self.melee_attack(enemies_in_range, audio)
+            else:
+                # No enemies in range - try to move to closest enemy
+                closest_enemy = None
+                closest_distance = float('inf')
+                
+                for enemy in enemies:
+                    dx = enemy.x - self.player.x
+                    dy = enemy.y - self.player.y
+                    distance = math.sqrt(dx * dx + dy * dy)
+                    if distance < closest_distance:
+                        closest_enemy = enemy
+                        closest_distance = distance
+                
+                if closest_enemy and closest_distance <= 5.0 and level:  # Only auto-move if enemy is reasonably close and we have level
+                    # Move towards the closest enemy
+                    target_tile_x = int(closest_enemy.x)
+                    target_tile_y = int(closest_enemy.y)
+                    
+                    # Try to get adjacent to the enemy
+                    if hasattr(self.player, 'movement_system'):
+                        self.player.movement_system._move_to_tile(target_tile_x, target_tile_y, level)
+                        if self.player.game_log:
+                            self.player.game_log.add_message(f"Moving closer to {closest_enemy.name}...", "combat")
+                else:
+                    if self.player.game_log:
+                        self.player.game_log.add_message("No enemies in melee range!", "combat")
     
     def melee_attack(self, enemies, audio):
         """Perform melee attack on nearby enemies"""

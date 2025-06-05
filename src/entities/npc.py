@@ -127,25 +127,90 @@ class NPC(Entity):
         
         # Try to use loaded sprite first
         if self.asset_loader:
-            # Map NPC names to sprite assets
+            # Map NPC names to sprite assets - EXPANDED MAPPING
             sprite_mappings = {
+                # Existing NPCs with dedicated assets
                 "Master Merchant": "npc_shopkeeper",
                 "Shopkeeper": "npc_shopkeeper", 
+                "Trader": "trader",  # Use dedicated trader asset
+                "Rich Merchant": "trade_master",
+                "Market Master": "trade_master",
+                
                 "Village Elder": "elder_npc",
                 "Elder": "elder_npc",
+                
                 "Guard Captain": "guard_captain",
-                "Guard": "village_guard_sprite",
+                "Guard": "village_guard_sprite",  # Use the village guard sprite
+                "Commander": "guard_captain",  # Reuse guard captain
+                "Barracks Chief": "guard_captain",
+                
                 "Master Smith": "master_smith",
                 "Blacksmith": "master_smith",
+                "Tool Maker": "master_smith",  # Reuse smith for tool maker
+                "Weapon Master": "master_smith",
+                
                 "Innkeeper": "innkeeper",
+                "Inn Master": "innkeeper",
+                "Lodge Keeper": "innkeeper",  # Reuse innkeeper
+                
                 "High Priest": "high_priest",
+                "Archbishop": "high_priest",  # Reuse priest
+                "Forest Priest": "high_priest",
+                
                 "Mine Foreman": "mine_foreman",
+                "Ore Master": "mine_foreman",  # Reuse mine foreman
+                "Veteran Miner": "mine_foreman",
+                
                 "Harbor Master": "harbor_master",
+                "Dock Master": "harbor_master",  # Reuse harbor master
+                "Fisherman": "master_fisher",
+                "Old Fisherman": "master_fisher",
+                "Fish Merchant": "master_fisher",
+                "Net Weaver": "master_fisher",
+                "Smoke Master": "master_fisher",
+                "Sailor": "master_fisher",
+                
                 "Caravan Master": "caravan_master",
+                "Desert Guide": "caravan_master",  # Reuse caravan master
+                "Desert Nomad": "caravan_master",
+                "Oasis Keeper": "caravan_master",
+                
                 "Forest Ranger": "forest_ranger",
+                "Scout Leader": "forest_ranger",  # Reuse ranger
+                "Hunter": "forest_ranger",
+                "Tree Keeper": "forest_ranger",
+                
                 "Master Herbalist": "master_herbalist",
+                "Herb Gatherer": "master_herbalist",  # Reuse herbalist
+                "Forest Druid": "master_herbalist",
+                "Swamp Alchemist": "master_herbalist",
+                
                 "Mysterious Wizard": "mysterious_wizard",
-                "Old Hermit": "old_hermit"
+                "Court Wizard": "mysterious_wizard",  # Reuse wizard
+                
+                "Old Hermit": "old_hermit",
+                "Swamp Dweller": "old_hermit",  # Reuse hermit
+                "Villager": "old_hermit",
+                
+                "Stable Master": "stable_master",
+                
+                # NPCs that need new assets (will use fallback generation)
+                "Mayor": "mayor",  # NEW ASSET NEEDED
+                "Noble": "noble",  # NEW ASSET NEEDED
+                "Banker": "banker",  # NEW ASSET NEEDED
+                "Librarian": "librarian",  # NEW ASSET NEEDED
+                "Guild Master": "guild_master",  # NEW ASSET NEEDED
+                "Barkeeper": "barkeeper",  # NEW ASSET NEEDED
+                "Craftsman": "craftsman",  # NEW ASSET NEEDED
+                "Master Woodcutter": "master_woodcutter",  # NEW ASSET NEEDED
+                "Miller": "miller",  # NEW ASSET NEEDED
+                "Boat Builder": "boat_builder",  # NEW ASSET NEEDED
+                "Swamp Witch": "swamp_witch",  # NEW ASSET NEEDED
+                "Fur Trader": "fur_trader",  # NEW ASSET NEEDED
+                "Ice Keeper": "ice_keeper",  # NEW ASSET NEEDED
+                "Water Keeper": "water_keeper",  # NEW ASSET NEEDED
+                "Mushroom Farmer": "mushroom_farmer",  # NEW ASSET NEEDED
+                "Assayer": "assayer",  # NEW ASSET NEEDED
             }
             
             sprite_name = sprite_mappings.get(self.name)
@@ -168,6 +233,7 @@ class NPC(Entity):
         
         # Different colors and features for different NPCs
         npc_styles = {
+            # Existing NPCs
             "Master Merchant": {"color": (255, 215, 0), "feature": "hat", "feature_color": (139, 69, 19)},  # Gold with brown hat
             "Shopkeeper": {"color": (255, 215, 0), "feature": "hat", "feature_color": (139, 69, 19)},
             "Village Elder": {"color": (128, 0, 128), "feature": "beard", "feature_color": (255, 255, 255)},  # Purple with white beard
@@ -185,6 +251,15 @@ class NPC(Entity):
             "Master Herbalist": {"color": (50, 205, 50), "feature": "hood", "feature_color": (34, 139, 34)},  # Lime green with forest green hood
             "Mysterious Wizard": {"color": (75, 0, 130), "feature": "hat", "feature_color": (25, 25, 112)},  # Indigo with midnight blue hat
             "Old Hermit": {"color": (160, 160, 160), "feature": "beard", "feature_color": (220, 220, 220)},  # Gray with light gray beard
+            
+            # New NPCs
+            "Desert Guide": {"color": (218, 165, 32), "feature": "turban", "feature_color": (184, 134, 11)},  # Goldenrod with darker turban
+            "Head Miner": {"color": (85, 85, 85), "feature": "helmet", "feature_color": (169, 169, 169)},  # Dark gray with light gray helmet
+            "Master Fisher": {"color": (0, 139, 139), "feature": "hat", "feature_color": (0, 100, 100)},  # Dark cyan with darker hat
+            "Trade Master": {"color": (255, 140, 0), "feature": "hat", "feature_color": (205, 102, 0)},  # Dark orange with darker hat
+            "Stable Master": {"color": (160, 82, 45), "feature": "hat", "feature_color": (139, 69, 19)},  # Saddle brown with brown hat
+            "Water Keeper": {"color": (30, 144, 255), "feature": "hood", "feature_color": (0, 100, 200)},  # Dodger blue with darker hood
+            "Lodge Keeper": {"color": (205, 92, 92), "feature": "apron", "feature_color": (255, 255, 255)}  # Indian red with white apron
         }
         
         # Get style for this NPC, default to generic style

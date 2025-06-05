@@ -14,7 +14,7 @@ try:
     from ..door_pathfinder import DoorPathfinder
     from ..door_renderer import DoorRenderer
     from ..wall_renderer import WallRenderer
-    from ..template_level import integrate_template_generation
+    from ..roof_renderer import RoofRenderer
     from ..entities.spawning import SpawningMixin
 except ImportError:
     # Fallback for direct execution
@@ -24,7 +24,7 @@ except ImportError:
     from src.door_pathfinder import DoorPathfinder
     from src.door_renderer import DoorRenderer
     from src.wall_renderer import WallRenderer
-    from src.template_level import integrate_template_generation
+    from src.roof_renderer import RoofRenderer
     from src.entities.spawning import SpawningMixin
 
 
@@ -50,6 +50,11 @@ class LevelBase(SpawningMixin):
     # Specific window wall types
     TILE_WALL_WINDOW_HORIZONTAL = 14  # Horizontal wall with window
     TILE_WALL_WINDOW_VERTICAL = 15    # Vertical wall with window
+    # Biome-specific tiles
+    TILE_SAND = 16            # Desert sand
+    TILE_SNOW = 17            # Snow/ice
+    TILE_FOREST_FLOOR = 18    # Forest floor
+    TILE_SWAMP = 19           # Swamp mud
     
     def __init__(self, level_name, player, asset_loader, game=None):
         """Initialize the base level"""
@@ -57,8 +62,8 @@ class LevelBase(SpawningMixin):
         self.player = player
         self.asset_loader = asset_loader
         self.game = game
-        self.width = 200  # Default size, may be overridden by template
-        self.height = 200
+        self.width = 1000  # Large procedural world size
+        self.height = 1000
         
         # Isometric renderer
         self.iso_renderer = IsometricRenderer(64, 32)
@@ -72,37 +77,19 @@ class LevelBase(SpawningMixin):
         # Wall rendering system
         self.wall_renderer = WallRenderer(self)
         
+        # Roof rendering system
+        self.roof_renderer = RoofRenderer(self)
+        
         # Camera
         self.camera_x = 0
         self.camera_y = 0
-        
-        # Template generator (will be set if template is used)
-        self.template_generator = None
         
         # Combat state tracking
         self.enemies_in_combat = set()  # Track which enemies are in combat
         self.combat_music_timer = 0     # Timer for combat music fade out
         
-        # Initialize template-based generation
-        self._initialize_template_generation()
-        
         # Generate heightmap and walkable grid if not already done
         self._initialize_level_data()
-    
-    def _initialize_template_generation(self):
-        """Initialize template-based level generation"""
-        template_path = "assets/maps/main_world.png"
-        if os.path.exists(template_path):
-            print("Using template-based map generation...")
-            success = integrate_template_generation(self, template_path)
-            if success:
-                print("Template-based generation successful!")
-            else:
-                print("Template generation failed, no fallback available")
-                raise RuntimeError("Template generation failed and no fallback is available")
-        else:
-            print("No template found, template is required")
-            raise RuntimeError("Template file not found and no fallback is available")
     
     def _initialize_level_data(self):
         """Initialize heightmap and walkable grid if not already done"""
@@ -122,10 +109,11 @@ class LevelBase(SpawningMixin):
                 height = 0
                 
                 # Walls are higher
-                if self.tiles[y][x] == self.TILE_WALL:
+                tile_type = self.get_tile(x, y) if hasattr(self, 'get_tile') else self.tiles[y][x]
+                if tile_type == self.TILE_WALL:
                     height = 1
                 # Water is lower
-                elif self.tiles[y][x] == self.TILE_WATER:
+                elif tile_type == self.TILE_WATER:
                     height = -0.5
                 # Add some random height variations
                 elif random.random() < 0.1:
@@ -144,7 +132,7 @@ class LevelBase(SpawningMixin):
             row = []
             for x in range(self.width):
                 # Start with basic tile walkability
-                tile_type = self.tiles[y][x]
+                tile_type = self.get_tile(x, y) if hasattr(self, 'get_tile') else self.tiles[y][x]
                 tile_walkable = tile_type in [self.TILE_GRASS, self.TILE_DIRT, self.TILE_STONE, self.TILE_DOOR, self.TILE_BRICK]
                 
                 if not tile_walkable:

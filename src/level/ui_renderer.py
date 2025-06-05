@@ -114,41 +114,18 @@ class UIRendererMixin:
         # Store button rect for click detection (adjust for screen position)
         self.inventory_button_rect = pygame.Rect(inv_button_x, screen_height - ui_height + 20, 100, 40)
         
-        # Right side - Game log with proper message rendering
-        log_x = screen_width - 350
-        log_width = 340
-        log_height = ui_height - 20
+        # Right side - Game log integrated into HUD
+        log_x = inv_button_x + 120  # Start after inventory button
+        log_width = screen_width - log_x - 20  # Use remaining width with margin
+        log_height = ui_height - 20  # Use most of the UI height
         
-        log_panel = pygame.Surface((log_width, log_height))
-        log_panel.fill((30, 30, 30))  # Darker background for log
-        pygame.draw.rect(log_panel, (80, 80, 80), (0, 0, log_width, log_height), 2)
+        # Draw game log background
+        log_rect = pygame.Rect(log_x, 10, log_width, log_height)
+        pygame.draw.rect(ui_panel, (50, 50, 50), log_rect)
+        pygame.draw.rect(ui_panel, (100, 100, 100), log_rect, 2)
         
-        # Game log title
-        log_title = font.render("Game Log:", True, (200, 200, 200))
-        log_panel.blit(log_title, (5, 5))
-        
-        # Render recent messages properly
-        if hasattr(self.player, 'game_log') and self.player.game_log:
-            recent_messages = self.player.game_log.messages[-6:]  # Last 6 messages
-            for i, message_data in enumerate(recent_messages):
-                # Handle both old tuple format and new dict format
-                if isinstance(message_data, dict):
-                    message = message_data.get('text', str(message_data))
-                    msg_type = message_data.get('type', 'system')
-                elif isinstance(message_data, tuple) and len(message_data) >= 2:
-                    message, msg_type = message_data[:2]
-                else:
-                    message = str(message_data)
-                    msg_type = "system"
-                
-                color = self.player.game_log.get_message_color(msg_type)
-                # Truncate long messages to fit in the log panel
-                if len(message) > 40:
-                    message = message[:37] + "..."
-                msg_surface = small_font.render(message, True, color)
-                log_panel.blit(msg_surface, (5, 30 + i * 18))
-        
-        ui_panel.blit(log_panel, (log_x, 10))
+        # Render game log content within the HUD
+        self.render_game_log_in_hud(ui_panel, log_x, 10, log_width, log_height)
         
         # Blit the entire UI panel to screen
         screen.blit(ui_panel, (0, screen_height - ui_height))
@@ -260,3 +237,99 @@ class UIRendererMixin:
         text_surface = font.render(xp_text, True, (255, 255, 255))
         text_rect = text_surface.get_rect(center=(bar_x + bar_width//2, bar_y + bar_height//2))
         screen.blit(text_surface, text_rect)
+    
+    def render_game_log_in_hud(self, ui_panel, log_x, log_y, log_width, log_height):
+        """Render game log content within the HUD panel"""
+        # Get the game log
+        game_log = None
+        if hasattr(self.player, 'game_log') and self.player.game_log:
+            game_log = self.player.game_log
+        elif hasattr(self, 'game') and hasattr(self.game, 'game_log'):
+            game_log = self.game.game_log
+        
+        if not game_log:
+            return
+        
+        # Draw title
+        font = pygame.font.Font(None, 20)
+        small_font = pygame.font.Font(None, 16)
+        
+        title_text = "Game Log"
+        if game_log.scroll_offset > 0:
+            title_text += f" (↑{game_log.scroll_offset})"
+        title_surface = small_font.render(title_text, True, (200, 200, 200))
+        ui_panel.blit(title_surface, (log_x + 5, log_y + 2))
+        
+        # Calculate visible messages
+        visible_messages = min(6, (log_height - 25) // 20)  # Adjust based on available height
+        message_height = 20
+        
+        # Draw scroll arrows if needed
+        scroll_up_rect = None
+        scroll_down_rect = None
+        
+        if len(game_log.messages) > visible_messages:
+            arrow_size = 14
+            arrow_x = log_x + log_width - arrow_size - 5
+            up_arrow_y = log_y + 2
+            down_arrow_y = log_y + log_height - arrow_size - 2
+            
+            # Store arrow rects for click detection (in screen coordinates)
+            screen_height = pygame.display.get_surface().get_height()
+            ui_height = 150
+            ui_y_offset = screen_height - ui_height
+            
+            game_log.scroll_up_rect = pygame.Rect(arrow_x, ui_y_offset + up_arrow_y, arrow_size, arrow_size)
+            game_log.scroll_down_rect = pygame.Rect(arrow_x, ui_y_offset + down_arrow_y, arrow_size, arrow_size)
+            
+            # Draw up arrow
+            up_color = (255, 255, 255) if game_log.scroll_offset < len(game_log.messages) - visible_messages else (100, 100, 100)
+            up_points = [
+                (arrow_x + arrow_size // 2, up_arrow_y + 2),
+                (arrow_x + 2, up_arrow_y + arrow_size - 2),
+                (arrow_x + arrow_size - 2, up_arrow_y + arrow_size - 2)
+            ]
+            pygame.draw.polygon(ui_panel, up_color, up_points)
+            
+            # Draw down arrow
+            down_color = (255, 255, 255) if game_log.scroll_offset > 0 else (100, 100, 100)
+            down_points = [
+                (arrow_x + 2, down_arrow_y + 2),
+                (arrow_x + arrow_size - 2, down_arrow_y + 2),
+                (arrow_x + arrow_size // 2, down_arrow_y + arrow_size - 2)
+            ]
+            pygame.draw.polygon(ui_panel, down_color, down_points)
+        else:
+            game_log.scroll_up_rect = None
+            game_log.scroll_down_rect = None
+        
+        # Calculate which messages to show
+        if len(game_log.messages) <= visible_messages:
+            messages_to_show = game_log.messages
+        else:
+            start_index = len(game_log.messages) - visible_messages - game_log.scroll_offset
+            end_index = len(game_log.messages) - game_log.scroll_offset
+            messages_to_show = game_log.messages[start_index:end_index]
+        
+        # Draw messages
+        for i, message in enumerate(messages_to_show):
+            y_pos = log_y + 18 + (i * message_height)
+            color = game_log.colors.get(message["type"], game_log.colors["default"])
+            
+            # Apply alpha for fading
+            if message["alpha"] < 255 and game_log.scroll_offset == 0:
+                color = (*color, message["alpha"])
+                text_surface = font.render(message["text"], True, color)
+                text_surface.set_alpha(message["alpha"])
+            else:
+                text_surface = font.render(message["text"], True, color)
+            
+            # Truncate long messages
+            max_width = log_width - 30 if len(game_log.messages) > visible_messages else log_width - 10
+            if text_surface.get_width() > max_width:
+                truncated_text = message["text"]
+                while font.size(truncated_text + "...")[0] > max_width and len(truncated_text) > 0:
+                    truncated_text = truncated_text[:-1]
+                text_surface = font.render(truncated_text + "...", True, color)
+            
+            ui_panel.blit(text_surface, (log_x + 5, y_pos))

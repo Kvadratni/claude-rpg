@@ -48,11 +48,19 @@ class AssetLoader:
             "door_tile": "door.png",  # Fixed: use door.png instead of door_tile.png
             "door_tile_isometric": "door.png",  # Added for isometric door rendering
             "door": "door.png",  # Added door texture for front face
+            "archway_texture": "archway_texture_tall.png",  # Updated to use tall archway texture for better wall face fit
+            "wall_door": "wall_door.png",  # Wall texture showing an open door for side/back faces
             "brick_tile": "brick_tile.png",  # Added brick tile for building interiors
+            "roof_texture": "roof_texture.png",  # Added roof texture for building roofs
+            "sand_tile": "sand_tile.png",
+            "snow_tile": "snow_tile.png",
+            "forest_floor_tile": "forest_floor_tile.png",
+            "swamp_tile": "swamp_tile.png",
             "player_sprite": "player_sprite.png",
             "goblin_sprite": "goblin_sprite.png",
             "orc_boss_sprite": "orc_boss_sprite.png",
             "npc_shopkeeper": "npc_shopkeeper.png",
+            "trader": "trader.png",
             "elder_npc": "elder_npc.png",  # Added elder NPC
             "village_guard_sprite": "village_guard_sprite.png",  # Added village guard
             # New NPCs
@@ -67,6 +75,26 @@ class AssetLoader:
             "master_herbalist": "master_herbalist.png",
             "mysterious_wizard": "mysterious_wizard.png",
             "old_hermit": "old_hermit.png",
+            "stable_master": "stable_master.png",  # Added missing stable master
+            "master_fisher": "master_fisher.png",  # Added missing master fisher
+            "trade_master": "trade_master.png",    # Added missing trade master
+            # Additional NPCs that need new assets
+            "mayor": "mayor.png",
+            "noble": "noble.png", 
+            "banker": "banker.png",
+            "librarian": "librarian.png",
+            "guild_master": "guild_master.png",
+            "barkeeper": "barkeeper.png",
+            "craftsman": "craftsman.png",
+            "master_woodcutter": "master_woodcutter.png",
+            "miller": "miller.png",
+            "boat_builder": "boat_builder.png",
+            "swamp_witch": "swamp_witch.png",
+            "fur_trader": "fur_trader.png",
+            "ice_keeper": "ice_keeper.png",
+            "water_keeper": "water_keeper.png",
+            "mushroom_farmer": "mushroom_farmer.png",
+            "assayer": "assayer.png",
             # New Enemies
             "bandit_scout": "bandit_scout.png",
             "forest_sprite": "forest_sprite.png",
@@ -79,6 +107,19 @@ class AssetLoader:
             "swamp_troll": "swamp_troll.png",
             "tree": "tree.png",
             "rock": "rock.png",
+            # Biome-specific environmental objects
+            "cactus_saguaro": "cactus_saguaro.png",
+            "cactus_barrel": "cactus_barrel.png",
+            "desert_rock": "desert_rock.png",
+            "snowy_pine": "snowy_pine.png",
+            "ice_block": "ice_block.png",
+            "frozen_rock": "frozen_rock.png",
+            "dead_tree": "dead_tree.png",
+            "swamp_log": "swamp_log.png",
+            "swamp_mushroom": "swamp_mushroom.png",
+            "pine_tree": "pine_tree.png",
+            "oak_tree": "oak_tree.png",
+            "fallen_log": "fallen_log.png",
             "menu_background": "menu_background.png",  # Added menu background
             # Individual item sprites
             "iron_sword": "iron_sword.png",
@@ -163,11 +204,19 @@ class AssetLoader:
             "door_tile": (139, 69, 19),  # Brown for door
             "door_tile_isometric": (139, 69, 19),  # Brown for isometric door
             "door": (139, 69, 19),  # Brown for door texture
+            "archway_texture": (160, 140, 120),  # Stone archway color
+            "wall_door": (120, 100, 80),  # Open door wall color (slightly darker than archway)
             "brick_tile": (150, 80, 60),  # Reddish-brown for brick
+            "roof_texture": (60, 40, 20),  # Dark brown for roof
+            "sand_tile": (220, 180, 120),  # Sandy beige
+            "snow_tile": (240, 240, 255),  # Snowy white
+            "forest_floor_tile": (80, 60, 40),  # Dark forest floor
+            "swamp_tile": (60, 80, 50),  # Murky swamp color
             "player_sprite": (100, 150, 255),
             "goblin_sprite": (0, 100, 0),
             "orc_boss_sprite": (139, 0, 0),
             "npc_shopkeeper": (255, 215, 0),
+            "trader": (210, 180, 140),  # Tan for simple trader
             "elder_npc": (128, 0, 128),  # Purple for elder
             "village_guard_sprite": (70, 130, 180),  # Steel blue for guard
             # New NPCs
@@ -182,6 +231,26 @@ class AssetLoader:
             "master_herbalist": (50, 205, 50),  # Lime green
             "mysterious_wizard": (75, 0, 130),  # Indigo
             "old_hermit": (160, 160, 160),  # Gray
+            "stable_master": (160, 82, 45),  # Saddle brown for stable master
+            "master_fisher": (0, 139, 139),  # Dark cyan for fisher
+            "trade_master": (255, 140, 0),   # Dark orange for trade master
+            # Additional NPCs
+            "mayor": (128, 0, 128),  # Purple for authority
+            "noble": (255, 215, 0),  # Gold for wealth
+            "banker": (0, 100, 0),  # Dark green for money
+            "librarian": (139, 69, 19),  # Brown for books
+            "guild_master": (70, 130, 180),  # Steel blue for leadership
+            "barkeeper": (160, 82, 45),  # Saddle brown
+            "craftsman": (139, 69, 19),  # Brown for crafting
+            "master_woodcutter": (34, 139, 34),  # Forest green
+            "miller": (210, 180, 140),  # Tan for grain
+            "boat_builder": (0, 100, 150),  # Navy blue
+            "swamp_witch": (85, 107, 47),  # Dark olive green
+            "fur_trader": (160, 82, 45),  # Saddle brown
+            "ice_keeper": (173, 216, 230),  # Light blue
+            "water_keeper": (30, 144, 255),  # Dodger blue
+            "mushroom_farmer": (160, 82, 45),  # Saddle brown
+            "assayer": (105, 105, 105),  # Gray for minerals
             # New Enemies
             "bandit_scout": (101, 67, 33),  # Brown
             "forest_sprite": (50, 205, 50),  # Lime green
@@ -194,6 +263,19 @@ class AssetLoader:
             "swamp_troll": (85, 107, 47),  # Dark olive green
             "tree": (34, 139, 34),
             "rock": (128, 128, 128),
+            # Biome-specific environmental objects
+            "cactus_saguaro": (34, 139, 34),  # Green cactus
+            "cactus_barrel": (107, 142, 35),  # Olive green cactus
+            "desert_rock": (210, 180, 140),  # Tan desert rock
+            "snowy_pine": (25, 100, 25),  # Dark green with snow
+            "ice_block": (173, 216, 230),  # Light blue ice
+            "frozen_rock": (176, 196, 222),  # Light steel blue
+            "dead_tree": (101, 67, 33),  # Saddle brown dead tree
+            "swamp_log": (85, 107, 47),  # Dark olive green log
+            "swamp_mushroom": (160, 82, 45),  # Saddle brown mushroom
+            "pine_tree": (34, 139, 34),  # Forest green pine
+            "oak_tree": (107, 142, 35),  # Olive green oak
+            "fallen_log": (139, 69, 19),  # Saddle brown fallen log
             # Item colors
             "iron_sword": (192, 192, 192),
             "steel_axe": (169, 169, 169),

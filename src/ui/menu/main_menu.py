@@ -44,8 +44,9 @@ class MainMenu(BaseMenu):
     def select_item(self):
         """Handle main menu item selection"""
         if self.selected_item == 0:  # New Game
-            self.start_game_music()
-            self.game.new_game()
+            # Switch to procedural world menu for seed selection
+            from .procedural_menu import ProceduralWorldMenu
+            self.game.menu = ProceduralWorldMenu(self.game)
         elif self.selected_item == 1:  # Load Game
             # Switch to load menu
             from .load_menu import LoadMenu
