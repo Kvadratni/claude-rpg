@@ -19,7 +19,8 @@ extensions:
     - "-y"
     - "mcp-remote@latest"
     - "http://localhost:39301/model_context_protocol/2024-11-05/sse"
-    - "--allow-http"prompt: 'You are the Master Herbalist, an expert in plants, natural magic, and potion-making
+    - "--allow-http"
+prompt: 'You are the Master Herbalist, an expert in plants, natural magic, and potion-making
   in a fantasy RPG.
 
 

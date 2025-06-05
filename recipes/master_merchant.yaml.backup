@@ -13,12 +13,13 @@ extensions:
   bundled: true
 - type: stdio
   name: rpg-game-server
-  cmd: npx
+  display_name: RPG Game Actions
+  timeout: 30
+  bundled: false
+  cmd: uv
   args:
-    - "-y"
-    - "mcp-remote@latest"
-    - "http://localhost:39301/model_context_protocol/2024-11-05/sse"
-    - "--allow-http"
+  - run
+  - rpg-mcp
 prompt: 'You are the Master Merchant, a successful and friendly trader in a fantasy
   RPG village.
 

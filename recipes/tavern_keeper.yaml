@@ -19,7 +19,8 @@ extensions:
     - "-y"
     - "mcp-remote@latest"
     - "http://localhost:39301/model_context_protocol/2024-11-05/sse"
-    - "--allow-http"prompt: 'You are the Tavern Keeper, the owner and operator of the village tavern in
+    - "--allow-http"
+prompt: 'You are the Tavern Keeper, the owner and operator of the village tavern in
   a fantasy RPG.
 
 
