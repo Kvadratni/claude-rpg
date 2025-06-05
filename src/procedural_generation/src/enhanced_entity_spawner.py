@@ -419,13 +419,13 @@ class EnhancedEntitySpawner:
     
     def find_closest_settlement(self, settlements: List[Dict]) -> Tuple[int, int]:
         """
-        Find the closest settlement to the center of the world for player spawn
+        Find optimal player spawn location within or near a settlement
         
         Args:
             settlements: List of settlement information
             
         Returns:
-            (x, y) coordinates of the closest settlement center
+            (x, y) coordinates for player spawn within/near settlement
         """
         if not settlements:
             # Fallback to world center if no settlements
@@ -452,18 +452,91 @@ class EnhancedEntitySpawner:
                 closest_settlement = settlement
         
         if closest_settlement:
-            # Return position near the settlement center but not exactly on it
-            spawn_x = closest_settlement['center_x'] + random.randint(-3, 3)
-            spawn_y = closest_settlement['center_y'] + random.randint(-3, 3)
+            # Try to spawn player within the settlement area first
+            settlement_x = closest_settlement['x']
+            settlement_y = closest_settlement['y']
+            
+            # Get settlement buildings to find a good spawn location
+            buildings = closest_settlement.get('buildings', [])
+            
+            if buildings:
+                # Try to find a courtyard or open area within the settlement
+                for attempt in range(20):  # Multiple attempts to find good spot
+                    # Try spawning near buildings but not inside them
+                    building = random.choice(buildings)
+                    
+                    # Spawn near the building entrance or courtyard
+                    spawn_options = [
+                        # Near building entrance (south side)
+                        (building['x'] + building['width'] // 2, building['y'] + building['height'] + 2),
+                        # Settlement courtyard areas
+                        (building['x'] - 3, building['y'] + building['height'] // 2),
+                        (building['x'] + building['width'] + 3, building['y'] + building['height'] // 2),
+                        # Near settlement center but offset
+                        (closest_settlement['center_x'] + random.randint(-8, 8), 
+                         closest_settlement['center_y'] + random.randint(-8, 8))
+                    ]
+                    
+                    for spawn_x, spawn_y in spawn_options:
+                        # Ensure spawn position is within world bounds
+                        spawn_x = max(5, min(self.width - 5, spawn_x))
+                        spawn_y = max(5, min(self.height - 5, spawn_y))
+                        
+                        # Check if this is a reasonable spawn location
+                        # (not inside buildings, not too close to walls)
+                        if self._is_good_player_spawn(spawn_x, spawn_y, buildings):
+                            print(f"Player spawn within {closest_settlement['name']} at ({spawn_x}, {spawn_y})")
+                            return (spawn_x, spawn_y)
+            
+            # Fallback: spawn at settlement border (safe zone edge)
+            center_x = closest_settlement['center_x']
+            center_y = closest_settlement['center_y']
+            
+            # Spawn at the edge of the safe zone (radius ~25-30 tiles from center)
+            angle = random.uniform(0, 2 * math.pi)
+            spawn_radius = random.uniform(20, 30)  # Between 20-30 tiles from center
+            
+            spawn_x = int(center_x + spawn_radius * math.cos(angle))
+            spawn_y = int(center_y + spawn_radius * math.sin(angle))
             
             # Ensure spawn position is within world bounds
             spawn_x = max(5, min(self.width - 5, spawn_x))
             spawn_y = max(5, min(self.height - 5, spawn_y))
             
-            print(f"Player spawn near {closest_settlement['name']} at ({spawn_x}, {spawn_y})")
+            print(f"Player spawn near {closest_settlement['name']} border at ({spawn_x}, {spawn_y})")
             return (spawn_x, spawn_y)
         
         return (world_center_x, world_center_y)
+    
+    def _is_good_player_spawn(self, x: int, y: int, buildings: List[Dict]) -> bool:
+        """
+        Check if a position is suitable for player spawning
+        
+        Args:
+            x, y: Position to check
+            buildings: List of buildings in the settlement
+            
+        Returns:
+            True if position is good for player spawn
+        """
+        # Check if spawn position is inside any building
+        for building in buildings:
+            bx, by = building['x'], building['y']
+            bw, bh = building['width'], building['height']
+            
+            # If player would spawn inside building, reject
+            if bx <= x < bx + bw and by <= y < by + bh:
+                return False
+            
+            # If too close to building walls (less than 2 tiles), reject
+            if (bx - 2 <= x < bx + bw + 2 and by - 2 <= y < by + bh + 2):
+                # But allow if it's near the south entrance area
+                if by + bh <= y < by + bh + 3 and bx + 2 <= x < bx + bw - 2:
+                    continue  # This is near entrance, allow it
+                else:
+                    return False
+        
+        return True
     
     # Keep existing helper methods
     def _is_in_safe_zone(self, x: int, y: int, 

@@ -246,11 +246,13 @@ class SettlementGenerator:
         # Mark area as occupied
         self.occupied_areas.append((x, y, settlement_width, settlement_height))
         
-        # Add safe zone
-        safe_radius = template_config.get('safe_radius', 15)
+        # Add safe zone with larger radius for better enemy exclusion
+        safe_radius = template_config.get('safe_radius', 35)  # Increased from 15 to 35
         center_x = x + settlement_width // 2
         center_y = y + settlement_height // 2
         self.settlement_safe_zones.append((center_x, center_y, safe_radius))
+        
+        print(f"  Safe zone established: center=({center_x}, {center_y}), radius={safe_radius} tiles")
         
         settlement_info = {
             'name': template_name,
