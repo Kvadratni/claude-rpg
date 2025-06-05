@@ -181,7 +181,6 @@ class WorldGenerator:
                         center_y = local_settlement_y + current_settlement_pattern.height // 2
                         
                         # Add some randomness around the center
-                        import random
                         npc_random = random.Random(hash((self.world_seed, chunk_x, chunk_y, i)))
                         offset_x = npc_random.randint(-3, 3)
                         offset_y = npc_random.randint(-3, 3)
@@ -224,7 +223,7 @@ class WorldGenerator:
                         
                         guard_entity = {
                             'type': 'npc',
-                            'name': f'Town Guard {guard_num + 1}',
+                            'name': 'Guard',  # Use simple name that maps to village_guard_sprite
                             'building': 'Guard Post',
                             'has_shop': False,
                             'x': guard_x,

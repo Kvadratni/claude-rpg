@@ -220,7 +220,13 @@ class ChunkSettlementManager:
         buildings_with_npcs = [b for b in config['buildings'] if 'npc' in b]
         buildings_with_npcs.sort(key=lambda b: {'high': 3, 'medium': 2, 'low': 1}.get(b.get('importance', 'low'), 1), reverse=True)
         
-        for building in buildings_with_npcs:
+        # Scale NPCs based on settlement size - smaller settlements get fewer NPCs
+        max_npcs = self._get_max_npcs_for_settlement(settlement_type)
+        npcs_to_place = min(len(buildings_with_npcs), max_npcs)
+        
+        print(f"  👥 Settlement {settlement_type}: placing {npcs_to_place}/{len(buildings_with_npcs)} NPCs (max: {max_npcs})")
+        
+        for i, building in enumerate(buildings_with_npcs[:npcs_to_place]):
             if 'npc' in building:
                 # Calculate NPC position within the building
                 building_center_x = world_x + settlement_random.randint(2, config['size'][0] - 2)
@@ -258,6 +264,28 @@ class ChunkSettlementManager:
         self.placed_settlements[(chunk_x, chunk_y)] = settlement_type
         
         return settlement_data
+    
+    def _get_max_npcs_for_settlement(self, settlement_type: str) -> int:
+        """
+        Determine maximum NPCs for settlement type based on size and importance
+        
+        Args:
+            settlement_type: Type of settlement
+            
+        Returns:
+            Maximum number of NPCs to place
+        """
+        npc_limits = {
+            'VILLAGE': 6,           # Small villages get 6 key NPCs (Elder, Merchant, Smith, Priest, Innkeeper, Guard)
+            'TOWN': 12,             # Towns get all NPCs
+            'DESERT_OUTPOST': 4,    # Desert outposts are small (Caravan Master, Water Keeper, Guide, Nomad)
+            'SNOW_SETTLEMENT': 5,   # Snow settlements are medium (Ranger, Herbalist, Lodge Keeper, Hunter, Trader)
+            'SWAMP_VILLAGE': 5,     # Swamp villages are medium (Alchemist, Fisherman, Witch, Boat Builder, Gatherer)
+            'FOREST_CAMP': 4,       # Forest camps are small (Woodcutter, Druid, Scout, Tree Keeper)
+            'MINING_CAMP': 5,       # Mining camps are medium (Foreman, Ore Master, Chief, Tool Maker, Assayer)
+            'FISHING_VILLAGE': 6    # Fishing villages are medium-large (Harbor Master, Fish Merchant, Dock Master, Net Weaver, Fisherman, Smoke Master)
+        }
+        return npc_limits.get(settlement_type, 4)  # Default to 4 NPCs
     
     def _generate_npc_dialog(self, npc_name: str, settlement_type: str, building_name: str) -> List[str]:
         """Generate contextual dialog for NPCs based on their role and settlement"""

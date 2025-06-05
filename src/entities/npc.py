@@ -47,7 +47,7 @@ class NPC(Entity):
                 "Elder": "elder_npc",
                 
                 "Guard Captain": "guard_captain",
-                "Guard": "village_guard_sprite",
+                "Guard": "village_guard_sprite",  # Use the village guard sprite
                 "Commander": "guard_captain",  # Reuse guard captain
                 "Barracks Chief": "guard_captain",
                 

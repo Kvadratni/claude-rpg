@@ -63,26 +63,45 @@ class LevelRendererMixin:
         # Sort entities by depth
         sorted_entities = sort_by_depth(all_entities)
         
-        # Render entities to game surface with building visibility logic
+        # Render entities to game surface with building-based visibility logic
         for entity in sorted_entities:
-            # Check if entity should be visible (not hidden by roof or building)
+            # Show entities based on building proximity
             should_render_entity = True
             
-            # Check if entity is inside a building
             entity_x, entity_y = int(entity.x), int(entity.y)
-            entity_building_bounds = self.get_building_bounds_at(entity_x, entity_y)
+            player_x, player_y = int(self.player.x), int(self.player.y)
             
-            if entity_building_bounds:
-                # Entity is inside a building - only show if player is in the SAME building
-                player_building_bounds = self.get_building_bounds_at(int(self.player.x), int(self.player.y))
-                
-                # Hide entity if player is not in the same building
-                if not player_building_bounds or entity_building_bounds != player_building_bounds:
-                    should_render_entity = False
+            # Check if entity is inside a building
+            if hasattr(self, 'get_tile'):
+                entity_tile_type = self.get_tile(entity_x, entity_y)
             else:
-                # Entity is outside buildings - check if it's hidden by a roof (but not if it's the player)
-                if entity != self.player:
-                    should_render_entity = not self.is_entity_hidden_by_roof(entity_x, entity_y)
+                if 0 <= entity_y < len(self.tiles) and 0 <= entity_x < len(self.tiles[0]):
+                    entity_tile_type = self.tiles[entity_y][entity_x]
+                else:
+                    entity_tile_type = None
+            
+            # Check if entity is on a building tile (interior floor or wall)
+            is_entity_in_building = (entity_tile_type == self.TILE_BRICK or 
+                                   (hasattr(self, 'wall_renderer') and 
+                                    self.wall_renderer.is_wall_tile(entity_tile_type)) or
+                                   entity_tile_type == self.TILE_DOOR)
+            
+            if is_entity_in_building and entity != self.player:
+                # Entity is inside a building - check if player is close to this building
+                entity_building_bounds = self.get_building_bounds_at(entity_x, entity_y)
+                if entity_building_bounds:
+                    min_x, min_y, max_x, max_y = entity_building_bounds
+                    
+                    # Check if player is within 2 tiles of the building bounds (same as roof logic)
+                    expanded_min_x = min_x - 2
+                    expanded_max_x = max_x + 2
+                    expanded_min_y = min_y - 2
+                    expanded_max_y = max_y + 2
+                    
+                    # Only show entity if player is close to the building
+                    if not (expanded_min_x <= player_x <= expanded_max_x and 
+                            expanded_min_y <= player_y <= expanded_max_y):
+                        should_render_entity = False
             
             if should_render_entity:
                 entity.render(game_surface, self.camera_x, self.camera_y, self.iso_renderer)
@@ -134,18 +153,27 @@ class LevelRendererMixin:
         # Adjust for height
         screen_y -= height * 16
         
-        # Determine if this tile is part of a building
+        # Determine if this tile is part of a building and if player is close to the building
         is_building_tile = self.is_building_tile(x, y, tile_type)
-        should_render_roof = False
+        should_render_roof = True  # Default to showing roof
         
         if is_building_tile:
-            # Check if player is inside this building
+            # Check if player is close to ANY part of this building
             building_bounds = self.get_building_bounds(x, y)
             if building_bounds:
-                player_in_building = self.is_player_in_building(building_bounds)
-                # Also check if player is under the roof of this building
-                player_under_roof = self.is_player_under_roof(x, y)
-                should_render_roof = not player_in_building and not player_under_roof
+                player_x, player_y = int(self.player.x), int(self.player.y)
+                min_x, min_y, max_x, max_y = building_bounds
+                
+                # Check if player is within 2 tiles of the building bounds (expanded detection area)
+                expanded_min_x = min_x - 2
+                expanded_max_x = max_x + 2
+                expanded_min_y = min_y - 2
+                expanded_max_y = max_y + 2
+                
+                # If player is within the expanded building area, flatten the whole building
+                if (expanded_min_x <= player_x <= expanded_max_x and 
+                    expanded_min_y <= player_y <= expanded_max_y):
+                    should_render_roof = False  # Flatten the whole building
         
         # ALWAYS render floor tile first (even under walls)
         floor_sprite = None
@@ -169,47 +197,28 @@ class LevelRendererMixin:
         
         # Render based on roof visibility
         if should_render_roof:
-            # First render the normal tile (wall or floor)
+            # Player is far from building - render with roof
             if hasattr(self, 'wall_renderer') and self.wall_renderer.is_wall_tile(tile_type):
                 # Render walls with roof texture as top face
                 self.render_wall_with_roof_top(surface, screen_x, screen_y, tile_type, x, y)
             elif tile_type == self.TILE_DOOR and hasattr(self, 'door_renderer'):
-                # Door renderer already includes roof texture on top - no need to add extra roof
+                # Door renderer with roof
                 self.door_renderer.render_door_tile(surface, screen_x, screen_y, tile_type, self, self.tile_width, self.tile_height)
             else:
-                # For interior floors, render the roof at floor level (not wall height)
+                # For interior floors, render the roof at floor level
                 self.render_roof_tile_at_floor_level(surface, screen_x, screen_y)
         else:
-            # No roof - render walls normally or show interior
-            if is_building_tile:
-                # Player is inside - show interior view
-                if hasattr(self, 'wall_renderer') and self.wall_renderer.is_wall_tile(tile_type):
-                    if tile_type == self.TILE_DOOR:
-                        # Special door rendering when inside
-                        self.render_interior_door(surface, screen_x, screen_y)
-                    else:
-                        # Show wall outline when inside
-                        self.render_wall_outline(surface, screen_x, screen_y, tile_type)
-            else:
-                # Outside building - render normally with all faces for regular walls
-                if hasattr(self, 'wall_renderer') and self.wall_renderer.is_wall_tile(tile_type):
-                    # Check if we should render with roof top (when player is outside other buildings)
-                    # Get the building bounds for this wall tile
-                    wall_building_bounds = self.get_building_bounds_at(x, y)
-                    if wall_building_bounds:
-                        # This wall is part of a building - check if player is outside it
-                        player_in_this_building = self.is_player_in_building(wall_building_bounds)
-                        if not player_in_this_building:
-                            # Player is outside this building - render with roof texture on top
-                            self.render_wall_with_roof_top(surface, screen_x, screen_y, tile_type, x, y)
-                        else:
-                            # Player is inside this building - render normally
-                            self.wall_renderer.render_flat_wall(surface, screen_x, screen_y, tile_type, x, y)
-                    else:
-                        # Not part of a building - render normally
-                        self.wall_renderer.render_flat_wall(surface, screen_x, screen_y, tile_type, x, y)
-                elif tile_type == self.TILE_DOOR and hasattr(self, 'door_renderer'):
-                    self.door_renderer.render_door_tile(surface, screen_x, screen_y, tile_type, self, self.tile_width, self.tile_height)
+            # Player is close - "no walls" mode - show interior
+            if hasattr(self, 'wall_renderer') and self.wall_renderer.is_wall_tile(tile_type):
+                if tile_type == self.TILE_DOOR:
+                    # Show door as archway when close
+                    self.render_interior_door(surface, screen_x, screen_y)
+                else:
+                    # Show wall outline when close
+                    self.render_wall_outline(surface, screen_x, screen_y, tile_type)
+            elif tile_type == self.TILE_DOOR and hasattr(self, 'door_renderer'):
+                # Show door as archway when close
+                self.render_interior_door(surface, screen_x, screen_y)
     
     def render_wall_with_roof_top(self, surface, screen_x, screen_y, tile_type, world_x, world_y):
         """Render wall with roof texture as the top face"""
@@ -323,6 +332,42 @@ class LevelRendererMixin:
         if self.is_building_tile(x, y, tile_type):
             return self.get_building_bounds(x, y)
         return None
+    
+    def is_entity_blocked_by_building(self, entity_x, entity_y, player_x, player_y):
+        """
+        Simplified check if there's a building between entity and player
+        
+        Args:
+            entity_x, entity_y: Entity position
+            player_x, player_y: Player position
+            
+        Returns:
+            True if entity is blocked by a building
+        """
+        # Check a few points along the line between player and entity
+        steps = max(abs(entity_x - player_x), abs(entity_y - player_y))
+        if steps == 0:
+            return False
+        
+        # Check 3 points along the line
+        for i in range(1, min(4, steps)):
+            t = i / steps
+            check_x = int(player_x + t * (entity_x - player_x))
+            check_y = int(player_y + t * (entity_y - player_y))
+            
+            # Get tile type at this position
+            if hasattr(self, 'get_tile'):
+                tile_type = self.get_tile(check_x, check_y)
+            else:
+                if not (0 <= check_y < len(self.tiles) and 0 <= check_x < len(self.tiles[0])):
+                    continue
+                tile_type = self.tiles[check_y][check_x]
+            
+            # If there's a wall tile, it's blocking
+            if hasattr(self, 'wall_renderer') and self.wall_renderer.is_wall_tile(tile_type):
+                return True
+        
+        return False
     
     def is_entity_hidden_by_roof(self, entity_x, entity_y):
         """Check if an entity is hidden by a roof tile (simple and fast)"""
