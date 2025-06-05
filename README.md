@@ -1,13 +1,13 @@
 # Goose RPG
-## 🤖 **100% AI-Developed Isometric RPG with Intelligent AI NPCs** 
+## 🤖 **World's First AI-Driven Procedural RPG with Intelligent AI NPCs** 
 
-An immersive isometric RPG game featuring combat, exploration, inventory management, and **revolutionary AI-powered NPCs** - **entirely created by artificial intelligence** with zero human programming.
+An immersive isometric RPG game featuring **procedural world generation**, **intelligent AI NPCs**, combat, exploration, and inventory management - **entirely created by artificial intelligence** with zero human programming.
 
 ![Main Menu](screenshots/mainmenu.png)
 
 ## 🎬 **Game Demo Video**
 
-**Watch the AI NPCs in action!** See how they dynamically create quests, spawn objects in the world, and interact intelligently with players.
+**Watch the AI NPCs in action!** See how they dynamically create quests, spawn objects in the world, and interact intelligently with players in procedurally generated worlds.
 
 [![AI NPC RPG Gameplay Demo](https://img.youtube.com/vi/i8ziAhtZfOY/maxresdefault.jpg)](https://www.youtube.com/watch?v=i8ziAhtZfOY)
 
@@ -19,6 +19,7 @@ An immersive isometric RPG game featuring combat, exploration, inventory managem
 - **Music**: Composed by Udio AI
 - **Sound Effects**: Sourced as freeware by Claude
 - **AI NPC System**: Powered by Goose with MCP integration
+- **Procedural Generation**: AI-designed infinite world system
 - **Human Role**: Creative prompting and direction only
 
 **This demonstrates what AI can accomplish in game development when given creative freedom.**
@@ -44,6 +45,15 @@ An immersive isometric RPG game featuring combat, exploration, inventory managem
 
 ## 🎮 Game Features
 
+### 🌍 **Procedural World Generation** ⭐ **NEW!**
+- **🗺️ Infinite Worlds**: Each playthrough generates a unique, vast world to explore
+- **🏘️ Dynamic Settlements**: Villages, outposts, and trading posts procedurally placed across biomes
+- **🌲 Biome Diversity**: Plains, forests, deserts, snow regions, and swamps with unique characteristics
+- **🛡️ Settlement Safe Zones**: Large peaceful areas (70-100 tiles) around civilized settlements
+- **🎯 Smart Player Spawning**: Players spawn within or near settlements, not in dangerous wilderness
+- **🏠 Realistic Population**: Mix of interactive AI NPCs and background population for atmosphere
+- **🎲 Seeded Generation**: Reproducible worlds using seed values for consistent experiences
+
 ### 🤖 **Revolutionary AI NPC System** ⭐ **NEW!**
 - **🧠 Intelligent Conversations**: NPCs powered by advanced AI models (GPT-4, Claude, etc.)
 - **📜 Dynamic Quest Generation**: AI NPCs create unique quests on-the-fly based on context
@@ -52,6 +62,7 @@ An immersive isometric RPG game featuring combat, exploration, inventory managem
 - **🔄 Adaptive Dialogue**: Conversations change based on player actions and game progression
 - **🛠️ Asset-Aware Quests**: AI only uses items and objects that actually exist in the game
 - **⚙️ Model Selection**: Choose your preferred AI model (GPT-4, Claude, etc.) in settings
+- **🛒 Seamless Tool Integration**: NPCs can open shops, give items, and perform actions while maintaining conversation
 
 ### 📋 **Advanced Quest System** ⭐ **NEW!**
 - **🎲 Procedural Quests**: AI generates infinite variety of collection, combat, and exploration quests
@@ -85,8 +96,19 @@ An immersive isometric RPG game featuring combat, exploration, inventory managem
 ## 🚀 Installation & Setup
 
 ### Prerequisites
+
+#### Required Software
 - **Python 3.8+** (Python 3.9+ recommended)
 - **Git** (for cloning the repository)
+
+#### For AI NPC Functionality ⭐ **IMPORTANT**
+- **Goose CLI** - Required for AI NPCs to function properly
+  - **📖 Installation Guide**: [https://block.github.io/goose/](https://block.github.io/goose/)
+  - **🔧 Setup Instructions**: Follow the complete installation and configuration guide
+  - **🤖 Model Configuration**: Ensure you have API keys for your preferred AI model (GPT-4, Claude, etc.)
+  - **✅ Verification**: Run `goose --version` to confirm installation
+
+> **⚠️ Note**: Without Goose CLI properly installed and configured, AI NPCs will fall back to basic dialogue mode. The revolutionary AI features require a working Goose installation with valid API credentials.
 
 ### Quick Start
 ```bash
@@ -128,9 +150,10 @@ python main.py
 
 ### System Requirements
 - **OS**: macOS, Linux, or Windows
-- **RAM**: 512MB minimum, 1GB recommended
-- **Storage**: 100MB free space
+- **RAM**: 1GB minimum, 2GB recommended (for AI processing)
+- **Storage**: 200MB free space
 - **Graphics**: Any system capable of running Pygame
+- **Network**: Internet connection required for AI NPC functionality
 
 ## 🎯 How to Play
 
@@ -170,31 +193,41 @@ python main.py
 
 ## 🔧 Development Status
 
-### Current State: **Advanced Alpha with AI NPCs** ⭐
-- ✅ **Revolutionary AI NPC System** - Dynamic conversations and quest generation
-- ✅ **Advanced Quest System** - Procedural quest creation with smart object spawning
-- ✅ **Asset-Aware AI** - Intelligent item selection that only uses existing game assets
+### Current State: **Advanced Beta with Procedural Generation & AI NPCs** ⭐
+- ✅ **🌍 Procedural World Generation** - Infinite, unique worlds with biome diversity
+- ✅ **🛡️ Settlement Safe Zones** - Large peaceful areas around civilized settlements  
+- ✅ **🎯 Smart Player Spawning** - Intelligent spawn placement within settlements
+- ✅ **🏠 Realistic Settlements** - Mix of interactive AI NPCs and background population
+- ✅ **🤖 Revolutionary AI NPC System** - Dynamic conversations and quest generation
+- ✅ **📋 Advanced Quest System** - Procedural quest creation with smart object spawning
+- ✅ **🛠️ Asset-Aware AI** - Intelligent item selection that only uses existing game assets
+- ✅ **🛒 Seamless Tool Integration** - NPCs can perform actions while maintaining conversation
 - ✅ Core gameplay mechanics implemented
 - ✅ Complete UI system with menus and HUD
-- ✅ Save/load functionality
+- ✅ Save/load functionality with procedural world support
 - ✅ Audio system with music and effects
 - ✅ Comprehensive inventory and equipment system
 
 ### Recent Major Updates 🚀
+- **🌍 Procedural World Generation**: Infinite worlds with diverse biomes and settlements
+- **🛡️ Enhanced Settlement System**: Large safe zones and realistic population density
+- **🎯 Improved Player Experience**: Smart spawning and better world navigation
 - **🤖 AI NPC Integration**: NPCs now powered by advanced language models
 - **📜 Dynamic Quest Generation**: Infinite variety of AI-created quests
 - **🎯 Smart Object Spawning**: Quests spawn appropriate items and enemies
 - **📊 Quest Progress Tracking**: Real-time objective tracking and completion
 - **🛠️ Asset Verification System**: AI only uses items that exist in the game
 - **⚙️ Model Selection**: Choose your preferred AI model in settings
+- **🛒 Tool Integration**: Seamless NPC actions with conversational responses
 
 ### Planned Features 🚀
-- **🗺️ Procedural Generation**: Dynamic world creation for endless exploration
+- **🗺️ Advanced Procedural Features**: Dungeons, caves, and special locations
 - **🔮 Magic System**: Spells and magical abilities
 - **🌟 Advanced Skills**: Detailed character progression trees
 - **🎭 Rich Storyline**: Main quest with branching narratives
 - **⚡ Enhanced Combat**: Special attacks and tactical options
 - **🤖 More AI NPCs**: Expand the cast of intelligent characters
+- **🌐 Multiplayer Support**: Shared procedural worlds
 
 ## 🤝 Contributing
 
@@ -214,20 +247,33 @@ This project is licensed under the MIT License - see the [LICENSE](LICENSE) file
 Goose RPG serves as a **groundbreaking demonstration** of what AI can accomplish in game development when given creative freedom. Every line of code, game mechanic, and system was designed and implemented by AI, showcasing the potential for AI-assisted creative projects.
 
 ### 🤖 **What Makes This Special**
-- **First-of-its-kind AI NPC System**: NPCs that think, adapt, and create content dynamically
-- **Zero Human Programming**: 100% AI-developed codebase with advanced features
-- **Revolutionary Quest Generation**: Infinite content created by AI in real-time
+- **World's First AI-Driven Procedural RPG**: Infinite worlds generated by AI with intelligent NPC integration
+- **Revolutionary AI NPC System**: NPCs that think, adapt, and create content dynamically
+- **Zero Human Programming**: 100% AI-developed codebase with advanced procedural generation
+- **Infinite Content Creation**: AI generates worlds, quests, and interactions in real-time
 - **Asset-Aware Intelligence**: AI that understands and works within game constraints
 - **Model Flexibility**: Support for multiple AI models (GPT-4, Claude, etc.)
+- **Seamless Integration**: Procedural worlds that perfectly integrate with AI NPCs
 
 The game is actively developed with new features and improvements added regularly through AI-driven development processes, pushing the boundaries of what's possible in AI game development.
 
 ### 🔬 **Technical Innovation**
+- **Procedural World Generation**: AI-designed biome systems with intelligent settlement placement
+- **Settlement Safe Zones**: Dynamic peaceful areas that scale with settlement importance
+- **Smart Player Spawning**: Context-aware spawn placement within civilized areas
 - **MCP Integration**: Model Context Protocol for seamless AI communication
 - **Dynamic Object Spawning**: AI creates and places game objects contextually
 - **Intelligent Asset Management**: AI verifies and selects appropriate game resources
 - **Real-time Quest Generation**: Procedural content creation during gameplay
 - **Adaptive Dialogue System**: Context-aware conversations that evolve with gameplay
+- **Background Population System**: Realistic settlement atmosphere with mixed NPC types
+
+### 🌟 **Achievements**
+- **First AI-Generated Procedural RPG**: Pioneering infinite world generation with AI NPCs
+- **Advanced AI Integration**: Seamless tool usage with conversational responses
+- **Realistic World Building**: Proper settlement design with safe zones and population
+- **Infinite Replayability**: Every playthrough offers unique worlds and experiences
+- **Technical Excellence**: Robust save/load system supporting procedural worlds
 
 ---
 
