@@ -141,14 +141,20 @@ class Game:
         # Initialize quest system with level reference
         from .quest_system import QuestManager
         self.quest_manager = QuestManager(self.player, self.game_log, self.current_level)
+        
+        # Initialize quest log UI
+        from .ui.quest_log import QuestLog
+        self.quest_log = QuestLog(self.asset_loader)
+        self.quest_log.set_quest_manager(self.quest_manager)
     
     def _add_debug_starting_bow_to_player(self):
         """DEBUG: Add a Magic Bow to the player for testing ranged weapons"""
         try:
             from .entities.item import Item
             
-            # Create a Magic Bow
+            # Create a Magic Bow (x, y coordinates don't matter for equipped items)
             magic_bow = Item(
+                x=0, y=0,  # Dummy coordinates since it will be equipped
                 name="Magic Bow",
                 item_type="weapon",
                 effect={"damage": 22},
@@ -159,24 +165,17 @@ class Game:
             # Equip it directly
             self.player.equipped_weapon = magic_bow
             
-            # Also add some health potions for testing
-            health_potion = Item(
-                name="Health Potion",
-                item_type="consumable",
-                effect={"health": 50},
-                value=25,
-                asset_loader=self.asset_loader
-            )
-            
             # Add 3 health potions to inventory
             for _ in range(3):
-                self.player.add_item(Item(
+                health_potion = Item(
+                    x=0, y=0,  # Dummy coordinates for inventory items
                     name="Health Potion",
                     item_type="consumable",
                     effect={"health": 50},
                     value=25,
                     asset_loader=self.asset_loader
-                ))
+                )
+                self.player.add_item(health_potion)
             
             self.game_log.add_message("🏹 DEBUG: Magic Bow equipped and health potions added!", "item")
             self.game_log.add_message("🎯 Test ranged combat by attacking enemies from distance!", "system")
@@ -184,11 +183,6 @@ class Game:
         except Exception as e:
             print(f"DEBUG: Could not add starting bow: {e}")
             self.game_log.add_message(f"⚠️ DEBUG: Failed to add starting bow: {e}", "system")
-        
-        # Initialize quest log UI
-        from .ui.quest_log import QuestLog
-        self.quest_log = QuestLog(self.asset_loader)
-        self.quest_log.set_quest_manager(self.quest_manager)
         
         # Switch to playing state
         self.state = Game.STATE_PLAYING
