@@ -146,6 +146,16 @@ class Game:
         from .ui.quest_log import QuestLog
         self.quest_log = QuestLog(self.asset_loader)
         self.quest_log.set_quest_manager(self.quest_manager)
+        
+        # Switch to playing state
+        self.state = Game.STATE_PLAYING
+        
+        # Log game start
+        self.game_log.add_message("Welcome to your procedurally generated world!", "system")
+        self.game_log.add_message("Explore and discover what awaits you...", "exploration")
+        if seed:
+            self.game_log.add_message(f"World seed: {seed}", "system")
+        self.game_log.add_message(f"You find yourself near a settlement...", "story")
     
     def _add_debug_starting_bow_to_player(self):
         """DEBUG: Add a Magic Bow to the player for testing ranged weapons"""
@@ -183,16 +193,6 @@ class Game:
         except Exception as e:
             print(f"DEBUG: Could not add starting bow: {e}")
             self.game_log.add_message(f"⚠️ DEBUG: Failed to add starting bow: {e}", "system")
-        
-        # Switch to playing state
-        self.state = Game.STATE_PLAYING
-        
-        # Log game start
-        self.game_log.add_message("Welcome to your procedurally generated world!", "system")
-        self.game_log.add_message("Explore and discover what awaits you...", "exploration")
-        if seed:
-            self.game_log.add_message(f"World seed: {seed}", "system")
-        self.game_log.add_message(f"You find yourself near a settlement...", "story")
     
     def load_game(self, save_name):
         """Load a saved game with procedural world support"""
