@@ -59,6 +59,11 @@ class ProceduralGenerationMixin:
             self.chests.clear()
         else:
             self.chests = []
+            
+        if hasattr(self, 'furniture'):
+            self.furniture.clear()
+        else:
+            self.furniture = []
         
         # Initialize walkable grid
         self.walkable = [[1 for _ in range(self.width)] for _ in range(self.height)]
@@ -233,7 +238,7 @@ class ProceduralGenerationMixin:
         
         load_radius = 1  # Only load 3x3 chunks around spawn initially
         
-        entity_counts = {'npcs': 0, 'enemies': 0, 'objects': 0, 'chests': 0, 'items': 0}
+        entity_counts = {'npcs': 0, 'enemies': 0, 'objects': 0, 'chests': 0, 'items': 0, 'furniture': 0}
         
         for chunk_y in range(spawn_chunk_y - load_radius, spawn_chunk_y + load_radius + 1):
             for chunk_x in range(spawn_chunk_x - load_radius, spawn_chunk_x + load_radius + 1):
@@ -276,6 +281,14 @@ class ProceduralGenerationMixin:
                         elif entity_data['type'] == 'item':
                             # TODO: Implement item creation when needed
                             entity_counts['items'] += 1
+                            
+                        elif entity_data['type'] == 'furniture':
+                            # Create and add Furniture
+                            furniture_obj = self.create_furniture_from_data(entity_data, world_x, world_y)
+                            if furniture_obj:
+                                self.furniture.append(furniture_obj)
+                                print(f"  Loaded Furniture: {entity_data.get('furniture_type', 'Unknown')} at ({world_x}, {world_y})")
+                            entity_counts['furniture'] += 1
         
         print(f"Loaded entities from {(load_radius * 2 + 1) ** 2} chunks around spawn:")
         for entity_type, count in entity_counts.items():
@@ -285,6 +298,7 @@ class ProceduralGenerationMixin:
         print(f"  NPCs: {len(self.npcs)}")
         print(f"  Enemies: {len(self.enemies)}")
         print(f"  Objects: {len(self.objects)}")
+        print(f"  Furniture: {len(self.furniture)}")
     
     def initialize_camera_for_spawn(self, spawn_x, spawn_y):
         """Initialize camera to center on spawn location"""
@@ -347,7 +361,8 @@ class ProceduralGenerationMixin:
         old_counts = {
             'npcs': len(self.npcs),
             'enemies': len(self.enemies), 
-            'objects': len(self.objects)
+            'objects': len(self.objects),
+            'furniture': len(self.furniture)
         }
         
         # Clear current entity lists
@@ -356,6 +371,7 @@ class ProceduralGenerationMixin:
         self.objects.clear()
         self.items.clear()
         self.chests.clear()
+        self.furniture.clear()
         
         # Load entities from chunks around player
         total_entities_found = 0
@@ -399,16 +415,23 @@ class ProceduralGenerationMixin:
                             obj = self.create_object_from_data(entity_data, world_x, world_y)
                             if obj:
                                 self.objects.append(obj)
+                                
+                        elif entity_data['type'] == 'furniture':
+                            # Create Furniture object
+                            furniture_obj = self.create_furniture_from_data(entity_data, world_x, world_y)
+                            if furniture_obj:
+                                self.furniture.append(furniture_obj)
         
         new_counts = {
             'npcs': len(self.npcs),
             'enemies': len(self.enemies), 
-            'objects': len(self.objects)
+            'objects': len(self.objects),
+            'furniture': len(self.furniture)
         }
         
         print(f"Entity update complete:")
         print(f"  Total entities found in chunks: {total_entities_found}")
-        for entity_type in ['npcs', 'enemies', 'objects']:
+        for entity_type in ['npcs', 'enemies', 'objects', 'furniture']:
             print(f"  {entity_type}: {old_counts[entity_type]} -> {new_counts[entity_type]}")
     
     def create_npc_from_data(self, entity_data, world_x, world_y):
@@ -558,6 +581,25 @@ class ProceduralGenerationMixin:
             print(f"Error creating Object from data: {e}")
             return None
     
+    def create_furniture_from_data(self, entity_data, world_x, world_y):
+        """Create Furniture object from entity data"""
+        try:
+            from ..entities.furniture import Furniture
+            
+            furniture_type = entity_data.get('furniture_type', 'chair')
+            
+            # Create Furniture with data from chunk
+            furniture = Furniture(
+                x=world_x,
+                y=world_y,
+                furniture_type=furniture_type,
+                asset_loader=self.asset_loader
+            )
+            return furniture
+        except Exception as e:
+            print(f"Error creating Furniture from data: {e}")
+            return None
+    
     def get_tile(self, x, y):
         """Get tile at world coordinates using chunk system"""
         if hasattr(self, 'chunk_manager'):
@@ -676,6 +718,17 @@ class ProceduralGenerationMixin:
                 distance = math.sqrt(dist_x * dist_x + dist_y * dist_y)
                 
                 collision_distance = size + 0.3
+                if distance < collision_distance:
+                    return True
+        
+        # Check collision with furniture
+        for furniture in getattr(self, 'furniture', []):
+            if furniture.blocks_movement and furniture != exclude_entity:
+                dist_x = x - furniture.x
+                dist_y = y - furniture.y
+                distance = math.sqrt(dist_x * dist_x + dist_y * dist_y)
+                
+                collision_distance = size + 0.35
                 if distance < collision_distance:
                     return True
         

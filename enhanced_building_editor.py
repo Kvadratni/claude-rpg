@@ -189,6 +189,9 @@ class EnhancedBuildingEditor:
         # UI state
         self.selected_npc_spawn = None
         self.show_npc_dialog = False
+        self.show_template_browser = False  # New template browser state
+        self.selected_template_in_browser = None
+        self.template_browser_scroll = 0
         self.npc_dialog_input = ""
         
         # Create templates directory
@@ -279,6 +282,11 @@ class EnhancedBuildingEditor:
             # Ctrl+N: New template
             self.create_new_template("New Building", 15, 15)
         
+        elif event.key == pygame.K_o and pygame.key.get_pressed()[pygame.K_LCTRL]:
+            # Ctrl+O: Open template browser
+            self.show_template_browser = True
+            self.template_list = self.load_template_list()  # Refresh list
+        
         elif event.key == pygame.K_1:
             self.current_tool = EditorTool.WALL
         elif event.key == pygame.K_2:
@@ -295,11 +303,17 @@ class EnhancedBuildingEditor:
             self.current_tool = EditorTool.ERASE
         elif event.key == pygame.K_ESCAPE:
             self.show_npc_dialog = False
+            self.show_template_browser = False  # Close template browser
             self.selected_npc_spawn = None
     
     def handle_mouse_click(self, event):
         """Handle mouse clicks"""
         mouse_x, mouse_y = event.pos
+        
+        # Handle template browser clicks first
+        if self.show_template_browser:
+            self.handle_template_browser_click(mouse_x, mouse_y, event.button)
+            return
         
         # Check if click is in grid area
         if self.is_in_grid_area(mouse_x, mouse_y):
@@ -389,6 +403,88 @@ class EnhancedBuildingEditor:
                 self.current_tool = tool
                 break
     
+    def handle_template_browser_click(self, mouse_x: int, mouse_y: int, button: int):
+        """Handle clicks in the template browser"""
+        browser_width = 600
+        browser_height = 500
+        browser_x = (self.screen_width - browser_width) // 2
+        browser_y = (self.screen_height - browser_height) // 2
+        
+        # Close button
+        close_x = browser_x + browser_width - 40
+        close_y = browser_y + 10
+        if close_x <= mouse_x <= close_x + 30 and close_y <= mouse_y <= close_y + 30:
+            self.show_template_browser = False
+            return
+        
+        # Template list area
+        list_x = browser_x + 20
+        list_y = browser_y + 60
+        list_width = browser_width - 40
+        list_height = 300
+        
+        if list_x <= mouse_x <= list_x + list_width and list_y <= mouse_y <= list_y + list_height:
+            # Calculate which template was clicked
+            item_height = 40
+            clicked_index = (mouse_y - list_y) // item_height
+            
+            if 0 <= clicked_index < len(self.template_list):
+                template_name = self.template_list[clicked_index]
+                
+                if button == 1:  # Left click - select
+                    self.selected_template_in_browser = template_name
+                elif button == 3:  # Right click - load immediately
+                    self.load_template(template_name)
+                    self.show_template_browser = False
+        
+        # Load button
+        load_button_x = browser_x + 20
+        load_button_y = browser_y + browser_height - 80
+        load_button_width = 100
+        load_button_height = 30
+        
+        if (load_button_x <= mouse_x <= load_button_x + load_button_width and 
+            load_button_y <= mouse_y <= load_button_y + load_button_height and
+            self.selected_template_in_browser):
+            self.load_template(self.selected_template_in_browser)
+            self.show_template_browser = False
+        
+        # Delete button
+        delete_button_x = browser_x + 140
+        delete_button_y = browser_y + browser_height - 80
+        delete_button_width = 100
+        delete_button_height = 30
+        
+        if (delete_button_x <= mouse_x <= delete_button_x + delete_button_width and 
+            delete_button_y <= mouse_y <= delete_button_y + delete_button_height and
+            self.selected_template_in_browser):
+            self.delete_template(self.selected_template_in_browser)
+            self.template_list = self.load_template_list()  # Refresh list
+            self.selected_template_in_browser = None
+        
+        # Refresh button
+        refresh_button_x = browser_x + 260
+        refresh_button_y = browser_y + browser_height - 80
+        refresh_button_width = 100
+        refresh_button_height = 30
+        
+        if (refresh_button_x <= mouse_x <= refresh_button_x + refresh_button_width and 
+            refresh_button_y <= mouse_y <= refresh_button_y + refresh_button_height):
+            self.template_list = self.load_template_list()  # Refresh list
+            self.selected_template_in_browser = None
+    
+    def delete_template(self, template_name: str):
+        """Delete a template file"""
+        filepath = os.path.join(self.templates_dir, f"{template_name}.json")
+        if os.path.exists(filepath):
+            try:
+                os.remove(filepath)
+                print(f"Template deleted: {template_name}")
+                return True
+            except Exception as e:
+                print(f"Error deleting template: {e}")
+        return False
+    
     def is_in_grid_area(self, x: int, y: int) -> bool:
         """Check if coordinates are in the grid area"""
         return x >= self.grid_offset_x and y >= self.grid_offset_y
@@ -427,6 +523,10 @@ class EnhancedBuildingEditor:
         # Draw NPC dialog if open
         if self.show_npc_dialog and self.selected_npc_spawn:
             self.draw_npc_dialog()
+        
+        # Draw template browser if open
+        if self.show_template_browser:
+            self.draw_template_browser()
         
         pygame.display.flip()
     
@@ -494,7 +594,8 @@ class EnhancedBuildingEditor:
             "Right Click: Remove",
             "Ctrl+S: Save",
             "Ctrl+N: New",
-            "1-5: Select Tool",
+            "Ctrl+O: Browse Templates",  # New instruction
+            "1-6: Select Tool",
             "E: Erase Tool"
         ]
         
@@ -629,6 +730,132 @@ class EnhancedBuildingEditor:
         # Close button
         close_text = self.small_font.render("Press ESC to close", True, self.colors['text'])
         self.screen.blit(close_text, (dialog_x + 10, dialog_y + dialog_height - 30))
+    
+    def draw_template_browser(self):
+        """Draw the template browser dialog"""
+        browser_width = 600
+        browser_height = 500
+        browser_x = (self.screen_width - browser_width) // 2
+        browser_y = (self.screen_height - browser_height) // 2
+        
+        # Semi-transparent overlay
+        overlay = pygame.Surface((self.screen_width, self.screen_height))
+        overlay.set_alpha(128)
+        overlay.fill((0, 0, 0))
+        self.screen.blit(overlay, (0, 0))
+        
+        # Browser background
+        browser_rect = pygame.Rect(browser_x, browser_y, browser_width, browser_height)
+        pygame.draw.rect(self.screen, self.colors['toolbar'], browser_rect)
+        pygame.draw.rect(self.screen, self.colors['text'], browser_rect, 3)
+        
+        # Title
+        title_text = self.font.render("Template Browser", True, self.colors['text'])
+        self.screen.blit(title_text, (browser_x + 20, browser_y + 15))
+        
+        # Close button
+        close_x = browser_x + browser_width - 40
+        close_y = browser_y + 10
+        close_rect = pygame.Rect(close_x, close_y, 30, 30)
+        pygame.draw.rect(self.screen, (180, 60, 60), close_rect)
+        pygame.draw.rect(self.screen, self.colors['text'], close_rect, 2)
+        close_text = self.font.render("X", True, self.colors['text'])
+        close_text_rect = close_text.get_rect(center=close_rect.center)
+        self.screen.blit(close_text, close_text_rect)
+        
+        # Instructions
+        instructions = [
+            "Left click: Select template",
+            "Right click: Load template immediately", 
+            "Load button: Load selected template",
+            "Delete button: Remove selected template"
+        ]
+        
+        inst_y = browser_y + 50
+        for instruction in instructions:
+            inst_text = self.small_font.render(instruction, True, self.colors['text'])
+            self.screen.blit(inst_text, (browser_x + 20, inst_y))
+            inst_y += 18
+        
+        # Template list
+        list_y = browser_y + 140
+        item_height = 40
+        
+        for i, template_name in enumerate(self.template_list):
+            item_y = list_y + i * item_height
+            item_rect = pygame.Rect(browser_x + 20, item_y, browser_width - 40, item_height - 2)
+            
+            # Highlight selected template
+            if template_name == self.selected_template_in_browser:
+                pygame.draw.rect(self.screen, self.colors['button_active'], item_rect)
+            else:
+                pygame.draw.rect(self.screen, self.colors['button'], item_rect)
+            
+            pygame.draw.rect(self.screen, self.colors['text'], item_rect, 1)
+            
+            # Template info
+            try:
+                # Load template info for preview
+                filepath = os.path.join(self.templates_dir, f"{template_name}.json")
+                with open(filepath, 'r') as f:
+                    data = json.load(f)
+                
+                # Template name
+                name_text = self.font.render(template_name, True, self.colors['text'])
+                self.screen.blit(name_text, (item_rect.x + 10, item_rect.y + 5))
+                
+                # Template details
+                size_text = f"{data.get('width', '?')}x{data.get('height', '?')}"
+                type_text = data.get('building_type', 'unknown')
+                npc_count = len(data.get('npc_spawns', []))
+                
+                details = f"{size_text} | {type_text} | {npc_count} NPCs"
+                details_text = self.small_font.render(details, True, self.colors['text'])
+                self.screen.blit(details_text, (item_rect.x + 10, item_rect.y + 22))
+                
+            except Exception as e:
+                # Fallback if template can't be loaded
+                name_text = self.font.render(f"{template_name} (error)", True, (255, 100, 100))
+                self.screen.blit(name_text, (item_rect.x + 10, item_rect.y + 10))
+        
+        # Action buttons
+        button_y = browser_y + browser_height - 80
+        
+        # Load button
+        load_button = pygame.Rect(browser_x + 20, button_y, 100, 30)
+        load_color = self.colors['button_active'] if self.selected_template_in_browser else self.colors['button']
+        pygame.draw.rect(self.screen, load_color, load_button)
+        pygame.draw.rect(self.screen, self.colors['text'], load_button, 2)
+        load_text = self.font.render("Load", True, self.colors['text'])
+        load_text_rect = load_text.get_rect(center=load_button.center)
+        self.screen.blit(load_text, load_text_rect)
+        
+        # Delete button
+        delete_button = pygame.Rect(browser_x + 140, button_y, 100, 30)
+        delete_color = (180, 60, 60) if self.selected_template_in_browser else self.colors['button']
+        pygame.draw.rect(self.screen, delete_color, delete_button)
+        pygame.draw.rect(self.screen, self.colors['text'], delete_button, 2)
+        delete_text = self.font.render("Delete", True, self.colors['text'])
+        delete_text_rect = delete_text.get_rect(center=delete_button.center)
+        self.screen.blit(delete_text, delete_text_rect)
+        
+        # Refresh button
+        refresh_button = pygame.Rect(browser_x + 260, button_y, 100, 30)
+        pygame.draw.rect(self.screen, self.colors['button'], refresh_button)
+        pygame.draw.rect(self.screen, self.colors['text'], refresh_button, 2)
+        refresh_text = self.font.render("Refresh", True, self.colors['text'])
+        refresh_text_rect = refresh_text.get_rect(center=refresh_button.center)
+        self.screen.blit(refresh_text, refresh_text_rect)
+        
+        # Status text
+        status_y = browser_y + browser_height - 40
+        if self.selected_template_in_browser:
+            status_text = f"Selected: {self.selected_template_in_browser}"
+        else:
+            status_text = f"Found {len(self.template_list)} templates"
+        
+        status_rendered = self.small_font.render(status_text, True, self.colors['text'])
+        self.screen.blit(status_rendered, (browser_x + 20, status_y))
     
     def run(self):
         """Main editor loop"""

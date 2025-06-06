@@ -86,16 +86,15 @@ class Game:
         pass
     
     def set_window_icon(self):
-        """Set the window icon using our custom logo"""
+        """Set the window icon using our custom logo with background"""
         try:
-            # Try to load our custom icon
+            # Try to load our custom icon with background for window icon
             if hasattr(self, 'asset_loader') and self.asset_loader:
-                icon = self.asset_loader.get_image('goose_rpg_icon')
+                icon = self.asset_loader.get_image('goose_rpg_icon_bg')
                 if icon:
-                    # Scale icon to appropriate size for window (32x32 is typical)
-                    icon_32 = pygame.transform.scale(icon, (32, 32))
-                    pygame.display.set_icon(icon_32)
-                    print("✅ Custom window icon set successfully")
+                    # Use original resolution instead of scaling down
+                    pygame.display.set_icon(icon)
+                    print("✅ Custom window icon set successfully (with background)")
                     return
             
             # If asset loader not ready yet, we'll set it later

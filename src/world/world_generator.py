@@ -124,6 +124,19 @@ class WorldGenerator:
             buildings_placed = self._apply_building_templates_to_chunk(chunk, settlement_data, local_settlement_x, local_settlement_y)
             print(f"  🏗️  Applied {buildings_placed} building templates to chunk")
             
+            # Spawn furniture from building templates
+            furniture_spawned = self._spawn_furniture_from_templates(chunk, settlement_data, local_settlement_x, local_settlement_y)
+            print(f"  🪑 Spawned {furniture_spawned} furniture pieces from templates")
+            
+            # Apply pathways from settlement data
+            pathways_applied = self._apply_pathways_to_chunk(chunk, settlement_data, local_settlement_x, local_settlement_y)
+            print(f"  🛤️  Applied {pathways_applied} pathway tiles")
+            
+            # Apply central feature from settlement data
+            central_feature_applied = self._apply_central_feature_to_chunk(chunk, settlement_data, local_settlement_x, local_settlement_y)
+            if central_feature_applied:
+                print(f"  🏛️  Applied central feature: {settlement_data.get('central_feature', {}).get('type', 'unknown')}")
+            
             # Add NPCs from building templates
             if 'npcs' in settlement_data:
                 npcs_added = 0
@@ -219,6 +232,168 @@ class WorldGenerator:
                         print(f"    🏠 Created fallback building at ({chunk_x}, {chunk_y}) - {tiles_placed} tiles")
         
         return buildings_placed
+    
+    def _spawn_furniture_from_templates(self, chunk: Chunk, settlement_data: Dict[str, Any], 
+                                      local_x: int, local_y: int) -> int:
+        """
+        Spawn furniture from building templates
+        
+        Args:
+            chunk: The chunk to add furniture to
+            settlement_data: Settlement data from enhanced generator
+            local_x, local_y: Local settlement position in chunk
+            
+        Returns:
+            Number of furniture pieces spawned
+        """
+        furniture_spawned = 0
+        
+        # Get chunk bounds for coordinate conversion
+        start_x, start_y, end_x, end_y = chunk.get_world_bounds()
+        
+        # Process each building's furniture
+        for building_data in settlement_data.get('buildings', []):
+            # building_data['x'] and ['y'] are world coordinates
+            # Convert to chunk coordinates
+            chunk_building_x = building_data['x'] - start_x
+            chunk_building_y = building_data['y'] - start_y
+            
+            # Get furniture positions from building template
+            furniture_positions = building_data.get('furniture_positions', [])
+            
+            for furniture_pos in furniture_positions:
+                if len(furniture_pos) >= 3:
+                    rel_x, rel_y, furniture_type = furniture_pos[:3]
+                    
+                    # Calculate world position
+                    world_x = building_data['x'] + rel_x
+                    world_y = building_data['y'] + rel_y
+                    
+                    # Convert to chunk-local coordinates
+                    local_furniture_x = world_x - start_x
+                    local_furniture_y = world_y - start_y
+                    
+                    # Ensure furniture is within chunk bounds
+                    if (0 <= local_furniture_x < Chunk.CHUNK_SIZE and 
+                        0 <= local_furniture_y < Chunk.CHUNK_SIZE):
+                        
+                        # Create furniture entity data
+                        furniture_entity = {
+                            'type': 'furniture',
+                            'furniture_type': furniture_type,
+                            'x': local_furniture_x,
+                            'y': local_furniture_y,
+                            'world_x': world_x,
+                            'world_y': world_y,
+                            'id': f"furniture_{furniture_type}_{world_x}_{world_y}",
+                            'template_spawn': True
+                        }
+                        
+                        # Add to chunk entities
+                        chunk.add_entity(furniture_entity)
+                        furniture_spawned += 1
+                        print(f"    🪑 Spawned {furniture_type} at chunk ({local_furniture_x}, {local_furniture_y}) / world ({world_x}, {world_y})")
+        
+        return furniture_spawned
+    
+    def _apply_pathways_to_chunk(self, chunk: Chunk, settlement_data: Dict[str, Any], 
+                                local_x: int, local_y: int) -> int:
+        """
+        Apply pathways from settlement data to the chunk
+        
+        Args:
+            chunk: The chunk to modify
+            settlement_data: Settlement data from enhanced generator
+            local_x, local_y: Local settlement position in chunk
+            
+        Returns:
+            Number of pathway tiles applied
+        """
+        pathways_applied = 0
+        
+        # Get chunk bounds for coordinate conversion
+        start_x, start_y, end_x, end_y = chunk.get_world_bounds()
+        
+        # Get pathways from settlement data
+        pathways = settlement_data.get('pathways', [])
+        
+        for pathway_x, pathway_y in pathways:
+            # Convert settlement-relative coordinates to world coordinates
+            world_x = settlement_data['world_x'] + pathway_x
+            world_y = settlement_data['world_y'] + pathway_y
+            
+            # Convert to chunk-local coordinates
+            local_pathway_x = world_x - start_x
+            local_pathway_y = world_y - start_y
+            
+            # Ensure pathway is within chunk bounds
+            if (0 <= local_pathway_x < Chunk.CHUNK_SIZE and 
+                0 <= local_pathway_y < Chunk.CHUNK_SIZE):
+                
+                # Apply pathway tile (use stone for pathways)
+                chunk.set_tile(local_pathway_x, local_pathway_y, 2)  # TILE_STONE
+                pathways_applied += 1
+        
+        return pathways_applied
+    
+    def _apply_central_feature_to_chunk(self, chunk: Chunk, settlement_data: Dict[str, Any], 
+                                      local_x: int, local_y: int) -> bool:
+        """
+        Apply central feature from settlement data to the chunk
+        
+        Args:
+            chunk: The chunk to modify
+            settlement_data: Settlement data from enhanced generator
+            local_x, local_y: Local settlement position in chunk
+            
+        Returns:
+            True if central feature was applied, False otherwise
+        """
+        central_feature = settlement_data.get('central_feature')
+        if not central_feature:
+            return False
+        
+        # Get chunk bounds for coordinate conversion
+        start_x, start_y, end_x, end_y = chunk.get_world_bounds()
+        
+        # Convert settlement-relative coordinates to world coordinates
+        feature_world_x = settlement_data['world_x'] + central_feature['x']
+        feature_world_y = settlement_data['world_y'] + central_feature['y']
+        
+        # Convert to chunk-local coordinates
+        local_feature_x = feature_world_x - start_x
+        local_feature_y = feature_world_y - start_y
+        
+        feature_width = central_feature['width']
+        feature_height = central_feature['height']
+        feature_type = central_feature['type']
+        
+        # Apply central feature tiles
+        tiles_applied = 0
+        for y in range(feature_height):
+            for x in range(feature_width):
+                chunk_x = local_feature_x + x
+                chunk_y = local_feature_y + y
+                
+                # Ensure within chunk bounds
+                if (0 <= chunk_x < Chunk.CHUNK_SIZE and 
+                    0 <= chunk_y < Chunk.CHUNK_SIZE):
+                    
+                    # Choose tile type based on feature type
+                    if feature_type == 'plaza':
+                        chunk.set_tile(chunk_x, chunk_y, 2)  # TILE_STONE
+                    elif feature_type == 'well':
+                        chunk.set_tile(chunk_x, chunk_y, 3)  # TILE_WATER
+                    elif feature_type == 'market':
+                        chunk.set_tile(chunk_x, chunk_y, 13)  # TILE_BRICK
+                    elif feature_type == 'fire_pit':
+                        chunk.set_tile(chunk_x, chunk_y, 1)  # TILE_DIRT
+                    else:
+                        chunk.set_tile(chunk_x, chunk_y, 2)  # Default to stone
+                    
+                    tiles_applied += 1
+        
+        return tiles_applied > 0
     
     def _apply_building_template_tiles(self, chunk: Chunk, start_x: int, start_y: int, 
                                      template_tiles: List[List[int]]) -> int:

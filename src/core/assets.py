@@ -180,6 +180,7 @@ class AssetLoader:
             # Game logos
             "goose_rpg_logo": "goose_rpg_logo.png",
             "goose_rpg_icon": "goose_rpg_icon.png",
+            "goose_rpg_icon_bg": "goose_rpg_icon_bg.png",
             "goose_rpg_square_logo": "goose_rpg_square_logo.png"
         }
         
