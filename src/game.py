@@ -46,6 +46,9 @@ class Game:
         self.screen = pygame.display.set_mode((self.width, self.height), flags)
         pygame.display.set_caption("Goose RPG")
         
+        # Set window icon
+        self.set_window_icon()
+        
         self.clock = pygame.time.Clock()
         self.running = True
         self.state = Game.STATE_MENU
@@ -54,6 +57,9 @@ class Game:
         self.save_system = SaveSystem()
         self.asset_loader = AssetLoader(self.settings)  # Pass settings to asset loader
         self.game_log = GameLog()
+        
+        # Set window icon now that asset loader is ready
+        self.update_window_icon()
         
         # Initialize MCP server
         self.mcp_server = None
@@ -78,6 +84,31 @@ class Game:
         """Load game resources"""
         # This would typically load sprites, sounds, etc.
         pass
+    
+    def set_window_icon(self):
+        """Set the window icon using our custom logo"""
+        try:
+            # Try to load our custom icon
+            if hasattr(self, 'asset_loader') and self.asset_loader:
+                icon = self.asset_loader.get_image('goose_rpg_icon')
+                if icon:
+                    # Scale icon to appropriate size for window (32x32 is typical)
+                    icon_32 = pygame.transform.scale(icon, (32, 32))
+                    pygame.display.set_icon(icon_32)
+                    print("✅ Custom window icon set successfully")
+                    return
+            
+            # If asset loader not ready yet, we'll set it later
+            print("⏳ Asset loader not ready, will set icon later")
+            
+        except Exception as e:
+            print(f"❌ Failed to set window icon: {e}")
+    
+    def update_window_icon(self):
+        """Update window icon after asset loader is ready"""
+        if not hasattr(self, '_icon_set'):
+            self.set_window_icon()
+            self._icon_set = True
     
     def new_game(self, seed=None):
         """Start a new game with procedural generation"""

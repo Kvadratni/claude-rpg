@@ -106,6 +106,10 @@ class Entity:
         """Check if this entity is adjacent to another entity"""
         return self.get_distance_to(other_entity) <= threshold
     
+    def to_dict(self):
+        """Convert entity to dictionary for saving"""
+        return self.get_save_data()
+    
     def get_save_data(self):
         """Get basic entity data for saving"""
         return {

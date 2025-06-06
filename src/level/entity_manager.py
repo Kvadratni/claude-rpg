@@ -48,6 +48,13 @@ class EntityManagerMixin:
         # Update items
         for item in self.items:
             item.update(self)
+        
+        # Update furniture
+        for furniture in getattr(self, 'furniture', []):
+            furniture.update(1/60)  # Assuming 60 FPS
+            # Check for player interaction
+            if hasattr(furniture, 'check_player_proximity'):
+                furniture.check_player_proximity(self.player)
     
     def _handle_enemy_death(self, enemy, enemy_id):
         """Handle enemy death and loot generation"""

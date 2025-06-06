@@ -114,42 +114,42 @@ class EnhancedSettlementGenerator:
         'VILLAGE': {
             'required': ['house', 'shop'],
             'preferred': ['inn', 'blacksmith'],
-            'optional': ['house', 'shop']  # Allow duplicates
+            'optional': ['house', 'shop', 'generic']  # Allow duplicates
         },
         'TOWN': {
             'required': ['house', 'shop', 'inn', 'blacksmith'],
-            'preferred': ['temple', 'town_hall', 'market', 'guard_post'],
-            'optional': ['library', 'bank', 'guildhall', 'noble_house']
+            'preferred': ['house', 'shop', 'generic'],  # Use available types
+            'optional': ['house', 'shop', 'inn', 'blacksmith', 'generic']
         },
         'DESERT_OUTPOST': {
             'required': ['house', 'shop'],
             'preferred': ['house'],
-            'optional': ['shop']
+            'optional': ['shop', 'generic']
         },
         'SNOW_SETTLEMENT': {
             'required': ['house', 'inn'],
             'preferred': ['shop'],
-            'optional': ['house']
+            'optional': ['house', 'generic']
         },
         'SWAMP_VILLAGE': {
             'required': ['house', 'shop'],
             'preferred': ['inn'],
-            'optional': ['house']
+            'optional': ['house', 'generic']
         },
         'FOREST_CAMP': {
             'required': ['house', 'shop'],
             'preferred': ['inn'],
-            'optional': ['house']
+            'optional': ['house', 'generic']
         },
         'MINING_CAMP': {
             'required': ['house', 'blacksmith'],
             'preferred': ['shop'],
-            'optional': ['house']
+            'optional': ['house', 'generic']
         },
         'FISHING_VILLAGE': {
             'required': ['house', 'shop'],
             'preferred': ['inn'],
-            'optional': ['house']
+            'optional': ['house', 'generic']
         }
     }
     
@@ -186,8 +186,16 @@ class EnhancedSettlementGenerator:
         
         # Calculate world position within chunk
         chunk_size = 64
-        world_x = chunk_x * chunk_size + settlement_random.randint(5, chunk_size - width - 5)
-        world_y = chunk_y * chunk_size + settlement_random.randint(5, chunk_size - height - 5)
+        margin = 5
+        max_width = chunk_size - 2 * margin
+        max_height = chunk_size - 2 * margin
+        
+        # Ensure settlement fits in chunk with margin
+        actual_width = min(width, max_width)
+        actual_height = min(height, max_height)
+        
+        world_x = chunk_x * chunk_size + settlement_random.randint(margin, chunk_size - actual_width - margin)
+        world_y = chunk_y * chunk_size + settlement_random.randint(margin, chunk_size - actual_height - margin)
         
         print(f"  🏘️  Generating {settlement_type} using {layout_name} layout ({width}x{height})")
         
@@ -223,8 +231,8 @@ class EnhancedSettlementGenerator:
             'chunk_y': chunk_y,
             'world_x': world_x,
             'world_y': world_y,
-            'width': width,
-            'height': height,
+            'width': actual_width,
+            'height': actual_height,
             'shape': layout.shape,
             'buildings': [self._building_to_dict(b, world_x, world_y) for b in buildings],
             'pathways': pathways,
@@ -247,24 +255,27 @@ class EnhancedSettlementGenerator:
         areas = []
         
         if layout.shape == "rectangular":
-            # Grid-based rectangular layout with multiple rows
-            rows = max(3, height // 12)  # At least 3 rows
-            cols = max(3, width // 12)   # At least 3 columns
+            # Grid-based rectangular layout with proper spacing
+            rows = max(2, height // 20)  # Even more spacing
+            cols = max(2, width // 20)   # Even more spacing
+            
+            # Calculate actual spacing needed
+            row_height = height // rows
+            col_width = width // cols
             
             for row in range(rows):
                 for col in range(cols):
-                    # Calculate area bounds with some randomization
-                    area_width = max(12, width // cols + rng.randint(-2, 2))
-                    area_height = max(12, height // rows + rng.randint(-2, 2))
+                    # Calculate area bounds with guaranteed non-overlap
+                    area_width = min(15, col_width - 5)  # Leave 5-unit buffer
+                    area_height = min(15, row_height - 5)  # Leave 5-unit buffer
                     
-                    x = col * (width // cols) + rng.randint(-1, 1)
-                    y = row * (height // rows) + rng.randint(-1, 1)
+                    # Position with proper spacing
+                    x = col * col_width + 3
+                    y = row * row_height + 3
                     
                     # Ensure area stays within bounds
-                    x = max(2, min(x, width - area_width - 2))
-                    y = max(2, min(y, height - area_height - 2))
-                    
-                    areas.append((x, y, area_width, area_height))
+                    if x + area_width <= width - 3 and y + area_height <= height - 3:
+                        areas.append((x, y, area_width, area_height))
         
         elif layout.shape == "circular":
             # Circular/radial layout
@@ -310,25 +321,80 @@ class EnhancedSettlementGenerator:
                             areas.append((x, y, 8, 10))
         
         elif layout.shape == "organic":
-            # Organic/irregular layout
-            num_clusters = rng.randint(3, 6)
+            # Organic/irregular layout with better spacing
+            num_clusters = min(rng.randint(2, 4), len(building_areas) if hasattr(self, 'building_areas') else 4)
+            min_distance = 15  # Minimum distance between buildings
             
-            for _ in range(num_clusters):
-                # Create cluster center
-                cluster_x = rng.randint(5, width - 10)
-                cluster_y = rng.randint(5, height - 10)
-                cluster_size = rng.randint(2, 4)
+            for cluster_idx in range(num_clusters):
+                # Create cluster center with better spacing
+                attempts = 0
+                while attempts < 50:
+                    # Ensure valid range for random generation
+                    max_x = max(8, width - 15)
+                    max_y = max(8, height - 15)
+                    
+                    if max_x <= 8:
+                        cluster_x = width // 2  # Use center if too small
+                    else:
+                        cluster_x = rng.randint(8, max_x)
+                    
+                    if max_y <= 8:
+                        cluster_y = height // 2  # Use center if too small
+                    else:
+                        cluster_y = rng.randint(8, max_y)
+                    
+                    # Check distance from existing areas
+                    too_close = False
+                    for existing_x, existing_y, _, _ in areas:
+                        distance = math.sqrt((cluster_x - existing_x)**2 + (cluster_y - existing_y)**2)
+                        if distance < min_distance:
+                            too_close = True
+                            break
+                    
+                    if not too_close:
+                        break
+                    attempts += 1
                 
-                # Add buildings around cluster center
-                for _ in range(cluster_size):
-                    offset_x = rng.randint(-8, 8)
-                    offset_y = rng.randint(-8, 8)
+                # Add buildings around cluster center with spacing
+                cluster_buildings = rng.randint(1, 3)  # 1-3 buildings per cluster
+                for building_idx in range(cluster_buildings):
+                    if building_idx == 0:
+                        # First building at cluster center
+                        x, y = cluster_x, cluster_y
+                    else:
+                        # Additional buildings with spacing
+                        attempts = 0
+                        while attempts < 30:
+                            offset_x = rng.randint(-12, 12)
+                            offset_y = rng.randint(-12, 12)
+                            
+                            x = cluster_x + offset_x
+                            y = cluster_y + offset_y
+                            
+                            # Check bounds
+                            if not (5 <= x <= width - 15 and 5 <= y <= height - 15):
+                                attempts += 1
+                                continue
+                            
+                            # Check distance from existing buildings
+                            too_close = False
+                            for existing_x, existing_y, _, _ in areas:
+                                distance = math.sqrt((x - existing_x)**2 + (y - existing_y)**2)
+                                if distance < min_distance:
+                                    too_close = True
+                                    break
+                            
+                            if not too_close:
+                                break
+                            attempts += 1
+                        
+                        # If we couldn't find a good spot, skip this building
+                        if attempts >= 30:
+                            continue
                     
-                    x = cluster_x + offset_x
-                    y = cluster_y + offset_y
-                    
-                    if 2 <= x <= width - 12 and 2 <= y <= height - 12:
-                        areas.append((x, y, 10, 10))
+                    # Add the building area
+                    if 5 <= x <= width - 15 and 5 <= y <= height - 15:
+                        areas.append((x, y, 12, 12))
         
         return areas
     
@@ -558,9 +624,9 @@ class EnhancedSettlementGenerator:
         for building in buildings:
             # Get NPC spawns from building template
             for spawn_data in building.template.npc_spawns:
-                # Calculate world position
-                world_x = building.x + spawn_data['x']
-                world_y = building.y + spawn_data['y']
+                # Calculate position relative to settlement (not world coordinates yet)
+                relative_x = building.x + spawn_data['x']
+                relative_y = building.y + spawn_data['y']
                 
                 npc_data = {
                     'name': spawn_data.get('name', 'Villager'),
@@ -569,8 +635,8 @@ class EnhancedSettlementGenerator:
                     'building_type': building.template.building_type,
                     'has_shop': spawn_data.get('has_shop', False),
                     'importance': spawn_data.get('importance', 'medium'),
-                    'x': world_x,
-                    'y': world_y,
+                    'x': relative_x,  # Relative to settlement, not world
+                    'y': relative_y,  # Relative to settlement, not world
                     'dialog': spawn_data.get('dialog', []),
                     'template_spawn': True  # Flag to indicate this came from a template
                 }

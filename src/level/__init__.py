@@ -10,6 +10,7 @@ from .level_pathfinding import PathfindingMixin
 from .tile_manager import TileManagerMixin
 from .level_events import EventHandlingMixin
 from .entity_manager import EntityManagerMixin
+from .furniture_manager import FurnitureManagerMixin
 from .level_data import LevelDataMixin
 from .level_renderer import LevelRendererMixin
 from .procedural_mixin import ProceduralGenerationMixin
@@ -26,6 +27,7 @@ class Level(
     TileManagerMixin,
     EventHandlingMixin,
     EntityManagerMixin,
+    FurnitureManagerMixin,
     LevelDataMixin,
     LevelRendererMixin,
     UIRendererMixin
@@ -79,6 +81,7 @@ class Level(
         self.objects = []
         self.items = []
         self.chests = []  # Add chests list
+        self.furniture = []  # Add furniture list
         
         # Generate procedural world
         self.generate_procedural_level(seed)
