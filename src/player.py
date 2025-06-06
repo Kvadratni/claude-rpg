@@ -65,32 +65,6 @@ class Player:
         # Initialize systems
         self.combat_system = CombatSystem(self)
         self.movement_system = MovementSystem(self)
-        
-        # DEBUG: Start with a Magic Bow for testing ranged weapons
-        self._add_debug_starting_bow()
-    
-    def _add_debug_starting_bow(self):
-        """DEBUG: Add a Magic Bow for testing ranged weapons"""
-        try:
-            from .entities.item import Item
-            
-            # Create a Magic Bow
-            magic_bow = Item(
-                name="Magic Bow",
-                item_type="weapon",
-                effect={"damage": 22},
-                value=180,
-                asset_loader=self.asset_loader
-            )
-            
-            # Equip it directly
-            self.equipped_weapon = magic_bow
-            
-            if self.game_log:
-                self.game_log.add_message("DEBUG: Started with Magic Bow equipped!", "item")
-                
-        except Exception as e:
-            print(f"DEBUG: Could not add starting bow: {e}")
     
     # Properties for world coordinates (for rendering and compatibility)
     @property
