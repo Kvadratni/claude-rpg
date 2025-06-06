@@ -505,14 +505,11 @@ class LevelRendererMixin:
     
     def _get_buildings_near_player(self, player_x, player_y):
         """
-        OPTIMIZATION: Get all buildings near player once per frame (FAST VERSION)
-        Returns a simple proximity check instead of expensive building bounds calculation
+        OPTIMIZATION: Get all buildings near player once per frame (IMPROVED VERSION)
+        Returns building tiles within a reasonable radius of the player
         """
-        # PERFORMANCE FIX: Don't calculate building bounds at all
-        # Just return a simple proximity indicator based on nearby building tiles
-        
-        # Check a very small area around the player (3x3 tiles only)
-        search_radius = 2  # Reduced from 5 to 2
+        # Check a larger area around the player to detect buildings properly
+        search_radius = 8  # Increased from 2 to 8 for better building detection
         building_tiles_nearby = []
         
         for dy in range(-search_radius, search_radius + 1):
@@ -546,15 +543,22 @@ class LevelRendererMixin:
     
     def _is_player_near_building_tile(self, tile_x, tile_y):
         """
-        OPTIMIZATION: Check if player is near this building tile using cached data (FAST VERSION)
+        OPTIMIZATION: Check if player is near this building tile using cached data (IMPROVED VERSION)
         """
         if not hasattr(self, '_player_nearby_buildings') or self._player_nearby_buildings is None:
             return False
         
-        # Simple distance check to nearby building tiles
+        # More generous distance check for building proximity
         for nearby_x, nearby_y in self._player_nearby_buildings:
-            # If this tile is within 3 tiles of a nearby building tile, consider it close
-            if abs(tile_x - nearby_x) <= 3 and abs(tile_y - nearby_y) <= 3:
+            # If this tile is within 6 tiles of a nearby building tile, consider it close
+            # This allows for larger buildings and better interior visibility
+            if abs(tile_x - nearby_x) <= 6 and abs(tile_y - nearby_y) <= 6:
                 return True
+        
+        # Also check direct distance to player for immediate proximity
+        player_x, player_y = int(self.player.x), int(self.player.y)
+        direct_distance = max(abs(tile_x - player_x), abs(tile_y - player_y))
+        if direct_distance <= 4:  # Player is within 4 tiles of this position
+            return True
         
         return False
