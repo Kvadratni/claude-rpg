@@ -120,22 +120,22 @@ class WorldGenerator:
             local_settlement_x = settlement_world_x - start_x
             local_settlement_y = settlement_world_y - start_y
             
-            # Apply building templates to the chunk
+            # Apply pathways from settlement data FIRST
+            pathways_applied = self._apply_pathways_to_chunk(chunk, settlement_data, local_settlement_x, local_settlement_y)
+            print(f"  🛤️  Applied {pathways_applied} pathway tiles")
+            
+            # Apply central feature from settlement data SECOND
+            central_feature_applied = self._apply_central_feature_to_chunk(chunk, settlement_data, local_settlement_x, local_settlement_y)
+            if central_feature_applied:
+                print(f"  🏛️  Applied central feature: {settlement_data.get('central_feature', {}).get('type', 'unknown')}")
+            
+            # Apply building templates to the chunk THIRD
             buildings_placed = self._apply_building_templates_to_chunk(chunk, settlement_data, local_settlement_x, local_settlement_y)
             print(f"  🏗️  Applied {buildings_placed} building templates to chunk")
             
             # Spawn furniture from building templates
             furniture_spawned = self._spawn_furniture_from_templates(chunk, settlement_data, local_settlement_x, local_settlement_y)
             print(f"  🪑 Spawned {furniture_spawned} furniture pieces from templates")
-            
-            # Apply pathways from settlement data
-            pathways_applied = self._apply_pathways_to_chunk(chunk, settlement_data, local_settlement_x, local_settlement_y)
-            print(f"  🛤️  Applied {pathways_applied} pathway tiles")
-            
-            # Apply central feature from settlement data
-            central_feature_applied = self._apply_central_feature_to_chunk(chunk, settlement_data, local_settlement_x, local_settlement_y)
-            if central_feature_applied:
-                print(f"  🏛️  Applied central feature: {settlement_data.get('central_feature', {}).get('type', 'unknown')}")
             
             # Add NPCs from building templates
             if 'npcs' in settlement_data:
@@ -192,10 +192,10 @@ class WorldGenerator:
         """
         buildings_placed = 0
         
-        # Clear the settlement area first
+        # Clear the settlement area first (but preserve some base terrain)
         settlement_width = settlement_data.get('width', 20)
         settlement_height = settlement_data.get('height', 20)
-        self._clear_settlement_area(chunk, local_x, local_y, settlement_width, settlement_height)
+        self._clear_settlement_area_selectively(chunk, local_x, local_y, settlement_width, settlement_height)
         
         # Apply each building template
         for building_data in settlement_data.get('buildings', []):
@@ -645,6 +645,27 @@ class WorldGenerator:
             chunk.entities.remove(entity)
         
         print(f"    🧹 Cleared {len(entities_to_remove)} entities from settlement area")
+    
+    def _clear_settlement_area_selectively(self, chunk: Chunk, x: int, y: int, width: int, height: int):
+        """Clear entities from settlement area but preserve some terrain features"""
+        # Remove any entities that fall within the settlement area
+        entities_to_remove = []
+        
+        for entity in chunk.entities:
+            entity_x = entity.get('x', 0)
+            entity_y = entity.get('y', 0)
+            
+            # Check if entity is within settlement bounds
+            if (x <= entity_x < x + width and y <= entity_y < y + height):
+                # Only remove objects and enemies, keep NPCs and furniture if they exist
+                if entity.get('type') in ['object', 'enemy']:
+                    entities_to_remove.append(entity)
+        
+        # Remove the entities
+        for entity in entities_to_remove:
+            chunk.entities.remove(entity)
+        
+        print(f"    🧹 Selectively cleared {len(entities_to_remove)} entities from settlement area")
     
     def get_chunk_seed(self, chunk_x: int, chunk_y: int) -> int:
         """Get deterministic seed for a specific chunk"""
