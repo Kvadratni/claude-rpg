@@ -126,21 +126,22 @@ class CombatSystem:
         if self.player.equipped_weapon and self.player.equipped_weapon.name in ranged_weapons:
             is_ranged_weapon = True
         
+        # Check stamina cost first
+        stamina_cost = self.get_weapon_stamina_cost()
+        if self.player.stamina < stamina_cost:
+            if self.player.game_log:
+                weapon_name = self.player.equipped_weapon.name if self.player.equipped_weapon else ("ranged attack" if is_ranged_weapon else "fists")
+                self.player.game_log.add_message(f"Not enough stamina to attack with {weapon_name}! (Need {stamina_cost})", "combat")
+            return
+        
+        # Consume stamina for attack
+        self.player.stamina -= stamina_cost
+        
         if is_ranged_weapon:
-            # Check stamina before ranged attack
-            stamina_cost = self.get_weapon_stamina_cost()
-            if self.player.stamina < stamina_cost:
-                if self.player.game_log:
-                    weapon_name = self.player.equipped_weapon.name if self.player.equipped_weapon else "ranged attack"
-                    self.player.game_log.add_message(f"Not enough stamina to attack with {weapon_name}! (Need {stamina_cost})", "combat")
-                return
-            
-            # Consume stamina for ranged attack
-            self.player.stamina -= stamina_cost
-            # Ranged attack - target all enemies within range
+            # Ranged attack - target enemies within ranged weapon range
             self.ranged_attack(enemies, audio)
         else:
-            # Melee attack - check if any enemies are in range first
+            # Melee attack - check if any enemies are in melee range first
             enemies_in_range = []
             for enemy in enemies:
                 dx = enemy.x - self.player.x
@@ -150,16 +151,6 @@ class CombatSystem:
                     enemies_in_range.append(enemy)
             
             if enemies_in_range:
-                # Check stamina before melee attack
-                stamina_cost = self.get_weapon_stamina_cost()
-                if self.player.stamina < stamina_cost:
-                    if self.player.game_log:
-                        weapon_name = self.player.equipped_weapon.name if self.player.equipped_weapon else "fists"
-                        self.player.game_log.add_message(f"Not enough stamina to attack with {weapon_name}! (Need {stamina_cost})", "combat")
-                    return
-                
-                # Consume stamina for melee attack
-                self.player.stamina -= stamina_cost
                 self.melee_attack(enemies_in_range, audio)
             else:
                 # No enemies in range - try to move to closest enemy
