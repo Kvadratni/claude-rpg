@@ -301,19 +301,39 @@ class Furniture(Entity):
         pass
     
     def render(self, surface, camera_x, camera_y, iso_renderer):
-        """Render furniture using isometric projection"""
+        """Render furniture using isometric projection with same scaling as other entities"""
         if not self.sprite:
             return
         
         # Convert world coordinates to screen coordinates
         screen_x, screen_y = iso_renderer.world_to_screen(self.x, self.y, camera_x, camera_y)
         
+        # Use the same scaling approach as other entities (base.py)
+        # Scale to a fixed size while maintaining aspect ratio
+        base_size = 48  # Same as other entities
+        
+        # For multi-tile furniture, scale proportionally
+        scaled_size = base_size * max(self.width, self.height)
+        
+        # Scale the sprite maintaining aspect ratio
+        original_rect = self.sprite.get_rect()
+        if original_rect.width > original_rect.height:
+            # Wide sprite
+            new_width = scaled_size
+            new_height = int(scaled_size * original_rect.height / original_rect.width)
+        else:
+            # Tall or square sprite
+            new_height = scaled_size
+            new_width = int(scaled_size * original_rect.width / original_rect.height)
+        
+        scaled_sprite = pygame.transform.scale(self.sprite, (new_width, new_height))
+        
         # Center the sprite
-        sprite_rect = self.sprite.get_rect()
+        sprite_rect = scaled_sprite.get_rect()
         sprite_rect.center = (screen_x, screen_y)
         
-        # Render the sprite
-        surface.blit(self.sprite, sprite_rect)
+        # Render the scaled sprite
+        surface.blit(scaled_sprite, sprite_rect)
         
         # Render interaction prompt if player is nearby
         if hasattr(self, '_show_interaction_prompt') and self._show_interaction_prompt:
