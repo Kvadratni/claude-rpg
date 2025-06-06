@@ -91,6 +91,26 @@ class CollisionMixin:
                 if distance < collision_distance:
                     return True
         
+        # Check collision with furniture using rectangular collision
+        if hasattr(self, 'furniture'):
+            for furniture in self.furniture:
+                if furniture.blocks_movement and furniture != exclude_entity:
+                    # Check if position overlaps with furniture bounds
+                    furniture_left = furniture.x - 0.5
+                    furniture_right = furniture.x + furniture.width - 0.5
+                    furniture_top = furniture.y - 0.5
+                    furniture_bottom = furniture.y + furniture.height - 0.5
+                    
+                    # Check if entity bounds overlap with furniture bounds
+                    entity_left = x - size
+                    entity_right = x + size
+                    entity_top = y - size
+                    entity_bottom = y + size
+                    
+                    if (entity_right > furniture_left and entity_left < furniture_right and
+                        entity_bottom > furniture_top and entity_top < furniture_bottom):
+                        return True
+        
         # Check collision with NPCs using circular collision
         for npc in self.npcs:
             if npc != exclude_entity:

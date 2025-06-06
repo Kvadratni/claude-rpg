@@ -366,22 +366,22 @@ class WallRenderer:
             if is_horizontal_wall:
                 # Horizontal walls show left and right faces (east and west)
                 # East face (right side in isometric view)  
-                if not east_wall or is_window_wall:
-                    self.render_textured_wall_face(surface, [top_point, right_point, right_top, top_top], "east", tile_type)
+                # Always render horizontal wall faces
+                self.render_textured_wall_face(surface, [top_point, right_point, right_top, top_top], "east", tile_type)
                 
                 # West face (left side in isometric view)
-                if not west_wall or is_window_wall:
-                    self.render_textured_wall_face(surface, [left_point, bottom_point, bottom_top, left_top], "west", tile_type)
+                # Always render horizontal wall faces
+                self.render_textured_wall_face(surface, [left_point, bottom_point, bottom_top, left_top], "west", tile_type)
                     
             elif is_vertical_wall:
                 # Vertical walls show front and back faces (north and south)
                 # North face (front face in isometric view)
-                if not north_wall or is_window_wall:
-                    self.render_textured_wall_face(surface, [left_point, top_point, top_top, left_top], "north", tile_type)
+                # Always render vertical wall faces
+                self.render_textured_wall_face(surface, [left_point, top_point, top_top, left_top], "north", tile_type)
                 
                 # South face (back face in isometric view)
-                if not south_wall or is_window_wall:
-                    self.render_textured_wall_face(surface, [bottom_point, right_point, right_top, bottom_top], "south", tile_type)
+                # Always render vertical wall faces
+                self.render_textured_wall_face(surface, [bottom_point, right_point, right_top, bottom_top], "south", tile_type)
                     
             else:
                 # Regular walls (fallback) - show front and back faces
@@ -546,22 +546,22 @@ class WallRenderer:
             if is_horizontal_wall:
                 # Horizontal walls show left and right faces (east and west)
                 # East face (right side in isometric view)  
-                if not east_wall or is_window_wall:
-                    self.render_textured_wall_face(surface, [top_point, right_point, right_top, top_top], "east", tile_type)
+                # Always render horizontal wall faces
+                self.render_textured_wall_face(surface, [top_point, right_point, right_top, top_top], "east", tile_type)
                 
                 # West face (left side in isometric view)
-                if not west_wall or is_window_wall:
-                    self.render_textured_wall_face(surface, [left_point, bottom_point, bottom_top, left_top], "west", tile_type)
+                # Always render horizontal wall faces
+                self.render_textured_wall_face(surface, [left_point, bottom_point, bottom_top, left_top], "west", tile_type)
                     
             elif is_vertical_wall:
                 # Vertical walls show front and back faces (north and south)
                 # North face (front face in isometric view)
-                if not north_wall or is_window_wall:
-                    self.render_textured_wall_face(surface, [left_point, top_point, top_top, left_top], "north", tile_type)
+                # Always render vertical wall faces
+                self.render_textured_wall_face(surface, [left_point, top_point, top_top, left_top], "north", tile_type)
                 
                 # South face (back face in isometric view)
-                if not south_wall or is_window_wall:
-                    self.render_textured_wall_face(surface, [bottom_point, right_point, right_top, bottom_top], "south", tile_type)
+                # Always render vertical wall faces
+                self.render_textured_wall_face(surface, [bottom_point, right_point, right_top, bottom_top], "south", tile_type)
                     
             else:
                 # Regular walls (fallback) - show front and back faces

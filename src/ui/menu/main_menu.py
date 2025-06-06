@@ -81,7 +81,46 @@ class MainMenu(BaseMenu):
         self.render_instructions(screen, screen_width, screen_height, instruction_text)
     
     def render_main_title(self, screen, width, height):
-        """Render the main game title with effects"""
+        """Render the main game title with logo"""
+        # Try to load and display the logo
+        if hasattr(self.game, 'asset_loader'):
+            logo = self.game.asset_loader.get_image('goose_rpg_icon')
+            if logo:
+                # Scale the logo to appropriate size for the menu
+                logo_size = 200  # Logo size in pixels
+                scaled_logo = pygame.transform.scale(logo, (logo_size, logo_size))
+                
+                # Position the logo
+                logo_rect = scaled_logo.get_rect(center=(width // 2, height // 4 - 20))
+                screen.blit(scaled_logo, logo_rect)
+                
+                # Add a subtle glow effect around the logo
+                glow_surface = pygame.transform.scale(logo, (logo_size + 20, logo_size + 20))
+                glow_surface.set_alpha(50)
+                glow_rect = glow_surface.get_rect(center=(width // 2, height // 4 - 20))
+                screen.blit(glow_surface, glow_rect)
+                
+                # Add the game title below the logo
+                title_text = "GOOSE RPG"
+                title_font = pygame.font.Font(None, 72)
+                title_surface = title_font.render(title_text, True, self.colors['title_gold'])
+                title_rect = title_surface.get_rect(center=(width // 2, height // 4 + 120))
+                
+                # Shadow effect for title
+                shadow_surface = title_font.render(title_text, True, self.colors['title_shadow'])
+                shadow_rect = shadow_surface.get_rect(center=(width // 2 + 2, height // 4 + 122))
+                screen.blit(shadow_surface, shadow_rect)
+                screen.blit(title_surface, title_rect)
+                
+                # Subtitle
+                subtitle_text = "AI-Driven Procedural Fantasy"
+                subtitle_surface = self.subtitle_font.render(subtitle_text, True, self.colors['menu_normal'])
+                subtitle_rect = subtitle_surface.get_rect(center=(width // 2, height // 4 + 160))
+                screen.blit(subtitle_surface, subtitle_rect)
+                
+                return
+        
+        # Fallback to text-only title if logo not available
         title_text = "GOOSE RPG"
         
         # Title with pulsing effect

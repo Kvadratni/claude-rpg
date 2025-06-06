@@ -32,7 +32,6 @@ class LevelRendererMixin:
         
         # OPTIMIZATION: Cache player building detection for this frame
         player_x, player_y = int(self.player.x), int(self.player.y)
-        self._player_nearby_buildings = self._get_buildings_near_player(player_x, player_y)
         
         # Calculate visible tile range - much larger rendering area
         visible_width = (screen_width // self.tile_width) + 10  # Optimized for large worlds
@@ -49,6 +48,13 @@ class LevelRendererMixin:
         start_y = center_y - visible_height
         end_y = center_y + visible_height
         
+        # Only recalculate building detection if player moved to a new tile
+        if not hasattr(self, '_last_player_pos') or self._last_player_pos != (player_x, player_y):
+            self._update_building_states(player_x, player_y)
+            self._update_entity_visibility_cache()  # Cache entity visibility too
+            self._update_tile_visibility_cache(start_x, end_x, start_y, end_y)  # Cache tile visibility too
+            self._last_player_pos = (player_x, player_y)
+        
         # Render tiles in proper isometric order (back to front)
         # This ensures proper depth sorting for buildings
         for y in range(start_y, end_y):
@@ -56,7 +62,7 @@ class LevelRendererMixin:
                 self.render_tile_at_position(game_surface, x, y)
         
         # Clear cached building data after rendering
-        self._player_nearby_buildings = None
+        # Building states persist until player moves
         
         # Collect all entities for depth sorting
         all_entities = []
@@ -66,39 +72,15 @@ class LevelRendererMixin:
         all_entities.extend(self.items)
         all_entities.extend(self.objects)
         all_entities.extend(self.chests)
+        all_entities.extend(getattr(self, 'furniture', []))
         
         # Sort entities by depth
         sorted_entities = sort_by_depth(all_entities)
         
-        # Render entities to game surface with building-based visibility logic
+        # Render entities to game surface using cached visibility
         for entity in sorted_entities:
-            # Show entities based on building proximity
-            should_render_entity = True
-            
-            entity_x, entity_y = int(entity.x), int(entity.y)
-            player_x, player_y = int(self.player.x), int(self.player.y)
-            
-            # Check if entity is inside a building
-            if hasattr(self, 'get_tile'):
-                entity_tile_type = self.get_tile(entity_x, entity_y)
-            else:
-                if 0 <= entity_y < len(self.tiles) and 0 <= entity_x < len(self.tiles[0]):
-                    entity_tile_type = self.tiles[entity_y][entity_x]
-                else:
-                    entity_tile_type = None
-            
-            # Check if entity is on a building tile (interior floor or wall)
-            is_entity_in_building = (entity_tile_type == self.TILE_BRICK or 
-                                   (hasattr(self, 'wall_renderer') and 
-                                    self.wall_renderer.is_wall_tile(entity_tile_type)) or
-                                   entity_tile_type == self.TILE_DOOR)
-            
-            if is_entity_in_building and entity != self.player:
-                # Entity is inside a building - check if player is close using cached data
-                if not self._is_player_near_building_tile(entity_x, entity_y):
-                    should_render_entity = False
-            
-            if should_render_entity:
+            # Use cached visibility check instead of expensive per-frame calculations
+            if self._should_render_entity_cached(entity):
                 entity.render(game_surface, self.camera_x, self.camera_y, self.iso_renderer)
         
         # Blit game surface to main screen
@@ -159,12 +141,12 @@ class LevelRendererMixin:
         screen_y -= height * 16
         
         # Determine if this tile is part of a building and if player is close to the building
-        is_building_tile = self.is_building_tile(x, y, tile_type)
+        is_building_tile = self.is_simple_building_tile(tile_type)  # Use fast version
         should_render_roof = False  # Default to NO roof
         
         if is_building_tile:
-            # OPTIMIZATION: Use cached building detection instead of expensive bounds calculation
-            should_render_roof = not self._is_player_near_building_tile(x, y)
+            # OPTIMIZATION: Use cached tile visibility instead of expensive per-tile checks
+            should_render_roof = not self._get_cached_tile_visibility(x, y)
         
         # ALWAYS render floor tile first (even under walls)
         floor_sprite = None
@@ -504,19 +486,23 @@ class LevelRendererMixin:
     
     def _get_buildings_near_player(self, player_x, player_y):
         """
-        OPTIMIZATION: Get all buildings near player once per frame
-        Returns a set of building bounds that are close to the player
+        Memoized building detection: cache building bounds to avoid repeated flood fills
         """
-        nearby_buildings = set()
+        # Initialize building cache if not exists
+        if not hasattr(self, '_building_cache'):
+            self._building_cache = {}  # Maps tile positions to building bounds
         
-        # Only check a small area around the player (5x5 tiles)
-        search_radius = 5
+        buildings_to_flatten = set()
+        
+        # Check immediate area around player
+        search_radius = 2
+        
         for dy in range(-search_radius, search_radius + 1):
             for dx in range(-search_radius, search_radius + 1):
                 check_x = player_x + dx
                 check_y = player_y + dy
                 
-                # Get tile type
+                # Get tile type (fast check)
                 if hasattr(self, 'get_tile'):
                     tile_type = self.get_tile(check_x, check_y)
                 else:
@@ -524,36 +510,258 @@ class LevelRendererMixin:
                         continue
                     tile_type = self.tiles[check_y][check_x]
                 
-                # If this is a building tile, get its bounds
-                if self.is_building_tile(check_x, check_y, tile_type):
-                    building_bounds = self.get_building_bounds(check_x, check_y)
-                    if building_bounds:
-                        min_x, min_y, max_x, max_y = building_bounds
-                        
-                        # Check if player is within 0.75 tiles of the building bounds
-                        expanded_min_x = min_x - 0.75
-                        expanded_max_x = max_x + 0.75
-                        expanded_min_y = min_y - 0.75
-                        expanded_max_y = max_y + 0.75
-                        
-                        # If player is close to this building, add it to nearby buildings
-                        if (expanded_min_x <= player_x <= expanded_max_x and 
-                            expanded_min_y <= player_y <= expanded_max_y):
-                            nearby_buildings.add(building_bounds)
+                # If this is a building tile and player is close enough
+                if self.is_simple_building_tile(tile_type):
+                    distance = max(abs(player_x - check_x), abs(player_y - check_y))
+                    if distance <= 1:  # Player within 1 tile
+                        # Get or compute building bounds for this tile
+                        building_bounds = self._get_cached_building_bounds(check_x, check_y)
+                        if building_bounds:
+                            buildings_to_flatten.add(building_bounds)
         
-        return nearby_buildings
+        return buildings_to_flatten
+        
+    def _update_building_states(self, player_x, player_y):
+        """
+        Update building flattened states based on player position
+        Only update when states actually change
+        """
+        # Initialize building state cache if not exists
+        if not hasattr(self, '_building_states'):
+            self._building_states = {}  # Maps building bounds to flattened state
+        
+        # Get buildings that should be flattened based on current position
+        buildings_to_flatten = self._get_buildings_near_player(player_x, player_y)
+        
+        # Only update states that have changed
+        # First, unflatten buildings that are no longer in range
+        for building_bounds in list(self._building_states.keys()):
+            if self._building_states[building_bounds] and building_bounds not in buildings_to_flatten:
+                self._building_states[building_bounds] = False
+        
+        # Then, flatten buildings that are now in range
+        for building_bounds in buildings_to_flatten:
+            if not self._building_states.get(building_bounds, False):
+                self._building_states[building_bounds] = True
+    
+    def _get_cached_building_bounds(self, tile_x, tile_y):
+        """
+        Get building bounds with caching to avoid repeated flood fills
+        """
+        cache_key = (tile_x, tile_y)
+        
+        # Check if we already computed bounds for this tile
+        if cache_key in self._building_cache:
+            return self._building_cache[cache_key]
+        
+        # Compute building bounds using flood fill
+        building_bounds = self._compute_building_bounds(tile_x, tile_y)
+        
+        # Cache the result for ALL tiles in this building
+        if building_bounds:
+            min_x, min_y, max_x, max_y, building_tiles = building_bounds
+            bounds_tuple = (min_x, min_y, max_x, max_y)
+            
+            # Cache bounds for every tile in this building
+            for bx, by in building_tiles:
+                self._building_cache[(bx, by)] = bounds_tuple
+            
+            return bounds_tuple
+        else:
+            # Cache negative result
+            self._building_cache[cache_key] = None
+            return None
+    
+    def _compute_building_bounds(self, tile_x, tile_y):
+        """
+        Compute building bounds using flood fill (only called once per building)
+        """
+        visited = set()
+        building_tiles = set()
+        to_visit = [(tile_x, tile_y)]
+        
+        # Limit search to prevent performance issues
+        max_iterations = 200
+        iterations = 0
+        
+        while to_visit and iterations < max_iterations:
+            iterations += 1
+            curr_x, curr_y = to_visit.pop()
+            if (curr_x, curr_y) in visited:
+                continue
+            visited.add((curr_x, curr_y))
+            
+            # Get tile type
+            if hasattr(self, 'get_tile'):
+                tile_type = self.get_tile(curr_x, curr_y)
+            else:
+                if not (0 <= curr_y < len(self.tiles) and 0 <= curr_x < len(self.tiles[0])):
+                    continue
+                tile_type = self.tiles[curr_y][curr_x]
+            
+            if self.is_simple_building_tile(tile_type):
+                building_tiles.add((curr_x, curr_y))
+                # Check adjacent tiles (4-directional only for performance)
+                for dx, dy in [(0, 1), (0, -1), (1, 0), (-1, 0)]:
+                    nx, ny = curr_x + dx, curr_y + dy
+                    if (nx, ny) not in visited:
+                        to_visit.append((nx, ny))
+        
+        if building_tiles:
+            min_x = min(x for x, y in building_tiles)
+            max_x = max(x for x, y in building_tiles)
+            min_y = min(y for x, y in building_tiles)
+            max_y = max(y for x, y in building_tiles)
+            return (min_x, min_y, max_x, max_y, building_tiles)
+        
+        return None
+
+    
+    def is_simple_building_tile(self, tile_type):
+        """Fast building tile check without expensive operations"""
+        if hasattr(self, 'wall_renderer') and self.wall_renderer.is_wall_tile(tile_type):
+            return True
+        if tile_type == self.TILE_DOOR:
+            return True
+        if tile_type == self.TILE_BRICK:  # Interior floor
+            return True
+        return False
     
     def _is_player_near_building_tile(self, tile_x, tile_y):
         """
-        OPTIMIZATION: Check if player is near this building tile using cached data
+        Check if this building tile should be flattened using cached building states
         """
-        if not hasattr(self, '_player_nearby_buildings') or self._player_nearby_buildings is None:
+        if not hasattr(self, '_building_states'):
             return False
         
-        # Check if this tile belongs to any of the nearby buildings
-        for building_bounds in self._player_nearby_buildings:
-            min_x, min_y, max_x, max_y = building_bounds
-            if min_x <= tile_x <= max_x and min_y <= tile_y <= max_y:
-                return True
+        # Get cached building bounds for this tile
+        if not hasattr(self, '_building_cache'):
+            return False
+            
+        cache_key = (tile_x, tile_y)
+        if cache_key not in self._building_cache:
+            return False
+            
+        building_bounds = self._building_cache[cache_key]
+        if not building_bounds:
+            return False
         
-        return False
+        # Check cached building state
+        return self._building_states.get(building_bounds, False)
+    
+    def _update_entity_visibility_cache(self):
+        """
+        Cache entity visibility states to avoid expensive per-frame checks
+        """
+        if not hasattr(self, '_entity_visibility_cache'):
+            self._entity_visibility_cache = {}
+        
+        # Get all entities
+        all_entities = []
+        all_entities.extend(getattr(self, 'enemies', []))
+        all_entities.extend(getattr(self, 'npcs', []))
+        all_entities.extend(getattr(self, 'items', []))
+        all_entities.extend(getattr(self, 'objects', []))
+        all_entities.extend(getattr(self, 'chests', []))
+        all_entities.extend(getattr(self, 'furniture', []))
+        
+        # Cache visibility for each entity
+        for entity in all_entities:
+            entity_id = id(entity)  # Use object ID as unique identifier
+            entity_x, entity_y = int(entity.x), int(entity.y)
+            
+            # Check if entity is inside a building
+            if hasattr(self, 'get_tile'):
+                entity_tile_type = self.get_tile(entity_x, entity_y)
+            else:
+                if 0 <= entity_y < len(self.tiles) and 0 <= entity_x < len(self.tiles[0]):
+                    entity_tile_type = self.tiles[entity_y][entity_x]
+                else:
+                    entity_tile_type = None
+            
+            # Check if entity is on a building tile (interior floor or wall)
+            is_entity_in_building = (entity_tile_type == self.TILE_BRICK or 
+                                   (hasattr(self, 'wall_renderer') and 
+                                    self.wall_renderer.is_wall_tile(entity_tile_type)) or
+                                   entity_tile_type == self.TILE_DOOR)
+            
+            if is_entity_in_building:
+                # Entity is inside a building - check if player is close using cached data
+                should_render = self._is_player_near_building_tile(entity_x, entity_y)
+            else:
+                # Entity is outside - always render
+                should_render = True
+            
+            self._entity_visibility_cache[entity_id] = should_render
+    
+    def _should_render_entity_cached(self, entity):
+        """
+        Fast entity visibility check using cached data
+        """
+        # Always render the player
+        if entity == self.player:
+            return True
+        
+        # Use cached visibility if available
+        if hasattr(self, '_entity_visibility_cache'):
+            entity_id = id(entity)
+            return self._entity_visibility_cache.get(entity_id, True)  # Default to visible
+        
+        # Fallback to always visible if cache not ready
+        return True
+    
+    def _update_tile_visibility_cache(self, start_x, end_x, start_y, end_y):
+        """
+        Cache tile visibility states for all visible tiles using already-computed building states
+        """
+        if not hasattr(self, '_tile_visibility_cache'):
+            self._tile_visibility_cache = {}
+        
+        # Clear old cache entries (only keep current visible area)
+        self._tile_visibility_cache.clear()
+        
+        # Use already-computed building states instead of expensive per-tile checks
+        if not hasattr(self, '_building_states') or not hasattr(self, '_building_cache'):
+            return  # No building data available
+        
+        # Cache visibility for all visible building tiles
+        for y in range(start_y, end_y):
+            for x in range(start_x, end_x):
+                # Get tile type
+                if hasattr(self, 'get_tile'):
+                    tile_type = self.get_tile(x, y)
+                    if tile_type is None:
+                        continue  # Don't cache unloaded chunks
+                else:
+                    if not hasattr(self, 'tiles') or not self.tiles or len(self.tiles) == 0:
+                        continue
+                    if not (0 <= y < len(self.tiles) and 0 <= x < len(self.tiles[0])):
+                        continue
+                    tile_type = self.tiles[y][x]
+                
+                # Only cache building tiles (others don't need visibility checks)
+                if self.is_simple_building_tile(tile_type):
+                    tile_key = (x, y)
+                    
+                    # Fast lookup using already-cached building bounds and states
+                    cache_key = (x, y)
+                    if cache_key in self._building_cache:
+                        building_bounds = self._building_cache[cache_key]
+                        if building_bounds:
+                            is_visible = self._building_states.get(building_bounds, False)
+                            self._tile_visibility_cache[tile_key] = is_visible
+                        else:
+                            self._tile_visibility_cache[tile_key] = False
+                    else:
+                        self._tile_visibility_cache[tile_key] = False
+    
+    def _get_cached_tile_visibility(self, tile_x, tile_y):
+        """
+        Fast tile visibility check using cached data
+        """
+        if hasattr(self, '_tile_visibility_cache'):
+            tile_key = (tile_x, tile_y)
+            return self._tile_visibility_cache.get(tile_key, False)  # Default to not visible (show roof)
+        
+        # Fallback to expensive check if cache not ready
+        return self._is_player_near_building_tile(tile_x, tile_y)

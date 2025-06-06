@@ -1,0 +1,163 @@
+{
+  "name": "village_inn",
+  "width": 11,
+  "height": 9,
+  "description": "A cozy inn with rooms and common area",
+  "building_type": "inn",
+  "tiles": [
+    [
+      1,
+      1,
+      1,
+      6,
+      1,
+      1,
+      1,
+      1,
+      1,
+      1,
+      1
+    ],
+    [
+      1,
+      4,
+      3,
+      3,
+      3,
+      4,
+      1,
+      4,
+      3,
+      3,
+      1
+    ],
+    [
+      1,
+      3,
+      3,
+      3,
+      3,
+      3,
+      1,
+      3,
+      3,
+      3,
+      1
+    ],
+    [
+      1,
+      4,
+      3,
+      3,
+      3,
+      3,
+      1,
+      3,
+      3,
+      3,
+      6
+    ],
+    [
+      1,
+      3,
+      3,
+      3,
+      3,
+      3,
+      3,
+      3,
+      4,
+      3,
+      1
+    ],
+    [
+      6,
+      3,
+      3,
+      3,
+      3,
+      3,
+      1,
+      3,
+      3,
+      3,
+      1
+    ],
+    [
+      1,
+      3,
+      3,
+      3,
+      3,
+      3,
+      1,
+      3,
+      3,
+      3,
+      1
+    ],
+    [
+      1,
+      3,
+      3,
+      4,
+      3,
+      3,
+      1,
+      3,
+      3,
+      4,
+      1
+    ],
+    [
+      1,
+      1,
+      1,
+      1,
+      1,
+      2,
+      1,
+      1,
+      1,
+      6,
+      1
+    ]
+  ],
+  "npc_spawns": [
+    {
+      "x": 3,
+      "y": 4,
+      "npc_type": "innkeeper",
+      "name": "Innkeeper",
+      "has_shop": true,
+      "dialog": [
+        "Welcome to the inn!",
+        "Rest and refreshment await!",
+        "A room for the night?"
+      ],
+      "importance": "high"
+    }
+  ],
+  "furniture_positions": [
+    [
+      2,
+      2,
+      "table"
+    ],
+    [
+      8,
+      2,
+      "bed"
+    ],
+    [
+      8,
+      6,
+      "bed"
+    ],
+    [
+      1,
+      6,
+      "bar"
+    ]
+  ]
+}

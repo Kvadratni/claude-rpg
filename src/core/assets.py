@@ -163,7 +163,25 @@ class AssetLoader:
             "gold_chest_closed": "gold_chest_closed.png",
             "gold_chest_open": "gold_chest_open.png",
             "magical_chest_closed": "magical_chest_closed.png",
-            "magical_chest_open": "magical_chest_open.png"
+            "magical_chest_open": "magical_chest_open.png",
+            # Furniture sprites
+            "bed": "bed.png",
+            "table": "table.png",
+            "chair": "chair.png",
+            "storage_chest": "storage_chest.png",
+            "shelf": "shelf.png",
+            "desk": "desk.png",
+            "bar": "bar.png",
+            "kitchen": "kitchen.png",
+            "weapon_rack": "weapon_rack.png",
+            "tool_rack": "tool_rack.png",
+            "storage": "storage.png",
+            "fancy_bed": "fancy_bed.png",
+            # Game logos
+            "goose_rpg_logo": "goose_rpg_logo.png",
+            "goose_rpg_icon": "goose_rpg_icon.png",
+            "goose_rpg_icon_bg": "goose_rpg_icon_bg.png",
+            "goose_rpg_square_logo": "goose_rpg_square_logo.png"
         }
         
         for name, filename in image_files.items():
@@ -318,7 +336,24 @@ class AssetLoader:
             "gold_chest_closed": (255, 215, 0),  # Gold
             "gold_chest_open": (255, 215, 0),  # Gold
             "magical_chest_closed": (138, 43, 226),  # Blue violet
-            "magical_chest_open": (138, 43, 226)  # Blue violet
+            "magical_chest_open": (138, 43, 226),  # Blue violet
+            # Furniture colors
+            "bed": (139, 69, 19),  # Brown
+            "table": (160, 82, 45),  # Saddle brown
+            "chair": (210, 180, 140),  # Tan
+            "storage_chest": (101, 67, 33),  # Dark brown
+            "shelf": (205, 133, 63),  # Peru
+            "desk": (139, 69, 19),  # Brown
+            "bar": (160, 82, 45),  # Saddle brown
+            "kitchen": (255, 255, 255),  # White
+            "weapon_rack": (105, 105, 105),  # Dim gray
+            "tool_rack": (169, 169, 169),  # Dark gray
+            "storage": (101, 67, 33),  # Dark brown
+            "fancy_bed": (128, 0, 128),  # Purple
+            # Logo colors
+            "goose_rpg_logo": (255, 215, 0),  # Gold
+            "goose_rpg_icon": (25, 25, 112),  # Dark blue
+            "goose_rpg_square_logo": (255, 215, 0)  # Gold
         }
         
         color = colors.get(name, (255, 255, 255))

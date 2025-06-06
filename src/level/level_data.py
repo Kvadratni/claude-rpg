@@ -3,9 +3,9 @@ Level data management and serialization
 """
 
 try:
-    from ..entities import Entity, NPC, Enemy, Item, Chest
+    from ..entities import Entity, NPC, Enemy, Item, Chest, Furniture
 except ImportError:
-    from ..entities import Entity, NPC, Enemy, Item, Chest
+    from ..entities import Entity, NPC, Enemy, Item, Chest, Furniture
 
 
 class LevelDataMixin:
@@ -21,6 +21,7 @@ class LevelDataMixin:
             "items": [item.get_save_data() for item in self.items],
             "objects": [obj.get_save_data() for obj in self.objects],
             "chests": [chest.get_save_data() for chest in self.chests],
+            "furniture": [furniture.to_dict() for furniture in getattr(self, 'furniture', [])],
             "camera_x": self.camera_x,
             "camera_y": self.camera_y
             # Note: Combat state is not saved as it should reset on load
@@ -76,5 +77,10 @@ class LevelDataMixin:
         for chest_data in data.get("chests", []):  # Use get() for backward compatibility
             chest = Chest.from_save_data(chest_data, asset_loader)
             level.chests.append(chest)
+        
+        level.furniture = []
+        for furniture_data in data.get("furniture", []):  # Use get() for backward compatibility
+            furniture = Furniture.from_dict(furniture_data, asset_loader)
+            level.furniture.append(furniture)
         
         return level

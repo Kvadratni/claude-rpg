@@ -1,574 +1,827 @@
 """
-Enhanced Settlement Generator with varied building shapes, road networks, and biome-specific architecture
-Integrates with the existing settlement pattern system for sophisticated town layouts
+Enhanced Settlement Generator - Creates varied settlement layouts using building templates
+Supports non-square settlements, multiple rows, and proper building template integration.
 """
 
 import random
 import math
 from typing import List, Dict, Tuple, Optional, Any
-from .settlement_patterns import SettlementPatternGenerator, SettlementPattern
+from dataclasses import dataclass
+from .building_template_manager import BuildingTemplateManager, BuildingTemplate
+
+
+@dataclass
+class SettlementBuilding:
+    """Represents a placed building in a settlement"""
+    template: BuildingTemplate
+    x: int  # World position
+    y: int  # World position
+    rotation: int = 0  # 0, 90, 180, 270 degrees
+    npc_assignments: List[Dict[str, Any]] = None
+    
+    def __post_init__(self):
+        if self.npc_assignments is None:
+            self.npc_assignments = []
+
+
+@dataclass
+class SettlementLayout:
+    """Defines the overall layout structure of a settlement"""
+    name: str
+    shape: str  # "rectangular", "circular", "organic", "linear"
+    min_size: Tuple[int, int]  # Minimum width, height
+    max_size: Tuple[int, int]  # Maximum width, height
+    building_density: float  # 0.0 to 1.0
+    path_style: str  # "grid", "radial", "organic"
+    central_feature: Optional[str] = None  # "plaza", "well", "market"
 
 
 class EnhancedSettlementGenerator:
-    """
-    Enhanced settlement generator that creates varied, realistic settlements with:
-    - Complex building shapes (L-shaped, T-shaped, courtyards)
-    - Road and pathway networks
-    - Biome-specific architectural styles
-    - District-based layouts
-    """
+    """Enhanced settlement generator with template support and varied layouts"""
     
-    # Tile constants (matching level constants)
-    TILE_GRASS = 0
-    TILE_DIRT = 1
-    TILE_STONE = 2
-    TILE_WATER = 3
-    TILE_WALL = 4
-    TILE_DOOR = 5
-    TILE_WALL_CORNER_TL = 6
-    TILE_WALL_CORNER_TR = 7
-    TILE_WALL_CORNER_BL = 8
-    TILE_WALL_CORNER_BR = 9
-    TILE_WALL_HORIZONTAL = 10
-    TILE_WALL_VERTICAL = 11
-    TILE_WALL_WINDOW_HORIZONTAL = 14
-    TILE_WALL_WINDOW_VERTICAL = 15
-    TILE_BRICK = 13
-    TILE_SAND = 16
-    TILE_SNOW = 17
-    TILE_FOREST_FLOOR = 18
-    TILE_SWAMP = 19
+    # Define settlement layout templates
+    LAYOUT_TEMPLATES = {
+        'small_village': SettlementLayout(
+            name="Small Village",
+            shape="organic",
+            min_size=(20, 20),
+            max_size=(30, 30),
+            building_density=0.3,
+            path_style="organic",
+            central_feature="well"
+        ),
+        'medium_village': SettlementLayout(
+            name="Medium Village",
+            shape="rectangular",
+            min_size=(25, 25),
+            max_size=(40, 35),
+            building_density=0.4,
+            path_style="grid",
+            central_feature="plaza"
+        ),
+        'large_village': SettlementLayout(
+            name="Large Village",
+            shape="rectangular",
+            min_size=(35, 30),
+            max_size=(50, 45),
+            building_density=0.5,
+            path_style="grid",
+            central_feature="market"
+        ),
+        'town': SettlementLayout(
+            name="Town",
+            shape="rectangular",
+            min_size=(40, 40),
+            max_size=(60, 55),
+            building_density=0.6,
+            path_style="grid",
+            central_feature="plaza"
+        ),
+        'linear_outpost': SettlementLayout(
+            name="Linear Outpost",
+            shape="linear",
+            min_size=(30, 15),
+            max_size=(50, 20),
+            building_density=0.4,
+            path_style="linear",
+            central_feature=None
+        ),
+        'circular_camp': SettlementLayout(
+            name="Circular Camp",
+            shape="circular",
+            min_size=(25, 25),
+            max_size=(35, 35),
+            building_density=0.4,
+            path_style="radial",
+            central_feature="fire_pit"
+        )
+    }
     
-    # Building shape templates
-    BUILDING_SHAPES = {
-        'rectangle': {
-            'pattern': [(0, 0, 1, 1)],  # Single rectangle
-            'door_positions': ['random_side']  # Changed from bottom_center only
+    # Settlement type to layout mapping
+    SETTLEMENT_LAYOUTS = {
+        'VILLAGE': ['small_village', 'medium_village', 'large_village'],
+        'TOWN': ['large_village', 'town'],
+        'DESERT_OUTPOST': ['linear_outpost', 'circular_camp'],
+        'SNOW_SETTLEMENT': ['circular_camp', 'linear_outpost'],
+        'SWAMP_VILLAGE': ['linear_outpost', 'small_village'],
+        'FOREST_CAMP': ['circular_camp', 'small_village'],
+        'MINING_CAMP': ['linear_outpost', 'medium_village'],
+        'FISHING_VILLAGE': ['linear_outpost', 'medium_village']
+    }
+    
+    # Building type requirements by settlement type
+    BUILDING_REQUIREMENTS = {
+        'VILLAGE': {
+            'required': ['house', 'shop'],
+            'preferred': ['inn', 'blacksmith'],
+            'optional': ['house', 'shop', 'generic']  # Allow duplicates
         },
-        'L_shape': {
-            'pattern': [
-                (0, 0, 0.6, 0.7),  # Main section
-                (0.6, 0.3, 0.4, 0.4)  # Extension
-            ],
-            'door_positions': ['bottom_center', 'right_center']
+        'TOWN': {
+            'required': ['house', 'shop', 'inn', 'blacksmith'],
+            'preferred': ['house', 'shop', 'generic'],  # Use available types
+            'optional': ['house', 'shop', 'inn', 'blacksmith', 'generic']
         },
-        'T_shape': {
-            'pattern': [
-                (0.2, 0, 0.6, 0.7),  # Main vertical section
-                (0, 0.5, 1, 0.3)     # Horizontal extension
-            ],
-            'door_positions': ['bottom_center', 'left_center', 'right_center']
+        'DESERT_OUTPOST': {
+            'required': ['house', 'shop'],
+            'preferred': ['house'],
+            'optional': ['shop', 'generic']
         },
-        'courtyard': {
-            'pattern': [
-                (0, 0, 1, 0.3),      # Top section
-                (0, 0.7, 1, 0.3),    # Bottom section
-                (0, 0.3, 0.25, 0.4), # Left section
-                (0.75, 0.3, 0.25, 0.4) # Right section
-            ],
-            'door_positions': ['courtyard_entrances']
+        'SNOW_SETTLEMENT': {
+            'required': ['house', 'inn'],
+            'preferred': ['shop'],
+            'optional': ['house', 'generic']
         },
-        'cross': {
-            'pattern': [
-                (0.3, 0, 0.4, 1),    # Vertical bar
-                (0, 0.3, 1, 0.4)     # Horizontal bar
-            ],
-            'door_positions': ['all_sides']
+        'SWAMP_VILLAGE': {
+            'required': ['house', 'shop'],
+            'preferred': ['inn'],
+            'optional': ['house', 'generic']
+        },
+        'FOREST_CAMP': {
+            'required': ['house', 'shop'],
+            'preferred': ['inn'],
+            'optional': ['house', 'generic']
+        },
+        'MINING_CAMP': {
+            'required': ['house', 'blacksmith'],
+            'preferred': ['shop'],
+            'optional': ['house', 'generic']
+        },
+        'FISHING_VILLAGE': {
+            'required': ['house', 'shop'],
+            'preferred': ['inn'],
+            'optional': ['house', 'generic']
         }
     }
     
-    # Road patterns for different settlement sizes
-    ROAD_PATTERNS = {
-        'small': {
-            'type': 'cross',
-            'main_roads': [(0.5, 0, 0.5, 1), (0, 0.5, 1, 0.5)],
-            'secondary_roads': []
-        },
-        'medium': {
-            'type': 'grid',
-            'main_roads': [(0.5, 0, 0.5, 1), (0, 0.5, 1, 0.5)],
-            'secondary_roads': [(0.25, 0, 0.25, 1), (0.75, 0, 0.75, 1), (0, 0.25, 1, 0.25), (0, 0.75, 1, 0.75)]
-        },
-        'large': {
-            'type': 'radial',
-            'main_roads': [(0.5, 0, 0.5, 1), (0, 0.5, 1, 0.5)],
-            'secondary_roads': [(0.2, 0, 0.2, 1), (0.8, 0, 0.8, 1), (0, 0.2, 1, 0.2), (0, 0.8, 1, 0.8)],
-            'diagonal_roads': [(0, 0, 1, 1), (0, 1, 1, 0)]  # Diagonal connections
-        }
-    }
-    
-    def __init__(self, width: int, height: int, seed: int = None):
-        """Initialize the enhanced settlement generator"""
-        self.width = width
-        self.height = height
-        self.seed = seed or random.randint(0, 1000000)
+    def __init__(self, world_seed: int, templates_dir: str = "building_templates"):
+        self.world_seed = world_seed
+        self.building_manager = BuildingTemplateManager(templates_dir)
+        self.placed_settlements = {}
         
-        # Initialize pattern generator
-        self.pattern_generator = SettlementPatternGenerator()
-        
-        # Track placed objects for collision
-        self.occupied_areas = []
-        self.settlement_safe_zones = []
-        
-        print(f"EnhancedSettlementGenerator initialized with seed: {self.seed}")
-    
-    def generate_enhanced_settlement(self, tiles: List[List[int]], start_x: int, start_y: int, 
-                                   settlement_type: str, biome: str, seed: int = None) -> Dict[str, Any]:
+    def generate_settlement(self, chunk_x: int, chunk_y: int, settlement_type: str, 
+                          biome: str = "plains") -> Dict[str, Any]:
         """
-        Generate an enhanced settlement with sophisticated layout
+        Generate an enhanced settlement with varied layout and building templates
         
         Args:
-            tiles: 2D list of tile types
-            start_x, start_y: Settlement starting position
-            settlement_type: Type of settlement to generate
-            biome: Biome for architectural adaptation
-            seed: Seed for deterministic generation
+            chunk_x, chunk_y: Chunk coordinates
+            settlement_type: Type of settlement
+            biome: Biome type for template selection
             
         Returns:
-            Settlement information dictionary
+            Settlement data with buildings, NPCs, and layout information
         """
-        # Use provided seed or generate one based on position
-        if seed is None:
-            seed = hash((start_x, start_y, settlement_type, biome)) % (2**31)
-        
         # Create deterministic random for this settlement
-        settlement_random = random.Random(seed)
+        settlement_seed = hash((self.world_seed, chunk_x, chunk_y, settlement_type)) % (2**31)
+        settlement_random = random.Random(settlement_seed)
         
-        # Get appropriate pattern for settlement type with variety
-        pattern = self.pattern_generator.get_pattern(settlement_type, seed)
+        # Select layout template
+        layout_options = self.SETTLEMENT_LAYOUTS.get(settlement_type, ['medium_village'])
+        layout_name = settlement_random.choice(layout_options)
+        layout = self.LAYOUT_TEMPLATES[layout_name]
         
-        # Adapt pattern to biome
-        adapted_pattern = self.pattern_generator.adapt_pattern_to_biome(pattern, biome)
+        # Determine settlement size
+        width = settlement_random.randint(layout.min_size[0], layout.max_size[0])
+        height = settlement_random.randint(layout.min_size[1], layout.max_size[1])
         
-        # Apply the pattern to tiles
-        self._apply_pattern_to_tiles(tiles, start_x, start_y, adapted_pattern)
+        # Calculate world position within chunk
+        chunk_size = 64
+        margin = 5
+        max_width = chunk_size - 2 * margin
+        max_height = chunk_size - 2 * margin
         
-        # Generate enhanced buildings with varied shapes
-        buildings = self._generate_enhanced_buildings(tiles, start_x, start_y, adapted_pattern, biome, settlement_random)
+        # Ensure settlement fits in chunk with margin
+        actual_width = min(width, max_width)
+        actual_height = min(height, max_height)
         
-        # Create road network
-        self._create_road_network(tiles, start_x, start_y, adapted_pattern, biome)
+        world_x = chunk_x * chunk_size + settlement_random.randint(margin, chunk_size - actual_width - margin)
+        world_y = chunk_y * chunk_size + settlement_random.randint(margin, chunk_size - actual_height - margin)
         
-        # Add architectural details
-        self._add_architectural_details(tiles, start_x, start_y, adapted_pattern, biome, settlement_random)
+        print(f"  🏘️  Generating {settlement_type} using {layout_name} layout ({width}x{height}) in {biome}")
         
-        # Mark area as occupied
-        self.occupied_areas.append((start_x, start_y, pattern.width, pattern.height))
+        # Generate building placement areas based on layout shape
+        building_areas = self._generate_building_areas(
+            layout, width, height, settlement_random
+        )
         
-        settlement_info = {
-            'name': settlement_type,
-            'x': start_x,
-            'y': start_y,
-            'center_x': start_x + pattern.width // 2,
-            'center_y': start_y + pattern.height // 2,
-            'size': (pattern.width, pattern.height),
-            'buildings': buildings,
+        # Select and place buildings
+        buildings = self._place_buildings(
+            settlement_type, building_areas, biome, settlement_random
+        )
+        
+        # Generate pathways with biome-specific tiles
+        pathways = self._generate_pathways(
+            layout, width, height, buildings, settlement_random, biome
+        )
+        
+        # Create central feature if specified
+        central_feature = None
+        if layout.central_feature:
+            central_feature = self._create_central_feature(
+                layout.central_feature, width, height, settlement_random
+            )
+        
+        # Assign NPCs to buildings
+        npcs = self._assign_npcs_to_buildings(buildings, settlement_type, settlement_random)
+        
+        settlement_data = {
+            'type': settlement_type,
+            'layout': layout_name,
+            'chunk_x': chunk_x,
+            'chunk_y': chunk_y,
+            'world_x': world_x,
+            'world_y': world_y,
+            'width': actual_width,
+            'height': actual_height,
+            'shape': layout.shape,
+            'buildings': [self._building_to_dict(b, world_x, world_y) for b in buildings],
+            'pathways': pathways,
+            'central_feature': central_feature,
+            'npcs': npcs,
             'biome': biome,
-            'pattern_used': pattern.name,
-            'architectural_style': self._get_architectural_style(biome),
-            'seed': seed
+            'total_buildings': len(buildings),
+            'total_npcs': len(npcs),
+            'shops': len([npc for npc in npcs if npc.get('has_shop', False)])
         }
         
-        print(f"Generated enhanced {settlement_type} at ({start_x}, {start_y}) in {biome} biome using {pattern.name} pattern")
-        return settlement_info
+        self.placed_settlements[(chunk_x, chunk_y)] = settlement_data
+        print(f"  ✅ Settlement complete: {len(buildings)} buildings, {len(npcs)} NPCs, {len(pathways)} ground tiles")
+        
+        return settlement_data
     
-    def _apply_pattern_to_tiles(self, tiles: List[List[int]], start_x: int, start_y: int, 
-                               pattern: SettlementPattern) -> None:
-        """Apply the settlement pattern to the tile grid"""
-        for y in range(pattern.height):
-            for x in range(pattern.width):
-                world_x = start_x + x
-                world_y = start_y + y
+    def _generate_building_areas(self, layout: SettlementLayout, width: int, height: int, 
+                               rng: random.Random) -> List[Tuple[int, int, int, int]]:
+        """Generate areas where buildings can be placed based on layout shape"""
+        areas = []
+        
+        if layout.shape == "rectangular":
+            # Grid-based rectangular layout with proper spacing
+            rows = max(2, height // 20)  # Even more spacing
+            cols = max(2, width // 20)   # Even more spacing
+            
+            # Calculate actual spacing needed
+            row_height = height // rows
+            col_width = width // cols
+            
+            for row in range(rows):
+                for col in range(cols):
+                    # Calculate area bounds with guaranteed non-overlap
+                    area_width = min(15, col_width - 5)  # Leave 5-unit buffer
+                    area_height = min(15, row_height - 5)  # Leave 5-unit buffer
+                    
+                    # Position with proper spacing
+                    x = col * col_width + 3
+                    y = row * row_height + 3
+                    
+                    # Ensure area stays within bounds
+                    if x + area_width <= width - 3 and y + area_height <= height - 3:
+                        areas.append((x, y, area_width, area_height))
+        
+        elif layout.shape == "circular":
+            # Circular/radial layout
+            center_x, center_y = width // 2, height // 2
+            radius = min(width, height) // 2 - 3
+            
+            # Create concentric rings
+            rings = max(2, radius // 8)
+            for ring in range(rings):
+                ring_radius = (ring + 1) * (radius // rings)
+                buildings_in_ring = max(4, int(2 * math.pi * ring_radius / 10))
                 
-                if 0 <= world_x < self.width and 0 <= world_y < self.height:
-                    pattern_tile = pattern.get_tile_at(x, y)
-                    tiles[world_y][world_x] = pattern_tile
+                for i in range(buildings_in_ring):
+                    angle = (2 * math.pi * i) / buildings_in_ring
+                    x = int(center_x + ring_radius * math.cos(angle))
+                    y = int(center_y + ring_radius * math.sin(angle))
+                    
+                    # Ensure within bounds
+                    if 2 <= x <= width - 12 and 2 <= y <= height - 12:
+                        areas.append((x, y, 10, 10))
+        
+        elif layout.shape == "linear":
+            # Linear layout along main axis
+            if width > height:  # Horizontal linear
+                rows = max(2, height // 10)
+                buildings_per_row = width // 8
+                
+                for row in range(rows):
+                    y = 2 + row * (height - 4) // max(1, rows - 1)
+                    for i in range(buildings_per_row):
+                        x = 2 + i * (width - 4) // max(1, buildings_per_row - 1)
+                        if x <= width - 12:
+                            areas.append((x, y, 10, 8))
+            else:  # Vertical linear
+                cols = max(2, width // 10)
+                buildings_per_col = height // 8
+                
+                for col in range(cols):
+                    x = 2 + col * (width - 4) // max(1, cols - 1)
+                    for i in range(buildings_per_col):
+                        y = 2 + i * (height - 4) // max(1, buildings_per_col - 1)
+                        if y <= height - 12:
+                            areas.append((x, y, 8, 10))
+        
+        elif layout.shape == "organic":
+            # Organic/irregular layout with better spacing
+            num_clusters = min(rng.randint(2, 4), len(building_areas) if hasattr(self, 'building_areas') else 4)
+            min_distance = 15  # Minimum distance between buildings
+            
+            for cluster_idx in range(num_clusters):
+                # Create cluster center with better spacing
+                attempts = 0
+                while attempts < 50:
+                    # Ensure valid range for random generation
+                    max_x = max(8, width - 15)
+                    max_y = max(8, height - 15)
+                    
+                    if max_x <= 8:
+                        cluster_x = width // 2  # Use center if too small
+                    else:
+                        cluster_x = rng.randint(8, max_x)
+                    
+                    if max_y <= 8:
+                        cluster_y = height // 2  # Use center if too small
+                    else:
+                        cluster_y = rng.randint(8, max_y)
+                    
+                    # Check distance from existing areas
+                    too_close = False
+                    for existing_x, existing_y, _, _ in areas:
+                        distance = math.sqrt((cluster_x - existing_x)**2 + (cluster_y - existing_y)**2)
+                        if distance < min_distance:
+                            too_close = True
+                            break
+                    
+                    if not too_close:
+                        break
+                    attempts += 1
+                
+                # Add buildings around cluster center with spacing
+                cluster_buildings = rng.randint(1, 3)  # 1-3 buildings per cluster
+                for building_idx in range(cluster_buildings):
+                    if building_idx == 0:
+                        # First building at cluster center
+                        x, y = cluster_x, cluster_y
+                    else:
+                        # Additional buildings with spacing
+                        attempts = 0
+                        while attempts < 30:
+                            offset_x = rng.randint(-12, 12)
+                            offset_y = rng.randint(-12, 12)
+                            
+                            x = cluster_x + offset_x
+                            y = cluster_y + offset_y
+                            
+                            # Check bounds
+                            if not (5 <= x <= width - 15 and 5 <= y <= height - 15):
+                                attempts += 1
+                                continue
+                            
+                            # Check distance from existing buildings
+                            too_close = False
+                            for existing_x, existing_y, _, _ in areas:
+                                distance = math.sqrt((x - existing_x)**2 + (y - existing_y)**2)
+                                if distance < min_distance:
+                                    too_close = True
+                                    break
+                            
+                            if not too_close:
+                                break
+                            attempts += 1
+                        
+                        # If we couldn't find a good spot, skip this building
+                        if attempts >= 30:
+                            continue
+                    
+                    # Add the building area
+                    if 5 <= x <= width - 15 and 5 <= y <= height - 15:
+                        areas.append((x, y, 12, 12))
+        
+        return areas
     
-    def _generate_enhanced_buildings(self, tiles: List[List[int]], start_x: int, start_y: int, 
-                                   pattern: SettlementPattern, biome: str, settlement_random: random.Random) -> List[Dict[str, Any]]:
-        """Generate buildings with varied shapes and architectural styles"""
+    def _place_buildings(self, settlement_type: str, building_areas: List[Tuple[int, int, int, int]], 
+                        biome: str, rng: random.Random) -> List[SettlementBuilding]:
+        """Place buildings in the designated areas using templates"""
         buildings = []
+        requirements = self.BUILDING_REQUIREMENTS.get(settlement_type, {
+            'required': ['house'], 'preferred': ['shop'], 'optional': []
+        })
         
-        for building_info in pattern.get_building_positions():
-            building_x = start_x + building_info['x']
-            building_y = start_y + building_info['y']
-            building_width = building_info['width']
-            building_height = building_info['height']
-            building_type = building_info['type']
-            
-            # Choose building shape based on type, size, and randomization
-            shape_name = self._choose_building_shape(building_type, building_width, building_height, settlement_random)
-            
-            # Create the building with chosen shape
-            self._create_shaped_building(tiles, building_x, building_y, building_width, 
-                                       building_height, shape_name, biome, settlement_random)
-            
-            buildings.append({
-                'x': building_x,
-                'y': building_y,
-                'width': building_width,
-                'height': building_height,
-                'type': building_type,
-                'shape': shape_name,
-                'architectural_style': self._get_architectural_style(biome)
-            })
+        # Determine settlement size category for template selection
+        total_areas = len(building_areas)
+        if total_areas <= 6:
+            size_category = "small"
+        elif total_areas <= 12:
+            size_category = "medium"
+        else:
+            size_category = "large"
         
+        # First, place required buildings
+        building_types_to_place = []
+        
+        # Add required buildings (at least one of each)
+        for building_type in requirements['required']:
+            building_types_to_place.append(building_type)
+        
+        # Add preferred buildings (based on available space)
+        preferred_count = min(len(requirements['preferred']), max(0, total_areas - len(requirements['required'])))
+        selected_preferred = rng.sample(requirements['preferred'], min(preferred_count, len(requirements['preferred'])))
+        building_types_to_place.extend(selected_preferred)
+        
+        # Fill remaining spaces with optional buildings and duplicates
+        remaining_spaces = total_areas - len(building_types_to_place)
+        if remaining_spaces > 0:
+            # Add some optional buildings
+            optional_count = min(len(requirements['optional']), remaining_spaces // 2)
+            if optional_count > 0:
+                selected_optional = rng.sample(requirements['optional'], optional_count)
+                building_types_to_place.extend(selected_optional)
+            
+            # Fill remaining with duplicates of common types
+            common_types = ['house', 'shop', 'workshop']
+            while len(building_types_to_place) < total_areas:
+                building_types_to_place.append(rng.choice(common_types))
+        
+        # Shuffle building placement order
+        rng.shuffle(building_types_to_place)
+        
+        # Place buildings in areas
+        placed_count = 0
+        for i, (area_x, area_y, area_w, area_h) in enumerate(building_areas):
+            if placed_count >= len(building_types_to_place):
+                break
+            
+            building_type = building_types_to_place[placed_count]
+            
+            # Select appropriate template
+            template = self.building_manager.select_random_template(
+                building_type, size_category, biome, 
+                seed=hash((settlement_type, i, building_type)) % (2**31)
+            )
+            
+            if template:
+                # Check if template fits in area (with some flexibility)
+                if template.width <= area_w + 4 and template.height <= area_h + 4:
+                    building = SettlementBuilding(
+                        template=template,
+                        x=area_x,
+                        y=area_y,
+                        rotation=rng.choice([0, 90, 180, 270]) if rng.random() < 0.1 else 0
+                    )
+                    buildings.append(building)
+                    placed_count += 1
+                else:
+                    # Try to find a smaller template of the same type
+                    smaller_templates = [
+                        t for t in self.building_manager.get_templates_for_building_type(building_type, "small", biome)
+                        if t.width <= area_w + 4 and t.height <= area_h + 4
+                    ]
+                    
+                    if smaller_templates:
+                        template = rng.choice(smaller_templates)
+                        building = SettlementBuilding(
+                            template=template,
+                            x=area_x,
+                            y=area_y,
+                            rotation=0
+                        )
+                        buildings.append(building)
+                        placed_count += 1
+        
+        print(f"    🏠 Placed {len(buildings)} buildings from {len(building_areas)} areas")
         return buildings
     
-    def _choose_building_shape(self, building_type: str, width: int, height: int, settlement_random: random.Random) -> str:
-        """Choose appropriate building shape based on type, size, and randomization"""
-        # Define shape probabilities based on building type and size
-        if width >= 6 and height >= 6:
-            # Large buildings - can have complex shapes
-            if building_type in ['town_hall', 'cathedral', 'grand_market', 'temple', 'church']:
-                # Important religious/government buildings favor complex shapes
-                shape_options = ['courtyard', 'cross', 'T_shape', 'L_shape', 'rectangle']
-                weights = [0.3, 0.25, 0.2, 0.15, 0.1]
-            elif building_type in ['inn', 'market', 'guildhall', 'grand_inn', 'armory']:
-                # Commercial/social buildings favor practical shapes
-                shape_options = ['L_shape', 'T_shape', 'rectangle', 'courtyard']
-                weights = [0.35, 0.3, 0.25, 0.1]
-            elif building_type in ['noble_house', 'merchant_house', 'warm_lodge']:
-                # Residential buildings favor L-shapes and rectangles
-                shape_options = ['L_shape', 'rectangle', 'T_shape']
-                weights = [0.5, 0.3, 0.2]
-            else:
-                # Generic large buildings
-                shape_options = ['rectangle', 'L_shape', 'T_shape']
-                weights = [0.5, 0.3, 0.2]
-        elif width >= 4 and height >= 4:
-            # Medium buildings - some variety
-            if building_type in ['shop', 'blacksmith', 'inn', 'market_stall']:
-                # Commercial buildings can be L-shaped
-                shape_options = ['rectangle', 'L_shape']
-                weights = [0.7, 0.3]
-            elif building_type in ['house', 'cottage', 'hut']:
-                # Residential buildings mostly rectangular with some L-shapes
-                shape_options = ['rectangle', 'L_shape']
-                weights = [0.8, 0.2]
-            else:
-                # Generic medium buildings
-                shape_options = ['rectangle', 'L_shape']
-                weights = [0.75, 0.25]
-        else:
-            # Small buildings are always rectangular
-            return 'rectangle'
+    def _generate_pathways(self, layout: SettlementLayout, width: int, height: int, 
+                          buildings: List[SettlementBuilding], rng: random.Random, biome: str = "plains") -> List[Tuple[int, int, int]]:
+        """Generate pathways and ground preparation with tile types"""
+        pathways = []  # List of (x, y, tile_type) tuples
         
-        # Select shape based on weights
-        return settlement_random.choices(shape_options, weights=weights)[0]
-    
-    def _create_shaped_building(self, tiles: List[List[int]], start_x: int, start_y: int, 
-                               width: int, height: int, shape_name: str, biome: str, settlement_random: random.Random) -> None:
-        """Create a building with the specified shape"""
-        shape_info = self.BUILDING_SHAPES[shape_name]
+        # Get biome-appropriate tiles
+        ground_tile, path_tile, plaza_tile = self._get_biome_tiles(biome)
         
-        # Clear the area first
-        for y in range(start_y, start_y + height):
-            for x in range(start_x, start_x + width):
-                if 0 <= x < self.width and 0 <= y < self.height:
-                    tiles[y][x] = self._get_biome_floor_tile(biome)
+        # First, prepare the ground around buildings
+        for building in buildings:
+            # Create a cleared area around each building
+            padding = 2
+            for y in range(max(0, building.y - padding), min(height, building.y + building.template.height + padding)):
+                for x in range(max(0, building.x - padding), min(width, building.x + building.template.width + padding)):
+                    # Don't overwrite building tiles, just prepare ground
+                    if not (building.x <= x < building.x + building.template.width and 
+                           building.y <= y < building.y + building.template.height):
+                        pathways.append((x, y, ground_tile))  # Biome-appropriate ground
         
-        # Create each section of the building
-        for section in shape_info['pattern']:
-            section_x = start_x + int(section[0] * width)
-            section_y = start_y + int(section[1] * height)
-            section_width = max(1, int(section[2] * width))
-            section_height = max(1, int(section[3] * height))
+        # Generate main pathways based on layout style
+        if layout.path_style == "grid":
+            # Grid-based pathways with better spacing
+            main_paths_x = []
+            main_paths_y = []
             
-            self._create_building_section(tiles, section_x, section_y, section_width, 
-                                        section_height, biome, settlement_random)
-        
-        # Add doors based on shape
-        self._add_building_doors(tiles, start_x, start_y, width, height, shape_info, biome)
-    
-    def _create_building_section(self, tiles: List[List[int]], start_x: int, start_y: int, 
-                               width: int, height: int, biome: str, settlement_random: random.Random) -> None:
-        """Create a single rectangular section of a building"""
-        # Interior floor
-        for y in range(start_y + 1, start_y + height - 1):
-            for x in range(start_x + 1, start_x + width - 1):
-                if 0 <= x < self.width and 0 <= y < self.height:
-                    tiles[y][x] = self._get_biome_interior_tile(biome)
-        
-        # Walls with proper corners
-        for y in range(start_y, start_y + height):
-            for x in range(start_x, start_x + width):
-                if 0 <= x < self.width and 0 <= y < self.height:
-                    # Skip interior
-                    if (x > start_x and x < start_x + width - 1 and 
-                        y > start_y and y < start_y + height - 1):
-                        continue
-                    
-                    # Determine wall type
-                    is_top = (y == start_y)
-                    is_bottom = (y == start_y + height - 1)
-                    is_left = (x == start_x)
-                    is_right = (x == start_x + width - 1)
-                    
-                    # Set appropriate wall tile
-                    if is_top and is_left:
-                        tiles[y][x] = self.TILE_WALL_CORNER_TL
-                    elif is_top and is_right:
-                        tiles[y][x] = self.TILE_WALL_CORNER_TR
-                    elif is_bottom and is_left:
-                        tiles[y][x] = self.TILE_WALL_CORNER_BL
-                    elif is_bottom and is_right:
-                        tiles[y][x] = self.TILE_WALL_CORNER_BR
-                    elif is_top or is_bottom:
-                        # Add windows to horizontal walls
-                        if settlement_random.random() < self._get_window_chance(biome):
-                            tiles[y][x] = self.TILE_WALL_WINDOW_HORIZONTAL
-                        else:
-                            tiles[y][x] = self.TILE_WALL_HORIZONTAL
-                    elif is_left or is_right:
-                        # Add windows to vertical walls
-                        if settlement_random.random() < self._get_window_chance(biome):
-                            tiles[y][x] = self.TILE_WALL_WINDOW_VERTICAL
-                        else:
-                            tiles[y][x] = self.TILE_WALL_VERTICAL
-                    else:
-                        tiles[y][x] = self.TILE_WALL
-    
-    def _add_building_doors(self, tiles: List[List[int]], start_x: int, start_y: int, 
-                           width: int, height: int, shape_info: Dict, biome: str) -> None:
-        """Add doors to the building based on its shape"""
-        door_positions = shape_info['door_positions']
-        
-        for door_pos in door_positions:
-            if door_pos == 'random_side':
-                # Choose a random side for the door
-                door_sides = ['bottom_center', 'top_center', 'left_center', 'right_center']
-                door_weights = [0.35, 0.2, 0.2, 0.25]  # Bottom slightly favored
-                chosen_door_pos = random.choices(door_sides, weights=door_weights)[0]
-                self._place_door_at_position(tiles, start_x, start_y, width, height, chosen_door_pos)
-            else:
-                self._place_door_at_position(tiles, start_x, start_y, width, height, door_pos)
-    
-    def _place_door_at_position(self, tiles: List[List[int]], start_x: int, start_y: int, 
-                               width: int, height: int, door_pos: str) -> None:
-        """Place a door at the specified position"""
-        if door_pos == 'bottom_center':
-            door_x = start_x + width // 2
-            door_y = start_y + height - 1
-            if 0 <= door_x < self.width and 0 <= door_y < self.height:
-                tiles[door_y][door_x] = self.TILE_DOOR
-        elif door_pos == 'top_center':
-            door_x = start_x + width // 2
-            door_y = start_y
-            if 0 <= door_x < self.width and 0 <= door_y < self.height:
-                tiles[door_y][door_x] = self.TILE_DOOR
-        elif door_pos == 'left_center':
-            door_x = start_x
-            door_y = start_y + height // 2
-            if 0 <= door_x < self.width and 0 <= door_y < self.height:
-                tiles[door_y][door_x] = self.TILE_DOOR
-        elif door_pos == 'right_center':
-            door_x = start_x + width - 1
-            door_y = start_y + height // 2
-            if 0 <= door_x < self.width and 0 <= door_y < self.height:
-                tiles[door_y][door_x] = self.TILE_DOOR
-    
-    def _create_road_network(self, tiles: List[List[int]], start_x: int, start_y: int, 
-                           pattern: SettlementPattern, biome: str) -> None:
-        """Create a road network for the settlement"""
-        # Determine road pattern based on settlement size
-        if pattern.width <= 12:
-            road_pattern = self.ROAD_PATTERNS['small']
-        elif pattern.width <= 20:
-            road_pattern = self.ROAD_PATTERNS['medium']
-        else:
-            road_pattern = self.ROAD_PATTERNS['large']
-        
-        road_tile = self._get_biome_road_tile(biome)
-        
-        # Create main roads
-        for road in road_pattern['main_roads']:
-            self._create_road_segment(tiles, start_x, start_y, pattern.width, pattern.height, 
-                                    road, road_tile, width=2)
-        
-        # Create secondary roads
-        for road in road_pattern['secondary_roads']:
-            self._create_road_segment(tiles, start_x, start_y, pattern.width, pattern.height, 
-                                    road, road_tile, width=1)
-        
-        # Create diagonal roads for large settlements
-        if 'diagonal_roads' in road_pattern:
-            for road in road_pattern['diagonal_roads']:
-                self._create_diagonal_road(tiles, start_x, start_y, pattern.width, pattern.height, 
-                                         road, road_tile)
-    
-    def _create_road_segment(self, tiles: List[List[int]], start_x: int, start_y: int, 
-                           settlement_width: int, settlement_height: int, 
-                           road_spec: Tuple[float, float, float, float], 
-                           road_tile: int, width: int = 1) -> None:
-        """Create a road segment"""
-        x1 = start_x + int(road_spec[0] * settlement_width)
-        y1 = start_y + int(road_spec[1] * settlement_height)
-        x2 = start_x + int(road_spec[2] * settlement_width)
-        y2 = start_y + int(road_spec[3] * settlement_height)
-        
-        # Create road line
-        if x1 == x2:  # Vertical road
-            for y in range(min(y1, y2), max(y1, y2) + 1):
-                for offset in range(-width//2, width//2 + 1):
-                    road_x = x1 + offset
-                    if 0 <= road_x < self.width and 0 <= y < self.height:
-                        # Don't overwrite buildings
-                        if tiles[y][road_x] not in [self.TILE_WALL, self.TILE_DOOR, self.TILE_BRICK]:
-                            tiles[y][road_x] = road_tile
-        else:  # Horizontal road
-            for x in range(min(x1, x2), max(x1, x2) + 1):
-                for offset in range(-width//2, width//2 + 1):
-                    road_y = y1 + offset
-                    if 0 <= x < self.width and 0 <= road_y < self.height:
-                        # Don't overwrite buildings
-                        if tiles[road_y][x] not in [self.TILE_WALL, self.TILE_DOOR, self.TILE_BRICK]:
-                            tiles[road_y][x] = road_tile
-    
-    def _create_diagonal_road(self, tiles: List[List[int]], start_x: int, start_y: int, 
-                            settlement_width: int, settlement_height: int, 
-                            road_spec: Tuple[float, float, float, float], 
-                            road_tile: int) -> None:
-        """Create a diagonal road"""
-        x1 = start_x + int(road_spec[0] * settlement_width)
-        y1 = start_y + int(road_spec[1] * settlement_height)
-        x2 = start_x + int(road_spec[2] * settlement_width)
-        y2 = start_y + int(road_spec[3] * settlement_height)
-        
-        # Use Bresenham's line algorithm for diagonal roads
-        dx = abs(x2 - x1)
-        dy = abs(y2 - y1)
-        x, y = x1, y1
-        x_inc = 1 if x1 < x2 else -1
-        y_inc = 1 if y1 < y2 else -1
-        error = dx - dy
-        
-        while True:
-            if 0 <= x < self.width and 0 <= y < self.height:
-                # Don't overwrite buildings
-                if tiles[y][x] not in [self.TILE_WALL, self.TILE_DOOR, self.TILE_BRICK]:
-                    tiles[y][x] = road_tile
+            # Create main horizontal paths
+            for y in range(3, height, max(8, height // 4)):
+                main_paths_y.append(y)
+                for x in range(width):
+                    pathways.append((x, y, path_tile))  # Biome-appropriate path
+                    # Add adjacent tiles for wider paths
+                    if y + 1 < height:
+                        pathways.append((x, y + 1, path_tile))
             
-            if x == x2 and y == y2:
-                break
+            # Create main vertical paths
+            for x in range(3, width, max(8, width // 4)):
+                main_paths_x.append(x)
+                for y in range(height):
+                    pathways.append((x, y, path_tile))  # Biome-appropriate path
+                    # Add adjacent tiles for wider paths
+                    if x + 1 < width:
+                        pathways.append((x + 1, y, path_tile))
+            
+            # Connect buildings to nearest main paths
+            for building in buildings:
+                building_center_x = building.x + building.template.width // 2
+                building_center_y = building.y + building.template.height // 2
                 
-            e2 = 2 * error
-            if e2 > -dy:
-                error -= dy
-                x += x_inc
-            if e2 < dx:
-                error += dx
-                y += y_inc
-    
-    def _add_architectural_details(self, tiles: List[List[int]], start_x: int, start_y: int, 
-                                 pattern: SettlementPattern, biome: str, settlement_random: random.Random) -> None:
-        """Add biome-specific architectural details"""
-        # Add fountains, statues, gardens, etc. based on biome
-        center_x = start_x + pattern.width // 2
-        center_y = start_y + pattern.height // 2
+                # Find nearest main path
+                nearest_path_x = min(main_paths_x, key=lambda px: abs(px - building_center_x), default=building_center_x)
+                nearest_path_y = min(main_paths_y, key=lambda py: abs(py - building_center_y), default=building_center_y)
+                
+                # Connect to nearest vertical path
+                for x in range(min(building_center_x, nearest_path_x), max(building_center_x, nearest_path_x) + 1):
+                    pathways.append((x, building_center_y, path_tile))
+                
+                # Connect to nearest horizontal path
+                for y in range(min(building_center_y, nearest_path_y), max(building_center_y, nearest_path_y) + 1):
+                    pathways.append((building_center_x, y, path_tile))
         
-        if biome == 'DESERT':
-            # Add oasis or water feature
-            self._add_water_feature(tiles, center_x, center_y, 2)
-        elif biome == 'FOREST':
-            # Add garden areas
-            self._add_garden_areas(tiles, start_x, start_y, pattern.width, pattern.height, settlement_random)
-        elif biome == 'SNOW':
-            # Add fire pits or warming areas
-            self._add_warming_areas(tiles, center_x, center_y)
-        elif biome == 'SWAMP':
-            # Add raised walkways
-            self._add_raised_walkways(tiles, start_x, start_y, pattern.width, pattern.height, settlement_random)
-    
-    def _add_water_feature(self, tiles: List[List[int]], center_x: int, center_y: int, radius: int) -> None:
-        """Add a water feature like a fountain or oasis"""
-        for y in range(center_y - radius, center_y + radius + 1):
-            for x in range(center_x - radius, center_x + radius + 1):
-                if 0 <= x < self.width and 0 <= y < self.height:
-                    distance = math.sqrt((x - center_x)**2 + (y - center_y)**2)
-                    if distance <= radius:
-                        # Don't overwrite buildings
-                        if tiles[y][x] not in [self.TILE_WALL, self.TILE_DOOR, self.TILE_BRICK]:
-                            tiles[y][x] = self.TILE_WATER
-    
-    def _add_garden_areas(self, tiles: List[List[int]], start_x: int, start_y: int, 
-                         width: int, height: int, settlement_random: random.Random) -> None:
-        """Add small garden areas throughout the settlement"""
-        for _ in range(3):  # Add 3 small gardens
-            garden_x = start_x + settlement_random.randint(2, width - 4)
-            garden_y = start_y + settlement_random.randint(2, height - 4)
+        elif layout.path_style == "radial":
+            # Radial pathways from center
+            center_x, center_y = width // 2, height // 2
             
-            for y in range(garden_y, garden_y + 2):
-                for x in range(garden_x, garden_x + 2):
-                    if 0 <= x < self.width and 0 <= y < self.height:
-                        # Don't overwrite buildings or roads
-                        if tiles[y][x] == self.TILE_DIRT:
-                            tiles[y][x] = self.TILE_GRASS
+            # Create central plaza area
+            plaza_size = 4
+            for y in range(center_y - plaza_size, center_y + plaza_size):
+                for x in range(center_x - plaza_size, center_x + plaza_size):
+                    if 0 <= x < width and 0 <= y < height:
+                        pathways.append((x, y, plaza_tile))  # Biome-appropriate plaza
+            
+            # Add radial spokes to buildings
+            for building in buildings:
+                building_center_x = building.x + building.template.width // 2
+                building_center_y = building.y + building.template.height // 2
+                
+                # Create path from center to building
+                dx = building_center_x - center_x
+                dy = building_center_y - center_y
+                distance = math.sqrt(dx*dx + dy*dy)
+                
+                if distance > 0:
+                    steps = int(distance)
+                    for step in range(steps):
+                        t = step / max(1, steps - 1)
+                        x = int(center_x + t * dx)
+                        y = int(center_y + t * dy)
+                        if 0 <= x < width and 0 <= y < height:
+                            pathways.append((x, y, path_tile))  # Biome-appropriate path
+            
+            # Add concentric rings
+            for radius in range(8, min(width, height) // 2, 6):
+                circumference = int(2 * math.pi * radius)
+                for i in range(0, circumference, 2):
+                    angle = (2 * math.pi * i) / circumference
+                    x = int(center_x + radius * math.cos(angle))
+                    y = int(center_y + radius * math.sin(angle))
+                    if 0 <= x < width and 0 <= y < height:
+                        pathways.append((x, y, path_tile))  # Biome-appropriate path
+        
+        elif layout.path_style == "linear":
+            # Linear main path with connections
+            if width > height:  # Horizontal main path
+                main_y = height // 2
+                # Create wide main path
+                for x in range(width):
+                    pathways.append((x, main_y, path_tile))  # Biome-appropriate path
+                    if main_y + 1 < height:
+                        pathways.append((x, main_y + 1, path_tile))
+                    if main_y - 1 >= 0:
+                        pathways.append((x, main_y - 1, path_tile))
+                
+                # Connect buildings to main path
+                for building in buildings:
+                    building_center_x = building.x + building.template.width // 2
+                    building_center_y = building.y + building.template.height // 2
+                    
+                    # Create perpendicular connection
+                    for y in range(min(building_center_y, main_y), max(building_center_y, main_y) + 1):
+                        pathways.append((building_center_x, y, path_tile))
+            else:  # Vertical main path
+                main_x = width // 2
+                # Create wide main path
+                for y in range(height):
+                    pathways.append((main_x, y, path_tile))  # Biome-appropriate path
+                    if main_x + 1 < width:
+                        pathways.append((main_x + 1, y, path_tile))
+                    if main_x - 1 >= 0:
+                        pathways.append((main_x - 1, y, path_tile))
+                
+                # Connect buildings to main path
+                for building in buildings:
+                    building_center_x = building.x + building.template.width // 2
+                    building_center_y = building.y + building.template.height // 2
+                    
+                    # Create perpendicular connection
+                    for x in range(min(building_center_x, main_x), max(building_center_x, main_x) + 1):
+                        pathways.append((x, building_center_y, path_tile))
+        
+        elif layout.path_style == "organic":
+            # Organic pathways with natural flow
+            # Create a main gathering area
+            center_x, center_y = width // 2, height // 2
+            for y in range(center_y - 2, center_y + 3):
+                for x in range(center_x - 2, center_x + 3):
+                    if 0 <= x < width and 0 <= y < height:
+                        pathways.append((x, y, ground_tile))  # Natural gathering area
+            
+            # Connect buildings with organic paths
+            for i, building1 in enumerate(buildings):
+                building1_center_x = building1.x + building1.template.width // 2
+                building1_center_y = building1.y + building1.template.height // 2
+                
+                # Connect to center
+                self._add_organic_path(pathways, building1_center_x, building1_center_y, center_x, center_y, width, height, ground_tile)
+                
+                # Connect to nearby buildings
+                for j, building2 in enumerate(buildings[i+1:], i+1):
+                    building2_center_x = building2.x + building2.template.width // 2
+                    building2_center_y = building2.y + building2.template.height // 2
+                    
+                    distance = math.sqrt((building2_center_x - building1_center_x)**2 + (building2_center_y - building1_center_y)**2)
+                    
+                    # Connect nearby buildings
+                    if distance < 20:
+                        self._add_organic_path(pathways, building1_center_x, building1_center_y, 
+                                             building2_center_x, building2_center_y, width, height, ground_tile)
+        
+        # Remove duplicates and return
+        unique_pathways = list(set(pathways))
+        print(f"    🛤️  Generated {len(unique_pathways)} pathway tiles using {layout.path_style} style for {biome}")
+        return unique_pathways
     
-    def _add_warming_areas(self, tiles: List[List[int]], center_x: int, center_y: int) -> None:
-        """Add warming areas like fire pits"""
-        if 0 <= center_x < self.width and 0 <= center_y < self.height:
-            # Don't overwrite buildings
-            if tiles[center_y][center_x] not in [self.TILE_WALL, self.TILE_DOOR, self.TILE_BRICK]:
-                tiles[center_y][center_x] = self.TILE_STONE  # Fire pit base
-    
-    def _add_raised_walkways(self, tiles: List[List[int]], start_x: int, start_y: int, 
-                           width: int, height: int, settlement_random: random.Random) -> None:
-        """Add raised walkways for swamp settlements"""
-        # Add some stone pathways
-        for _ in range(2):
-            path_y = start_y + settlement_random.randint(2, height - 3)
-            for x in range(start_x + 1, start_x + width - 1):
-                if 0 <= x < self.width and 0 <= path_y < self.height:
-                    if tiles[path_y][x] == self.TILE_SWAMP:
-                        tiles[path_y][x] = self.TILE_STONE
-    
-    # Helper methods for biome-specific tiles
-    def _get_biome_floor_tile(self, biome: str) -> int:
-        """Get appropriate floor tile for biome"""
-        biome_floors = {
-            'DESERT': self.TILE_SAND,
-            'SNOW': self.TILE_SNOW,
-            'FOREST': self.TILE_FOREST_FLOOR,
-            'SWAMP': self.TILE_SWAMP,
-            'PLAINS': self.TILE_DIRT
+    def _get_biome_tiles(self, biome: str) -> Tuple[int, int, int]:
+        """Get appropriate tile types for ground, paths, and plazas based on biome"""
+        biome_tiles = {
+            'plains': (1, 2, 2),       # TILE_DIRT, TILE_STONE, TILE_STONE (no brick for plazas)
+            'forest': (1, 2, 1),       # TILE_DIRT, TILE_STONE, TILE_DIRT
+            'desert': (4, 4, 2),       # TILE_SAND, TILE_SAND, TILE_STONE
+            'snow': (5, 2, 2),         # TILE_SNOW, TILE_STONE, TILE_STONE (no brick for plazas)
+            'swamp': (1, 2, 1),        # TILE_DIRT, TILE_STONE, TILE_DIRT
+            'mountain': (2, 2, 2),     # TILE_STONE, TILE_STONE, TILE_STONE
+            'coast': (4, 2, 2),        # TILE_SAND, TILE_STONE, TILE_STONE (no brick for plazas)
+            'tundra': (5, 2, 2),       # TILE_SNOW, TILE_STONE, TILE_STONE
+            'hills': (1, 2, 2),        # TILE_DIRT, TILE_STONE, TILE_STONE
         }
-        return biome_floors.get(biome, self.TILE_DIRT)
+        
+        return biome_tiles.get(biome.lower(), (1, 2, 2))  # Default to plains (no brick for plazas)
     
-    def _get_biome_interior_tile(self, biome: str) -> int:
-        """Get appropriate interior tile for biome"""
-        # Most interiors use brick, but some biomes might differ
-        return self.TILE_BRICK
+    def _add_organic_path(self, pathways: List[Tuple[int, int, int]], x1: int, y1: int, x2: int, y2: int, 
+                         width: int, height: int, tile_type: int):
+        """Add an organic path between two points"""
+        dx = x2 - x1
+        dy = y2 - y1
+        distance = math.sqrt(dx*dx + dy*dy)
+        
+        if distance > 0:
+            steps = int(distance * 1.5)  # More steps for smoother path
+            for step in range(steps):
+                t = step / max(1, steps - 1)
+                
+                # Add some randomness for organic feel
+                noise_x = int(math.sin(t * math.pi * 4) * 2)
+                noise_y = int(math.cos(t * math.pi * 3) * 2)
+                
+                x = int(x1 + t * dx + noise_x)
+                y = int(y1 + t * dy + noise_y)
+                
+                if 0 <= x < width and 0 <= y < height:
+                    pathways.append((x, y, tile_type))  # Use specified tile type
     
-    def _get_biome_road_tile(self, biome: str) -> int:
-        """Get appropriate road tile for biome"""
-        biome_roads = {
-            'DESERT': self.TILE_SAND,
-            'SNOW': self.TILE_STONE,  # Cleared stone paths in snow
-            'FOREST': self.TILE_DIRT,
-            'SWAMP': self.TILE_STONE,  # Raised stone walkways
-            'PLAINS': self.TILE_STONE
+    def _create_central_feature(self, feature_type: str, width: int, height: int, 
+                              rng: random.Random) -> Dict[str, Any]:
+        """Create a central feature for the settlement"""
+        center_x, center_y = width // 2, height // 2
+        
+        features = {
+            'plaza': {
+                'type': 'plaza',
+                'x': center_x - 3,
+                'y': center_y - 3,
+                'width': 6,
+                'height': 6,
+                'description': 'A central plaza where villagers gather'
+            },
+            'well': {
+                'type': 'well',
+                'x': center_x,
+                'y': center_y,
+                'width': 1,
+                'height': 1,
+                'description': 'A communal well providing fresh water'
+            },
+            'market': {
+                'type': 'market',
+                'x': center_x - 4,
+                'y': center_y - 4,
+                'width': 8,
+                'height': 8,
+                'description': 'A bustling market area with stalls'
+            },
+            'fire_pit': {
+                'type': 'fire_pit',
+                'x': center_x - 1,
+                'y': center_y - 1,
+                'width': 2,
+                'height': 2,
+                'description': 'A central fire pit for warmth and gathering'
+            }
         }
-        return biome_roads.get(biome, self.TILE_STONE)
+        
+        return features.get(feature_type, features['plaza'])
     
-    def _get_window_chance(self, biome: str) -> float:
-        """Get window probability based on biome"""
-        biome_windows = {
-            'DESERT': 0.1,   # Fewer windows in desert (heat)
-            'SNOW': 0.05,    # Very few windows in cold
-            'FOREST': 0.25,  # More windows in pleasant forest
-            'SWAMP': 0.15,   # Some windows but not many
-            'PLAINS': 0.2    # Standard window rate
-        }
-        return biome_windows.get(biome, 0.2)
+    def _assign_npcs_to_buildings(self, buildings: List[SettlementBuilding], 
+                                settlement_type: str, rng: random.Random) -> List[Dict[str, Any]]:
+        """Assign NPCs to buildings based on their templates"""
+        npcs = []
+        
+        for building in buildings:
+            # Get NPC spawns from building template
+            for spawn_data in building.template.npc_spawns:
+                # Calculate position relative to settlement (not world coordinates yet)
+                relative_x = building.x + spawn_data['x']
+                relative_y = building.y + spawn_data['y']
+                
+                npc_data = {
+                    'name': spawn_data.get('name', 'Villager'),
+                    'npc_type': spawn_data.get('npc_type', 'generic'),
+                    'building': building.template.name,
+                    'building_type': building.template.building_type,
+                    'has_shop': spawn_data.get('has_shop', False),
+                    'importance': spawn_data.get('importance', 'medium'),
+                    'x': relative_x,  # Relative to settlement, not world
+                    'y': relative_y,  # Relative to settlement, not world
+                    'dialog': spawn_data.get('dialog', []),
+                    'template_spawn': True  # Flag to indicate this came from a template
+                }
+                npcs.append(npc_data)
+                
+                # Store NPC assignment in building
+                building.npc_assignments.append(npc_data)
+        
+        return npcs
     
-    def _get_architectural_style(self, biome: str) -> str:
-        """Get architectural style name for biome"""
-        styles = {
-            'DESERT': 'Adobe Desert Style',
-            'SNOW': 'Northern Lodge Style',
-            'FOREST': 'Woodland Cottage Style',
-            'SWAMP': 'Stilted Marsh Style',
-            'PLAINS': 'Classic Village Style'
+    def _building_to_dict(self, building: SettlementBuilding, settlement_x: int, settlement_y: int) -> Dict[str, Any]:
+        """Convert SettlementBuilding to dictionary for serialization"""
+        return {
+            'template_name': building.template.name,
+            'building_type': building.template.building_type,
+            'x': settlement_x + building.x,
+            'y': settlement_y + building.y,
+            'width': building.template.width,
+            'height': building.template.height,
+            'rotation': building.rotation,
+            'tiles': building.template.tiles,
+            'npc_spawns': building.template.npc_spawns,
+            'furniture_positions': building.template.furniture_positions,
+            'description': building.template.description
         }
-        return styles.get(biome, 'Generic Style')
+
+
+def main():
+    """Test the enhanced settlement generator"""
+    generator = EnhancedSettlementGenerator(12345)
+    
+    # Test different settlement types
+    test_settlements = [
+        ('VILLAGE', 'plains'),
+        ('TOWN', 'plains'),
+        ('DESERT_OUTPOST', 'desert'),
+        ('FOREST_CAMP', 'forest'),
+        ('FISHING_VILLAGE', 'coast')
+    ]
+    
+    for settlement_type, biome in test_settlements:
+        print(f"\n=== Testing {settlement_type} in {biome} ===")
+        settlement = generator.generate_settlement(0, 0, settlement_type, biome)
+        
+        print(f"Layout: {settlement['layout']} ({settlement['width']}x{settlement['height']})")
+        print(f"Shape: {settlement['shape']}")
+        print(f"Buildings: {settlement['total_buildings']}")
+        print(f"NPCs: {settlement['total_npcs']}")
+        print(f"Shops: {settlement['shops']}")
+        
+        # Show building types
+        building_types = {}
+        for building in settlement['buildings']:
+            btype = building['building_type']
+            building_types[btype] = building_types.get(btype, 0) + 1
+        
+        print("Building types:", ', '.join([f"{k}({v})" for k, v in building_types.items()]))
+
+
+if __name__ == "__main__":
+    main()

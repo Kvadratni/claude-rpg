@@ -1,0 +1,98 @@
+{
+  "name": "small_house",
+  "width": 7,
+  "height": 7,
+  "description": "A small residential house for villagers",
+  "building_type": "house",
+  "tiles": [
+    [
+      1,
+      1,
+      1,
+      6,
+      1,
+      1,
+      1
+    ],
+    [
+      1,
+      4,
+      3,
+      3,
+      3,
+      3,
+      1
+    ],
+    [
+      1,
+      3,
+      3,
+      3,
+      3,
+      3,
+      1
+    ],
+    [
+      6,
+      3,
+      3,
+      3,
+      3,
+      4,
+      6
+    ],
+    [
+      1,
+      4,
+      3,
+      3,
+      3,
+      3,
+      1
+    ],
+    [
+      1,
+      3,
+      3,
+      3,
+      3,
+      3,
+      1
+    ],
+    [
+      1,
+      1,
+      1,
+      2,
+      1,
+      1,
+      1
+    ]
+  ],
+  "npc_spawns": [
+    {
+      "x": 3,
+      "y": 3,
+      "npc_type": "villager",
+      "name": "Resident",
+      "has_shop": false,
+      "dialog": [
+        "Welcome to my home!",
+        "It's a simple life here."
+      ],
+      "importance": "low"
+    }
+  ],
+  "furniture_positions": [
+    [
+      2,
+      2,
+      "bed"
+    ],
+    [
+      4,
+      2,
+      "table"
+    ]
+  ]
+}

@@ -9,6 +9,7 @@ from ..procedural_generation.src.biome_generator import BiomeGenerator
 from ..procedural_generation.src.enhanced_entity_spawner import EnhancedEntitySpawner
 from .chunk import Chunk
 from .settlement_manager import ChunkSettlementManager
+from .enhanced_settlement_generator import EnhancedSettlementGenerator
 from .settlement_patterns import SettlementPatternGenerator
 
 
@@ -26,6 +27,7 @@ class WorldGenerator:
         """
         self.world_seed = world_seed
         self.settlement_manager = ChunkSettlementManager(world_seed)
+        self.enhanced_settlement_generator = EnhancedSettlementGenerator(world_seed)  # Add enhanced generator
         self.pattern_generator = SettlementPatternGenerator()
         random.seed(world_seed)
         
@@ -101,10 +103,15 @@ class WorldGenerator:
         
         settlement_type = self.settlement_manager.should_generate_settlement(chunk_x, chunk_y, biome_counts)
         
-        # STEP 4: SETTLEMENT OVERRIDE - This is the final step that clears and replaces everything
+        # STEP 4: SETTLEMENT OVERRIDE - Use Enhanced Settlement Generator with Building Templates
         if settlement_type:
-            print(f"  🏘️  Generating {settlement_type} settlement (FINAL OVERRIDE STEP)...")
-            settlement_data = self.settlement_manager.generate_settlement_in_chunk(chunk_x, chunk_y, settlement_type)
+            print(f"  🏘️  Generating {settlement_type} settlement using building templates...")
+            
+            # Use the enhanced settlement generator which supports building templates
+            dominant_biome = max(biome_counts.items(), key=lambda x: x[1])[0].lower()
+            settlement_data = self.enhanced_settlement_generator.generate_settlement(
+                chunk_x, chunk_y, settlement_type, dominant_biome
+            )
             
             # Calculate local settlement coordinates
             start_x, start_y, end_x, end_y = chunk.get_world_bounds()
@@ -113,138 +120,54 @@ class WorldGenerator:
             local_settlement_x = settlement_world_x - start_x
             local_settlement_y = settlement_world_y - start_y
             
-            # HARDCORE OVERRIDE: Clear and replace the settlement area completely
-            buildings_placed = self._override_area_with_settlement(chunk, settlement_data, settlement_type)
-            print(f"  🏗️  Settlement override complete: {buildings_placed} buildings placed")
+            # Apply pathways from settlement data FIRST
+            pathways_applied = self._apply_pathways_to_chunk(chunk, settlement_data, local_settlement_x, local_settlement_y)
+            print(f"  🛤️  Applied {pathways_applied} pathway tiles")
             
-            # Add settlement NPCs after area override - FIXED: Place inside actual buildings
+            # Apply central feature from settlement data SECOND
+            central_feature_applied = self._apply_central_feature_to_chunk(chunk, settlement_data, local_settlement_x, local_settlement_y)
+            if central_feature_applied:
+                print(f"  🏛️  Applied central feature: {settlement_data.get('central_feature', {}).get('type', 'unknown')}")
+            
+            # Apply building templates to the chunk THIRD
+            buildings_placed = self._apply_building_templates_to_chunk(chunk, settlement_data, local_settlement_x, local_settlement_y)
+            print(f"  🏗️  Applied {buildings_placed} building templates to chunk")
+            
+            # Spawn furniture from building templates
+            furniture_spawned = self._spawn_furniture_from_templates(chunk, settlement_data, local_settlement_x, local_settlement_y)
+            print(f"  🪑 Spawned {furniture_spawned} furniture pieces from templates")
+            
+            # Add NPCs from building templates
             if 'npcs' in settlement_data:
                 npcs_added = 0
-                
-                # Get settlement pattern for building positions
-                base_pattern = self.pattern_generator.get_pattern(settlement_type)
-                dominant_biome = self._get_dominant_biome_in_area(chunk, local_settlement_x, local_settlement_y, 
-                                                                base_pattern.width, base_pattern.height)
-                current_settlement_pattern = self.pattern_generator.adapt_pattern_to_biome(base_pattern, dominant_biome)
-                
-                # Get the actual buildings that were placed by the pattern
-                building_positions = []
-                if hasattr(current_settlement_pattern, 'get_building_positions'):
-                    for building_info in current_settlement_pattern.get_building_positions():
-                        building_x = local_settlement_x + building_info['x']
-                        building_y = local_settlement_y + building_info['y']
-                        building_width = building_info['width']
-                        building_height = building_info['height']
-                        
-                        # Ensure building is within chunk bounds
-                        if (building_x + building_width <= Chunk.CHUNK_SIZE and 
-                            building_y + building_height <= Chunk.CHUNK_SIZE):
-                            building_positions.append({
-                                'x': building_x,
-                                'y': building_y,
-                                'width': building_width,
-                                'height': building_height,
-                                'center_x': building_x + building_width // 2,
-                                'center_y': building_y + building_height // 2
-                            })
-                
-                print(f"  🏠 Found {len(building_positions)} actual buildings for NPC placement")
-                
-                # Place NPCs inside actual buildings
-                for i, npc_data in enumerate(settlement_data['npcs']):
-                    if i < len(building_positions):
-                        # Place NPC in the center of the corresponding building
-                        building = building_positions[i]
-                        local_npc_x = building['center_x']
-                        local_npc_y = building['center_y']
-                        
-                        # Ensure NPC is within chunk bounds
-                        local_npc_x = max(1, min(Chunk.CHUNK_SIZE - 2, local_npc_x))
-                        local_npc_y = max(1, min(Chunk.CHUNK_SIZE - 2, local_npc_y))
-                        
+                for npc_data in settlement_data['npcs']:
+                    # Convert settlement-relative coordinates to local chunk coordinates
+                    local_npc_x = local_settlement_x + npc_data['x']
+                    local_npc_y = local_settlement_y + npc_data['y']
+                    
+                    # Ensure NPC is within chunk bounds
+                    if 0 <= local_npc_x < Chunk.CHUNK_SIZE and 0 <= local_npc_y < Chunk.CHUNK_SIZE:
                         npc_entity = {
                             'type': 'npc',
                             'name': npc_data['name'],
                             'building': npc_data.get('building', 'Unknown Building'),
+                            'building_type': npc_data.get('building_type', 'generic'),
                             'has_shop': npc_data.get('has_shop', False),
-                            'is_background': npc_data.get('is_background', False),  # Copy is_background flag
+                            'importance': npc_data.get('importance', 'medium'),
+                            'template_spawn': npc_data.get('template_spawn', False),
+                            'ai_ready': True,  # Enable AI for template NPCs
                             'x': local_npc_x,
                             'y': local_npc_y,
-                            'world_x': start_x + local_npc_x,  # Add world coordinates for chunked_level.py
+                            'world_x': start_x + local_npc_x,
                             'world_y': start_y + local_npc_y,
-                            'id': f"npc_{npc_data['name'].lower().replace(' ', '_')}_{chunk_x}_{chunk_y}"
+                            'id': f"npc_{npc_data['name'].lower().replace(' ', '_')}_{chunk_x}_{chunk_y}",
+                            'dialog': npc_data.get('dialog', [])
                         }
                         chunk.add_entity(npc_entity)
                         npcs_added += 1
-                        
-                        print(f"    👤 Placed {npc_data['name']} inside building at ({local_npc_x}, {local_npc_y})")
-                    else:
-                        # If we have more NPCs than buildings, place them near the settlement center
-                        center_x = local_settlement_x + current_settlement_pattern.width // 2
-                        center_y = local_settlement_y + current_settlement_pattern.height // 2
-                        
-                        # Add some randomness around the center
-                        npc_random = random.Random(hash((self.world_seed, chunk_x, chunk_y, i)))
-                        offset_x = npc_random.randint(-3, 3)
-                        offset_y = npc_random.randint(-3, 3)
-                        
-                        local_npc_x = max(1, min(Chunk.CHUNK_SIZE - 2, center_x + offset_x))
-                        local_npc_y = max(1, min(Chunk.CHUNK_SIZE - 2, center_y + offset_y))
-                        
-                        npc_entity = {
-                            'type': 'npc',
-                            'name': npc_data['name'],
-                            'building': 'Town Square',
-                            'has_shop': npc_data.get('has_shop', False),
-                            'is_background': npc_data.get('is_background', False),  # Copy is_background flag
-                            'x': local_npc_x,
-                            'y': local_npc_y,
-                            'world_x': start_x + local_npc_x,  # Add world coordinates for chunked_level.py
-                            'world_y': start_y + local_npc_y,
-                            'id': f"npc_{npc_data['name'].lower().replace(' ', '_')}_{chunk_x}_{chunk_y}"
-                        }
-                        chunk.add_entity(npc_entity)
-                        npcs_added += 1
-                        
-                        print(f"    👤 Placed {npc_data['name']} near town center at ({local_npc_x}, {local_npc_y})")
+                        print(f"    👤 Placed {npc_data['name']} from template at ({local_npc_x}, {local_npc_y})")
                 
-                print(f"  👥 Added {npcs_added} NPCs to settlement (placed inside buildings)")
-                
-                # Add some guard NPCs outside buildings for atmosphere
-                if settlement_type in ['VILLAGE', 'TOWN'] and len(building_positions) > 2:
-                    guards_to_add = min(2, len(building_positions) // 3)  # 1 guard per 3 buildings, max 2
-                    guard_random = random.Random(hash((self.world_seed, chunk_x, chunk_y, "guards")))
-                    
-                    for guard_num in range(guards_to_add):
-                        # Place guard near a random building entrance
-                        building = guard_random.choice(building_positions)
-                        
-                        # Place guard outside the building (near door area)
-                        guard_x = building['x'] + building['width'] // 2
-                        guard_y = building['y'] + building['height'] + 1  # Just outside the building
-                        
-                        # Ensure guard is within chunk bounds
-                        guard_x = max(1, min(Chunk.CHUNK_SIZE - 2, guard_x))
-                        guard_y = max(1, min(Chunk.CHUNK_SIZE - 2, guard_y))
-                        
-                        guard_entity = {
-                            'type': 'npc',
-                            'name': 'Guard',  # Use simple name that maps to village_guard_sprite
-                            'building': 'Guard Post',
-                            'has_shop': False,
-                            'is_background': False,  # Guards are interactive NPCs
-                            'x': guard_x,
-                            'y': guard_y,
-                            'world_x': start_x + guard_x,  # Add world coordinates for chunked_level.py
-                            'world_y': start_y + guard_y,
-                            'id': f"guard_{guard_num}_{chunk_x}_{chunk_y}"
-                        }
-                        chunk.add_entity(guard_entity)
-                        npcs_added += 1
-                        
-                        print(f"    🛡️  Placed guard outside building at ({guard_x}, {guard_y})")
-                    
-                    print(f"  🛡️  Added {guards_to_add} guard NPCs outside buildings")
+                print(f"  👥 Added {npcs_added} NPCs from building templates")
         else:
             print(f"  ❌ No settlement for chunk ({chunk_x}, {chunk_y})")
         
@@ -253,6 +176,349 @@ class WorldGenerator:
         
         print(f"🎉 Chunk ({chunk_x}, {chunk_y}) generation complete!")
         return chunk
+    
+    def _apply_building_templates_to_chunk(self, chunk: Chunk, settlement_data: Dict[str, Any], 
+                                         local_x: int, local_y: int) -> int:
+        """
+        Apply building templates from settlement data to the chunk
+        
+        Args:
+            chunk: The chunk to modify
+            settlement_data: Settlement data from enhanced generator
+            local_x, local_y: Local settlement position in chunk
+            
+        Returns:
+            Number of buildings successfully placed
+        """
+        buildings_placed = 0
+        
+        # Clear the settlement area first (but preserve some base terrain)
+        settlement_width = settlement_data.get('width', 20)
+        settlement_height = settlement_data.get('height', 20)
+        self._clear_settlement_area_selectively(chunk, local_x, local_y, settlement_width, settlement_height)
+        
+        # Apply each building template
+        for building_data in settlement_data.get('buildings', []):
+            # building_data['x'] and ['y'] are already world coordinates from _building_to_dict
+            # Convert directly to chunk coordinates
+            start_x, start_y, end_x, end_y = chunk.get_world_bounds()
+            chunk_x = building_data['x'] - start_x
+            chunk_y = building_data['y'] - start_y
+            
+            # Ensure building fits in chunk
+            building_width = building_data['width']
+            building_height = building_data['height']
+            
+            if (chunk_x + building_width <= Chunk.CHUNK_SIZE and 
+                chunk_y + building_height <= Chunk.CHUNK_SIZE and
+                chunk_x >= 0 and chunk_y >= 0):
+                
+                # Apply building template tiles
+                building_tiles = building_data.get('tiles', [])
+                if building_tiles:
+                    tiles_placed = self._apply_building_template_tiles(
+                        chunk, chunk_x, chunk_y, building_tiles
+                    )
+                    if tiles_placed > 0:
+                        buildings_placed += 1
+                        print(f"    🏠 Applied {building_data['template_name']} template at ({chunk_x}, {chunk_y}) - {tiles_placed} tiles")
+                else:
+                    # Fallback to basic building if no template tiles
+                    settlement_random = random.Random(hash((self.world_seed, chunk.chunk_x, chunk.chunk_y, building_data['template_name'])))
+                    tiles_placed = self._create_building_on_chunk(chunk, chunk_x, chunk_y, 
+                                                                building_width, building_height, settlement_random)
+                    if tiles_placed > 0:
+                        buildings_placed += 1
+                        print(f"    🏠 Created fallback building at ({chunk_x}, {chunk_y}) - {tiles_placed} tiles")
+        
+        return buildings_placed
+    
+    def _spawn_furniture_from_templates(self, chunk: Chunk, settlement_data: Dict[str, Any], 
+                                      local_x: int, local_y: int) -> int:
+        """
+        Spawn furniture from building templates
+        
+        Args:
+            chunk: The chunk to add furniture to
+            settlement_data: Settlement data from enhanced generator
+            local_x, local_y: Local settlement position in chunk
+            
+        Returns:
+            Number of furniture pieces spawned
+        """
+        furniture_spawned = 0
+        
+        # Get chunk bounds for coordinate conversion
+        start_x, start_y, end_x, end_y = chunk.get_world_bounds()
+        
+        # Process each building's furniture
+        for building_data in settlement_data.get('buildings', []):
+            # building_data['x'] and ['y'] are world coordinates
+            # Convert to chunk coordinates
+            chunk_building_x = building_data['x'] - start_x
+            chunk_building_y = building_data['y'] - start_y
+            
+            # Get furniture positions from building template
+            furniture_positions = building_data.get('furniture_positions', [])
+            
+            for furniture_pos in furniture_positions:
+                if len(furniture_pos) >= 3:
+                    rel_x, rel_y, furniture_type = furniture_pos[:3]
+                    
+                    # Calculate world position
+                    world_x = building_data['x'] + rel_x
+                    world_y = building_data['y'] + rel_y
+                    
+                    # Convert to chunk-local coordinates
+                    local_furniture_x = world_x - start_x
+                    local_furniture_y = world_y - start_y
+                    
+                    # Ensure furniture is within chunk bounds
+                    if (0 <= local_furniture_x < Chunk.CHUNK_SIZE and 
+                        0 <= local_furniture_y < Chunk.CHUNK_SIZE):
+                        
+                        # Create furniture entity data
+                        furniture_entity = {
+                            'type': 'furniture',
+                            'furniture_type': furniture_type,
+                            'x': local_furniture_x,
+                            'y': local_furniture_y,
+                            'world_x': world_x,
+                            'world_y': world_y,
+                            'id': f"furniture_{furniture_type}_{world_x}_{world_y}",
+                            'template_spawn': True
+                        }
+                        
+                        # Add to chunk entities
+                        chunk.add_entity(furniture_entity)
+                        furniture_spawned += 1
+                        print(f"    🪑 Spawned {furniture_type} at chunk ({local_furniture_x}, {local_furniture_y}) / world ({world_x}, {world_y})")
+        
+        return furniture_spawned
+    
+    def _apply_pathways_to_chunk(self, chunk: Chunk, settlement_data: Dict[str, Any], 
+                                local_x: int, local_y: int) -> int:
+        """
+        Apply pathways from settlement data to the chunk
+        
+        Args:
+            chunk: The chunk to modify
+            settlement_data: Settlement data from enhanced generator
+            local_x, local_y: Local settlement position in chunk
+            
+        Returns:
+            Number of pathway tiles applied
+        """
+        pathways_applied = 0
+        
+        # Get chunk bounds for coordinate conversion
+        start_x, start_y, end_x, end_y = chunk.get_world_bounds()
+        
+        # Get pathways from settlement data
+        pathways = settlement_data.get('pathways', [])
+        
+        for pathway_data in pathways:
+            # Handle both old format (x, y) and new format (x, y, tile_type)
+            if len(pathway_data) == 2:
+                pathway_x, pathway_y = pathway_data
+                tile_type = 2  # Default to TILE_STONE
+            elif len(pathway_data) == 3:
+                pathway_x, pathway_y, tile_type = pathway_data
+            else:
+                continue  # Skip invalid pathway data
+            
+            # Convert settlement-relative coordinates to world coordinates
+            world_x = settlement_data['world_x'] + pathway_x
+            world_y = settlement_data['world_y'] + pathway_y
+            
+            # Convert to chunk-local coordinates
+            local_pathway_x = world_x - start_x
+            local_pathway_y = world_y - start_y
+            
+            # Ensure pathway is within chunk bounds
+            if (0 <= local_pathway_x < Chunk.CHUNK_SIZE and 
+                0 <= local_pathway_y < Chunk.CHUNK_SIZE):
+                
+                # Apply pathway tile with specified type
+                chunk.set_tile(local_pathway_x, local_pathway_y, tile_type)
+                pathways_applied += 1
+        
+        return pathways_applied
+    
+    def _apply_central_feature_to_chunk(self, chunk: Chunk, settlement_data: Dict[str, Any], 
+                                      local_x: int, local_y: int) -> bool:
+        """
+        Apply central feature from settlement data to the chunk
+        
+        Args:
+            chunk: The chunk to modify
+            settlement_data: Settlement data from enhanced generator
+            local_x, local_y: Local settlement position in chunk
+            
+        Returns:
+            True if central feature was applied, False otherwise
+        """
+        central_feature = settlement_data.get('central_feature')
+        if not central_feature:
+            return False
+        
+        # Get chunk bounds for coordinate conversion
+        start_x, start_y, end_x, end_y = chunk.get_world_bounds()
+        
+        # Convert settlement-relative coordinates to world coordinates
+        feature_world_x = settlement_data['world_x'] + central_feature['x']
+        feature_world_y = settlement_data['world_y'] + central_feature['y']
+        
+        # Convert to chunk-local coordinates
+        local_feature_x = feature_world_x - start_x
+        local_feature_y = feature_world_y - start_y
+        
+        feature_width = central_feature['width']
+        feature_height = central_feature['height']
+        feature_type = central_feature['type']
+        
+        # Apply central feature tiles
+        tiles_applied = 0
+        for y in range(feature_height):
+            for x in range(feature_width):
+                chunk_x = local_feature_x + x
+                chunk_y = local_feature_y + y
+                
+                # Ensure within chunk bounds
+                if (0 <= chunk_x < Chunk.CHUNK_SIZE and 
+                    0 <= chunk_y < Chunk.CHUNK_SIZE):
+                    
+                    # Choose tile type based on feature type
+                    if feature_type == 'plaza':
+                        chunk.set_tile(chunk_x, chunk_y, 2)  # TILE_STONE
+                    elif feature_type == 'well':
+                        chunk.set_tile(chunk_x, chunk_y, 3)  # TILE_WATER
+                    elif feature_type == 'market':
+                        chunk.set_tile(chunk_x, chunk_y, 2)  # TILE_STONE (not brick - avoid roof rendering)
+                    elif feature_type == 'fire_pit':
+                        chunk.set_tile(chunk_x, chunk_y, 1)  # TILE_DIRT
+                    else:
+                        chunk.set_tile(chunk_x, chunk_y, 2)  # Default to stone
+                    
+                    tiles_applied += 1
+        
+        return tiles_applied > 0
+    
+    def _apply_building_template_tiles(self, chunk: Chunk, start_x: int, start_y: int, 
+                                     template_tiles: List[List[int]]) -> int:
+        """
+        Apply building template tiles to the chunk with improved wall mapping
+        
+        Args:
+            chunk: Chunk to modify
+            start_x, start_y: Starting position for the building
+            template_tiles: 2D array of tile types from template
+            
+        Returns:
+            Number of tiles placed
+        """
+        tiles_placed = 0
+        template_height = len(template_tiles)
+        template_width = len(template_tiles[0]) if template_tiles else 0
+        
+        for y, row in enumerate(template_tiles):
+            for x, tile_value in enumerate(row):
+                chunk_x = start_x + x
+                chunk_y = start_y + y
+                
+                if (0 <= chunk_x < Chunk.CHUNK_SIZE and 
+                    0 <= chunk_y < Chunk.CHUNK_SIZE and
+                    tile_value != 0):  # Don't place empty tiles
+                    
+                    # Map template tile types to chunk tile types with position awareness
+                    chunk_tile_type = self._map_template_tile_to_chunk_tile_with_position(
+                        tile_value, x, y, template_width, template_height
+                    )
+                    chunk.set_tile(chunk_x, chunk_y, chunk_tile_type)
+                    tiles_placed += 1
+        
+        return tiles_placed
+    
+    def _map_template_tile_to_chunk_tile_with_position(self, template_tile: int, x: int, y: int, 
+                                                      width: int, height: int) -> int:
+        """
+        Map building template tile types to chunk tile types with position awareness
+        
+        Template tile types:
+        0 = EMPTY, 1 = WALL, 2 = DOOR, 3 = FLOOR, 4 = FURNITURE, 5 = NPC_SPAWN, 6 = WINDOW
+        
+        Chunk tile types (improved mapping):
+        4 = TILE_WALL, 5 = TILE_DOOR, 6-9 = TILE_WALL_CORNER_*, 10-11 = TILE_WALL_H/V, 13 = TILE_BRICK, 14/15 = TILE_WALL_WINDOW_*
+        """
+        if template_tile == 0:
+            return 0  # EMPTY
+        elif template_tile == 1:  # WALL - use position-aware mapping
+            # Determine position within building
+            is_top_edge = (y == 0)
+            is_bottom_edge = (y == height - 1)
+            is_left_edge = (x == 0)
+            is_right_edge = (x == width - 1)
+            
+            # Map to appropriate wall tile based on position
+            if is_top_edge and is_left_edge:
+                return 6  # TILE_WALL_CORNER_TL
+            elif is_top_edge and is_right_edge:
+                return 7  # TILE_WALL_CORNER_TR
+            elif is_bottom_edge and is_left_edge:
+                return 8  # TILE_WALL_CORNER_BL
+            elif is_bottom_edge and is_right_edge:
+                return 9  # TILE_WALL_CORNER_BR
+            elif is_top_edge or is_bottom_edge:
+                return 10  # TILE_WALL_HORIZONTAL
+            elif is_left_edge or is_right_edge:
+                return 11  # TILE_WALL_VERTICAL
+            else:
+                return 4  # TILE_WALL (interior wall)
+        elif template_tile == 2:
+            return 5  # DOOR -> TILE_DOOR
+        elif template_tile == 3:
+            return 13  # FLOOR -> TILE_BRICK
+        elif template_tile == 4:
+            return 13  # FURNITURE -> TILE_BRICK (furniture rendered separately)
+        elif template_tile == 5:
+            return 13  # NPC_SPAWN -> TILE_BRICK (NPC placed separately)
+        elif template_tile == 6:  # WINDOW - use position-aware mapping
+            # Determine if this is a horizontal or vertical wall
+            is_top_edge = (y == 0)
+            is_bottom_edge = (y == height - 1)
+            is_left_edge = (x == 0)
+            is_right_edge = (x == width - 1)
+            
+            if is_top_edge or is_bottom_edge:
+                return 14  # TILE_WALL_WINDOW_HORIZONTAL
+            elif is_left_edge or is_right_edge:
+                return 15  # TILE_WALL_WINDOW_VERTICAL
+            else:
+                return 14  # Default to horizontal
+        else:
+            return 4  # Default to wall
+    
+    def _map_template_tile_to_chunk_tile(self, template_tile: int) -> int:
+        """
+        Map building template tile types to chunk tile types
+        
+        Template tile types:
+        0 = EMPTY, 1 = WALL, 2 = DOOR, 3 = FLOOR, 4 = FURNITURE, 5 = NPC_SPAWN, 6 = WINDOW
+        
+        Chunk tile types:
+        4 = TILE_WALL, 5 = TILE_DOOR, 13 = TILE_BRICK (floor), 14/15 = TILE_WALL_WINDOW_*
+        """
+        tile_mapping = {
+            0: 0,   # EMPTY -> EMPTY (don't place)
+            1: 4,   # WALL -> TILE_WALL
+            2: 5,   # DOOR -> TILE_DOOR
+            3: 13,  # FLOOR -> TILE_BRICK
+            4: 13,  # FURNITURE -> TILE_BRICK (furniture rendered separately)
+            5: 13,  # NPC_SPAWN -> TILE_BRICK (NPC placed separately)
+            6: 14   # WINDOW -> TILE_WALL_WINDOW_HORIZONTAL (simplified)
+        }
+        
+        return tile_mapping.get(template_tile, 4)  # Default to wall
     
     def _override_area_with_settlement(self, chunk: Chunk, settlement_data: Dict[str, Any], settlement_type: str) -> int:
         """
@@ -388,6 +654,27 @@ class WorldGenerator:
             chunk.entities.remove(entity)
         
         print(f"    🧹 Cleared {len(entities_to_remove)} entities from settlement area")
+    
+    def _clear_settlement_area_selectively(self, chunk: Chunk, x: int, y: int, width: int, height: int):
+        """Clear entities from settlement area but preserve some terrain features"""
+        # Remove any entities that fall within the settlement area
+        entities_to_remove = []
+        
+        for entity in chunk.entities:
+            entity_x = entity.get('x', 0)
+            entity_y = entity.get('y', 0)
+            
+            # Check if entity is within settlement bounds
+            if (x <= entity_x < x + width and y <= entity_y < y + height):
+                # Only remove objects and enemies, keep NPCs and furniture if they exist
+                if entity.get('type') in ['object', 'enemy']:
+                    entities_to_remove.append(entity)
+        
+        # Remove the entities
+        for entity in entities_to_remove:
+            chunk.entities.remove(entity)
+        
+        print(f"    🧹 Selectively cleared {len(entities_to_remove)} entities from settlement area")
     
     def get_chunk_seed(self, chunk_x: int, chunk_y: int) -> int:
         """Get deterministic seed for a specific chunk"""

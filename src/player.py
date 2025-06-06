@@ -210,6 +210,10 @@ class Player:
     def handle_input(self, keys, level=None):
         """Handle player input"""
         self.movement_system.handle_input(keys, level)
+        
+        # Handle furniture interaction with E key
+        if keys[pygame.K_e] and level and hasattr(level, 'handle_furniture_interaction'):
+            level.handle_furniture_interaction(self)
     
     def recalculate_path(self, level):
         """Recalculate path to target"""
