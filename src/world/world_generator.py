@@ -394,7 +394,7 @@ class WorldGenerator:
                     elif feature_type == 'well':
                         chunk.set_tile(chunk_x, chunk_y, 3)  # TILE_WATER
                     elif feature_type == 'market':
-                        chunk.set_tile(chunk_x, chunk_y, 13)  # TILE_BRICK
+                        chunk.set_tile(chunk_x, chunk_y, 2)  # TILE_STONE (not brick - avoid roof rendering)
                     elif feature_type == 'fire_pit':
                         chunk.set_tile(chunk_x, chunk_y, 1)  # TILE_DIRT
                     else:

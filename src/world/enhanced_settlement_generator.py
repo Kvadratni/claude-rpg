@@ -666,18 +666,18 @@ class EnhancedSettlementGenerator:
     def _get_biome_tiles(self, biome: str) -> Tuple[int, int, int]:
         """Get appropriate tile types for ground, paths, and plazas based on biome"""
         biome_tiles = {
-            'plains': (1, 2, 13),      # TILE_DIRT, TILE_STONE, TILE_BRICK
+            'plains': (1, 2, 2),       # TILE_DIRT, TILE_STONE, TILE_STONE (no brick for plazas)
             'forest': (1, 2, 1),       # TILE_DIRT, TILE_STONE, TILE_DIRT
             'desert': (4, 4, 2),       # TILE_SAND, TILE_SAND, TILE_STONE
-            'snow': (5, 2, 13),        # TILE_SNOW, TILE_STONE, TILE_BRICK
+            'snow': (5, 2, 2),         # TILE_SNOW, TILE_STONE, TILE_STONE (no brick for plazas)
             'swamp': (1, 2, 1),        # TILE_DIRT, TILE_STONE, TILE_DIRT
-            'mountain': (2, 2, 13),    # TILE_STONE, TILE_STONE, TILE_BRICK
-            'coast': (4, 2, 13),       # TILE_SAND, TILE_STONE, TILE_BRICK
+            'mountain': (2, 2, 2),     # TILE_STONE, TILE_STONE, TILE_STONE
+            'coast': (4, 2, 2),        # TILE_SAND, TILE_STONE, TILE_STONE (no brick for plazas)
             'tundra': (5, 2, 2),       # TILE_SNOW, TILE_STONE, TILE_STONE
             'hills': (1, 2, 2),        # TILE_DIRT, TILE_STONE, TILE_STONE
         }
         
-        return biome_tiles.get(biome.lower(), (1, 2, 13))  # Default to plains
+        return biome_tiles.get(biome.lower(), (1, 2, 2))  # Default to plains (no brick for plazas)
     
     def _add_organic_path(self, pathways: List[Tuple[int, int, int]], x1: int, y1: int, x2: int, y2: int, 
                          width: int, height: int, tile_type: int):
