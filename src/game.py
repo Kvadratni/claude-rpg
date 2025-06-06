@@ -279,6 +279,9 @@ class Game:
         for event in pygame.event.get():
             if event.type == pygame.QUIT:
                 self.running = False
+            elif event.type == pygame.USEREVENT + 1:
+                # Reset cursor after attack
+                pygame.mouse.set_cursor(pygame.SYSTEM_CURSOR_ARROW)
             elif event.type == pygame.VIDEORESIZE:
                 # Handle window resize
                 self.width = max(self.min_width, event.w)
