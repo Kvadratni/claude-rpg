@@ -317,7 +317,16 @@ class WorldGenerator:
         # Get pathways from settlement data
         pathways = settlement_data.get('pathways', [])
         
-        for pathway_x, pathway_y in pathways:
+        for pathway_data in pathways:
+            # Handle both old format (x, y) and new format (x, y, tile_type)
+            if len(pathway_data) == 2:
+                pathway_x, pathway_y = pathway_data
+                tile_type = 2  # Default to TILE_STONE
+            elif len(pathway_data) == 3:
+                pathway_x, pathway_y, tile_type = pathway_data
+            else:
+                continue  # Skip invalid pathway data
+            
             # Convert settlement-relative coordinates to world coordinates
             world_x = settlement_data['world_x'] + pathway_x
             world_y = settlement_data['world_y'] + pathway_y
@@ -330,8 +339,8 @@ class WorldGenerator:
             if (0 <= local_pathway_x < Chunk.CHUNK_SIZE and 
                 0 <= local_pathway_y < Chunk.CHUNK_SIZE):
                 
-                # Apply pathway tile (use stone for pathways)
-                chunk.set_tile(local_pathway_x, local_pathway_y, 2)  # TILE_STONE
+                # Apply pathway tile with specified type
+                chunk.set_tile(local_pathway_x, local_pathway_y, tile_type)
                 pathways_applied += 1
         
         return pathways_applied

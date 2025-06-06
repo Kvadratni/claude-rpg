@@ -197,7 +197,7 @@ class EnhancedSettlementGenerator:
         world_x = chunk_x * chunk_size + settlement_random.randint(margin, chunk_size - actual_width - margin)
         world_y = chunk_y * chunk_size + settlement_random.randint(margin, chunk_size - actual_height - margin)
         
-        print(f"  🏘️  Generating {settlement_type} using {layout_name} layout ({width}x{height})")
+        print(f"  🏘️  Generating {settlement_type} using {layout_name} layout ({width}x{height}) in {biome}")
         
         # Generate building placement areas based on layout shape
         building_areas = self._generate_building_areas(
@@ -209,9 +209,9 @@ class EnhancedSettlementGenerator:
             settlement_type, building_areas, biome, settlement_random
         )
         
-        # Generate pathways
+        # Generate pathways with biome-specific tiles
         pathways = self._generate_pathways(
-            layout, width, height, buildings, settlement_random
+            layout, width, height, buildings, settlement_random, biome
         )
         
         # Create central feature if specified
@@ -245,7 +245,7 @@ class EnhancedSettlementGenerator:
         }
         
         self.placed_settlements[(chunk_x, chunk_y)] = settlement_data
-        print(f"  ✅ Settlement complete: {len(buildings)} buildings, {len(npcs)} NPCs")
+        print(f"  ✅ Settlement complete: {len(buildings)} buildings, {len(npcs)} NPCs, {len(pathways)} ground tiles")
         
         return settlement_data
     
@@ -491,88 +491,215 @@ class EnhancedSettlementGenerator:
         return buildings
     
     def _generate_pathways(self, layout: SettlementLayout, width: int, height: int, 
-                          buildings: List[SettlementBuilding], rng: random.Random) -> List[Tuple[int, int]]:
-        """Generate pathways connecting buildings based on layout style"""
-        pathways = []
+                          buildings: List[SettlementBuilding], rng: random.Random, biome: str = "plains") -> List[Tuple[int, int, int]]:
+        """Generate pathways and ground preparation with tile types"""
+        pathways = []  # List of (x, y, tile_type) tuples
         
+        # Get biome-appropriate tiles
+        ground_tile, path_tile, plaza_tile = self._get_biome_tiles(biome)
+        
+        # First, prepare the ground around buildings
+        for building in buildings:
+            # Create a cleared area around each building
+            padding = 2
+            for y in range(max(0, building.y - padding), min(height, building.y + building.template.height + padding)):
+                for x in range(max(0, building.x - padding), min(width, building.x + building.template.width + padding)):
+                    # Don't overwrite building tiles, just prepare ground
+                    if not (building.x <= x < building.x + building.template.width and 
+                           building.y <= y < building.y + building.template.height):
+                        pathways.append((x, y, ground_tile))  # Biome-appropriate ground
+        
+        # Generate main pathways based on layout style
         if layout.path_style == "grid":
-            # Grid-based pathways
-            # Main horizontal paths
-            for y in range(0, height, 8):
-                for x in range(width):
-                    pathways.append((x, y))
+            # Grid-based pathways with better spacing
+            main_paths_x = []
+            main_paths_y = []
             
-            # Main vertical paths
-            for x in range(0, width, 8):
+            # Create main horizontal paths
+            for y in range(3, height, max(8, height // 4)):
+                main_paths_y.append(y)
+                for x in range(width):
+                    pathways.append((x, y, path_tile))  # Biome-appropriate path
+                    # Add adjacent tiles for wider paths
+                    if y + 1 < height:
+                        pathways.append((x, y + 1, path_tile))
+            
+            # Create main vertical paths
+            for x in range(3, width, max(8, width // 4)):
+                main_paths_x.append(x)
                 for y in range(height):
-                    pathways.append((x, y))
+                    pathways.append((x, y, path_tile))  # Biome-appropriate path
+                    # Add adjacent tiles for wider paths
+                    if x + 1 < width:
+                        pathways.append((x + 1, y, path_tile))
+            
+            # Connect buildings to nearest main paths
+            for building in buildings:
+                building_center_x = building.x + building.template.width // 2
+                building_center_y = building.y + building.template.height // 2
+                
+                # Find nearest main path
+                nearest_path_x = min(main_paths_x, key=lambda px: abs(px - building_center_x), default=building_center_x)
+                nearest_path_y = min(main_paths_y, key=lambda py: abs(py - building_center_y), default=building_center_y)
+                
+                # Connect to nearest vertical path
+                for x in range(min(building_center_x, nearest_path_x), max(building_center_x, nearest_path_x) + 1):
+                    pathways.append((x, building_center_y, path_tile))
+                
+                # Connect to nearest horizontal path
+                for y in range(min(building_center_y, nearest_path_y), max(building_center_y, nearest_path_y) + 1):
+                    pathways.append((building_center_x, y, path_tile))
         
         elif layout.path_style == "radial":
             # Radial pathways from center
             center_x, center_y = width // 2, height // 2
             
-            # Add radial spokes
-            num_spokes = 8
-            for i in range(num_spokes):
-                angle = (2 * math.pi * i) / num_spokes
-                for r in range(0, min(width, height) // 2, 2):
-                    x = int(center_x + r * math.cos(angle))
-                    y = int(center_y + r * math.sin(angle))
+            # Create central plaza area
+            plaza_size = 4
+            for y in range(center_y - plaza_size, center_y + plaza_size):
+                for x in range(center_x - plaza_size, center_x + plaza_size):
                     if 0 <= x < width and 0 <= y < height:
-                        pathways.append((x, y))
+                        pathways.append((x, y, plaza_tile))  # Biome-appropriate plaza
             
-            # Add concentric circles
-            for radius in range(5, min(width, height) // 2, 8):
+            # Add radial spokes to buildings
+            for building in buildings:
+                building_center_x = building.x + building.template.width // 2
+                building_center_y = building.y + building.template.height // 2
+                
+                # Create path from center to building
+                dx = building_center_x - center_x
+                dy = building_center_y - center_y
+                distance = math.sqrt(dx*dx + dy*dy)
+                
+                if distance > 0:
+                    steps = int(distance)
+                    for step in range(steps):
+                        t = step / max(1, steps - 1)
+                        x = int(center_x + t * dx)
+                        y = int(center_y + t * dy)
+                        if 0 <= x < width and 0 <= y < height:
+                            pathways.append((x, y, path_tile))  # Biome-appropriate path
+            
+            # Add concentric rings
+            for radius in range(8, min(width, height) // 2, 6):
                 circumference = int(2 * math.pi * radius)
                 for i in range(0, circumference, 2):
                     angle = (2 * math.pi * i) / circumference
                     x = int(center_x + radius * math.cos(angle))
                     y = int(center_y + radius * math.sin(angle))
                     if 0 <= x < width and 0 <= y < height:
-                        pathways.append((x, y))
+                        pathways.append((x, y, path_tile))  # Biome-appropriate path
         
         elif layout.path_style == "linear":
-            # Linear main path
+            # Linear main path with connections
             if width > height:  # Horizontal main path
                 main_y = height // 2
+                # Create wide main path
                 for x in range(width):
-                    pathways.append((x, main_y))
+                    pathways.append((x, main_y, path_tile))  # Biome-appropriate path
+                    if main_y + 1 < height:
+                        pathways.append((x, main_y + 1, path_tile))
+                    if main_y - 1 >= 0:
+                        pathways.append((x, main_y - 1, path_tile))
                 
                 # Connect buildings to main path
                 for building in buildings:
-                    for y in range(min(building.y, main_y), max(building.y, main_y) + 1):
-                        pathways.append((building.x + building.template.width // 2, y))
+                    building_center_x = building.x + building.template.width // 2
+                    building_center_y = building.y + building.template.height // 2
+                    
+                    # Create perpendicular connection
+                    for y in range(min(building_center_y, main_y), max(building_center_y, main_y) + 1):
+                        pathways.append((building_center_x, y, path_tile))
             else:  # Vertical main path
                 main_x = width // 2
+                # Create wide main path
                 for y in range(height):
-                    pathways.append((main_x, y))
+                    pathways.append((main_x, y, path_tile))  # Biome-appropriate path
+                    if main_x + 1 < width:
+                        pathways.append((main_x + 1, y, path_tile))
+                    if main_x - 1 >= 0:
+                        pathways.append((main_x - 1, y, path_tile))
                 
                 # Connect buildings to main path
                 for building in buildings:
-                    for x in range(min(building.x, main_x), max(building.x, main_x) + 1):
-                        pathways.append((x, building.y + building.template.height // 2))
+                    building_center_x = building.x + building.template.width // 2
+                    building_center_y = building.y + building.template.height // 2
+                    
+                    # Create perpendicular connection
+                    for x in range(min(building_center_x, main_x), max(building_center_x, main_x) + 1):
+                        pathways.append((x, building_center_y, path_tile))
         
         elif layout.path_style == "organic":
-            # Organic pathways connecting building clusters
-            # Simple approach: connect each building to nearby buildings
+            # Organic pathways with natural flow
+            # Create a main gathering area
+            center_x, center_y = width // 2, height // 2
+            for y in range(center_y - 2, center_y + 3):
+                for x in range(center_x - 2, center_x + 3):
+                    if 0 <= x < width and 0 <= y < height:
+                        pathways.append((x, y, ground_tile))  # Natural gathering area
+            
+            # Connect buildings with organic paths
             for i, building1 in enumerate(buildings):
+                building1_center_x = building1.x + building1.template.width // 2
+                building1_center_y = building1.y + building1.template.height // 2
+                
+                # Connect to center
+                self._add_organic_path(pathways, building1_center_x, building1_center_y, center_x, center_y, width, height, ground_tile)
+                
+                # Connect to nearby buildings
                 for j, building2 in enumerate(buildings[i+1:], i+1):
-                    # Calculate distance
-                    dx = building2.x - building1.x
-                    dy = building2.y - building1.y
-                    distance = math.sqrt(dx*dx + dy*dy)
+                    building2_center_x = building2.x + building2.template.width // 2
+                    building2_center_y = building2.y + building2.template.height // 2
+                    
+                    distance = math.sqrt((building2_center_x - building1_center_x)**2 + (building2_center_y - building1_center_y)**2)
                     
                     # Connect nearby buildings
-                    if distance < 15:
-                        # Simple line connection
-                        steps = int(distance)
-                        for step in range(steps):
-                            t = step / max(1, steps - 1)
-                            x = int(building1.x + t * dx)
-                            y = int(building1.y + t * dy)
-                            pathways.append((x, y))
+                    if distance < 20:
+                        self._add_organic_path(pathways, building1_center_x, building1_center_y, 
+                                             building2_center_x, building2_center_y, width, height, ground_tile)
         
-        return list(set(pathways))  # Remove duplicates
+        # Remove duplicates and return
+        unique_pathways = list(set(pathways))
+        print(f"    🛤️  Generated {len(unique_pathways)} pathway tiles using {layout.path_style} style for {biome}")
+        return unique_pathways
+    
+    def _get_biome_tiles(self, biome: str) -> Tuple[int, int, int]:
+        """Get appropriate tile types for ground, paths, and plazas based on biome"""
+        biome_tiles = {
+            'plains': (1, 2, 13),      # TILE_DIRT, TILE_STONE, TILE_BRICK
+            'forest': (1, 2, 1),       # TILE_DIRT, TILE_STONE, TILE_DIRT
+            'desert': (4, 4, 2),       # TILE_SAND, TILE_SAND, TILE_STONE
+            'snow': (5, 2, 13),        # TILE_SNOW, TILE_STONE, TILE_BRICK
+            'swamp': (1, 2, 1),        # TILE_DIRT, TILE_STONE, TILE_DIRT
+            'mountain': (2, 2, 13),    # TILE_STONE, TILE_STONE, TILE_BRICK
+            'coast': (4, 2, 13),       # TILE_SAND, TILE_STONE, TILE_BRICK
+            'tundra': (5, 2, 2),       # TILE_SNOW, TILE_STONE, TILE_STONE
+            'hills': (1, 2, 2),        # TILE_DIRT, TILE_STONE, TILE_STONE
+        }
+        
+        return biome_tiles.get(biome.lower(), (1, 2, 13))  # Default to plains
+    
+    def _add_organic_path(self, pathways: List[Tuple[int, int, int]], x1: int, y1: int, x2: int, y2: int, 
+                         width: int, height: int, tile_type: int):
+        """Add an organic path between two points"""
+        dx = x2 - x1
+        dy = y2 - y1
+        distance = math.sqrt(dx*dx + dy*dy)
+        
+        if distance > 0:
+            steps = int(distance * 1.5)  # More steps for smoother path
+            for step in range(steps):
+                t = step / max(1, steps - 1)
+                
+                # Add some randomness for organic feel
+                noise_x = int(math.sin(t * math.pi * 4) * 2)
+                noise_y = int(math.cos(t * math.pi * 3) * 2)
+                
+                x = int(x1 + t * dx + noise_x)
+                y = int(y1 + t * dy + noise_y)
+                
+                if 0 <= x < width and 0 <= y < height:
+                    pathways.append((x, y, tile_type))  # Use specified tile type
     
     def _create_central_feature(self, feature_type: str, width: int, height: int, 
                               rng: random.Random) -> Dict[str, Any]:

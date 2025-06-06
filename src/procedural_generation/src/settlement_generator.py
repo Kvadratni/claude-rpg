@@ -240,8 +240,12 @@ class SettlementGenerator:
         """
         settlement_width, settlement_height = template_config['size']
         
+        # Add template name to config for helper methods
+        template_config_with_name = template_config.copy()
+        template_config_with_name['name'] = template_name
+        
         # Place the settlement
-        buildings = self.place_settlement_buildings(tiles, x, y, template_config)
+        buildings = self.place_settlement_buildings(tiles, x, y, template_config_with_name)
         
         # Mark area as occupied
         self.occupied_areas.append((x, y, settlement_width, settlement_height))
@@ -271,7 +275,7 @@ class SettlementGenerator:
     def place_settlement_buildings(self, tiles: List[List[int]], start_x: int, start_y: int, 
                                  template_config: Dict) -> List[Dict]:
         """
-        Place buildings for a settlement with improved placement logic and debugging
+        Place buildings for a settlement with proper ground preparation and pathways
         
         Args:
             tiles: 2D list of tile types
@@ -283,17 +287,17 @@ class SettlementGenerator:
         """
         settlement_width, settlement_height = template_config['size']
         
-        # Create smaller stone square in center to leave more room for buildings
-        center_size = min(settlement_width, settlement_height) // 4  # Reduced from // 3 to make even smaller
+        # Step 1: Prepare the settlement ground with biome-appropriate tiles
+        self._prepare_settlement_ground(tiles, start_x, start_y, settlement_width, settlement_height, template_config)
+        
+        # Step 2: Create central feature (plaza, well, market, etc.)
+        center_size = min(settlement_width, settlement_height) // 4
         center_start_x = start_x + (settlement_width - center_size) // 2
         center_start_y = start_y + (settlement_height - center_size) // 2
         
-        for x in range(center_start_x, center_start_x + center_size):
-            for y in range(center_start_y, center_start_y + center_size):
-                if 0 <= x < self.width and 0 <= y < self.height:
-                    tiles[y][x] = 2  # TILE_STONE
+        self._create_central_feature(tiles, center_start_x, center_start_y, center_size, template_config)
         
-        # Place buildings around the center with improved logic
+        # Step 3: Place buildings around the center with improved logic
         buildings = template_config['buildings']
         placed_buildings = []
         
@@ -352,6 +356,14 @@ class SettlementGenerator:
             
             if not placed:
                 print(f"        FAILED to place {building_name} after 100 attempts!")
+        
+        # Step 4: Create pathways connecting buildings to center
+        self._create_pathways(tiles, start_x, start_y, settlement_width, settlement_height, 
+                             center_start_x, center_start_y, center_size, placed_buildings, template_config)
+        
+        # Step 5: Add outdoor furniture and features
+        self._add_outdoor_features(tiles, start_x, start_y, settlement_width, settlement_height, 
+                                  placed_buildings, template_config)
         
         print(f"    Settlement building placement complete: {len(placed_buildings)}/{len(buildings)} buildings placed")
         npc_buildings = sum(1 for b in placed_buildings if b.get('npc'))
@@ -655,3 +667,171 @@ class SettlementGenerator:
             min_distance = min(min_distance, distance)
         
         return min_distance
+    
+    def _prepare_settlement_ground(self, tiles: List[List[int]], start_x: int, start_y: int, 
+                                  width: int, height: int, template_config: Dict) -> None:
+        """
+        Prepare settlement ground with biome-appropriate tiles
+        
+        Args:
+            tiles: 2D list of tile types
+            start_x, start_y: Settlement position
+            width, height: Settlement dimensions
+            template_config: Settlement configuration
+        """
+        # Determine ground tile based on settlement type and biome
+        settlement_name = template_config.get('name', 'VILLAGE')
+        biomes = template_config.get('biomes', ['PLAINS'])
+        
+        # Choose appropriate ground tile
+        if 'DESERT' in biomes:
+            ground_tile = 16  # TILE_SAND
+        elif 'SNOW' in biomes:
+            ground_tile = 17  # TILE_SNOW
+        elif 'FOREST' in biomes:
+            ground_tile = 18  # TILE_FOREST_FLOOR
+        else:
+            ground_tile = 1   # TILE_DIRT (default for plains settlements)
+        
+        # Replace all terrain in settlement area with appropriate ground
+        for y in range(start_y, start_y + height):
+            for x in range(start_x, start_x + width):
+                if 0 <= x < self.width and 0 <= y < self.height:
+                    # Don't replace water tiles
+                    if tiles[y][x] != 3:  # TILE_WATER
+                        tiles[y][x] = ground_tile
+        
+        print(f"    Prepared settlement ground with tile type {ground_tile}")
+    
+    def _create_central_feature(self, tiles: List[List[int]], center_x: int, center_y: int, 
+                               size: int, template_config: Dict) -> None:
+        """
+        Create central feature for settlement (plaza, well, market, etc.)
+        
+        Args:
+            tiles: 2D list of tile types
+            center_x, center_y: Center feature position
+            size: Size of central feature
+            template_config: Settlement configuration
+        """
+        settlement_name = template_config.get('name', 'VILLAGE')
+        
+        # Create stone plaza base
+        for y in range(center_y, center_y + size):
+            for x in range(center_x, center_x + size):
+                if 0 <= x < self.width and 0 <= y < self.height:
+                    tiles[y][x] = 2  # TILE_STONE
+        
+        # Add central feature based on settlement type
+        center_center_x = center_x + size // 2
+        center_center_y = center_y + size // 2
+        
+        if settlement_name in ['VILLAGE', 'FISHING_VILLAGE']:
+            # Village well (single stone tile in center)
+            if 0 <= center_center_x < self.width and 0 <= center_center_y < self.height:
+                tiles[center_center_y][center_center_x] = 2  # TILE_STONE (well)
+        elif settlement_name == 'TRADING_POST':
+            # Market area (larger stone area)
+            for dy in range(-1, 2):
+                for dx in range(-1, 2):
+                    wx, wy = center_center_x + dx, center_center_y + dy
+                    if 0 <= wx < self.width and 0 <= wy < self.height:
+                        tiles[wy][wx] = 2  # TILE_STONE
+        
+        print(f"    Created central feature for {settlement_name}")
+    
+    def _create_pathways(self, tiles: List[List[int]], start_x: int, start_y: int, 
+                        width: int, height: int, center_x: int, center_y: int, center_size: int,
+                        buildings: List[Dict], template_config: Dict) -> None:
+        """
+        Create pathways connecting buildings to the center
+        
+        Args:
+            tiles: 2D list of tile types
+            start_x, start_y: Settlement position
+            width, height: Settlement dimensions
+            center_x, center_y: Center position
+            center_size: Size of central area
+            buildings: List of placed buildings
+            template_config: Settlement configuration
+        """
+        # Path tile based on biome
+        biomes = template_config.get('biomes', ['PLAINS'])
+        if 'DESERT' in biomes:
+            path_tile = 2   # TILE_STONE (stone paths in desert)
+        elif 'SNOW' in biomes:
+            path_tile = 2   # TILE_STONE (stone paths in snow)
+        else:
+            path_tile = 1   # TILE_DIRT (dirt paths elsewhere)
+        
+        center_center_x = center_x + center_size // 2
+        center_center_y = center_y + center_size // 2
+        
+        # Create paths from center to each building
+        for building in buildings:
+            building_center_x = building['x'] + building['width'] // 2
+            building_center_y = building['y'] + building['height'] // 2
+            
+            # Create L-shaped path (horizontal then vertical)
+            # Horizontal path
+            start_path_x = min(center_center_x, building_center_x)
+            end_path_x = max(center_center_x, building_center_x)
+            for x in range(start_path_x, end_path_x + 1):
+                if 0 <= x < self.width and 0 <= center_center_y < self.height:
+                    # Don't overwrite buildings or center
+                    if not self._is_building_tile(tiles[center_center_y][x]):
+                        tiles[center_center_y][x] = path_tile
+            
+            # Vertical path
+            start_path_y = min(center_center_y, building_center_y)
+            end_path_y = max(center_center_y, building_center_y)
+            for y in range(start_path_y, end_path_y + 1):
+                if 0 <= building_center_x < self.width and 0 <= y < self.height:
+                    # Don't overwrite buildings or center
+                    if not self._is_building_tile(tiles[y][building_center_x]):
+                        tiles[y][building_center_x] = path_tile
+        
+        print(f"    Created pathways connecting {len(buildings)} buildings")
+    
+    def _add_outdoor_features(self, tiles: List[List[int]], start_x: int, start_y: int, 
+                             width: int, height: int, buildings: List[Dict], 
+                             template_config: Dict) -> None:
+        """
+        Add outdoor furniture and features to settlement
+        
+        Args:
+            tiles: 2D list of tile types
+            start_x, start_y: Settlement position
+            width, height: Settlement dimensions
+            buildings: List of placed buildings
+            template_config: Settlement configuration
+        """
+        # For now, just add some decorative stone tiles around the settlement
+        # This could be expanded to include actual outdoor furniture entities
+        
+        settlement_name = template_config.get('name', 'VILLAGE')
+        
+        # Add decorative elements based on settlement type
+        if settlement_name == 'TRADING_POST':
+            # Add some stone markers around the trading post
+            for _ in range(3):
+                x = start_x + random.randint(2, width - 3)
+                y = start_y + random.randint(2, height - 3)
+                if (0 <= x < self.width and 0 <= y < self.height and 
+                    not self._is_building_tile(tiles[y][x])):
+                    tiles[y][x] = 2  # TILE_STONE
+        
+        print(f"    Added outdoor features for {settlement_name}")
+    
+    def _is_building_tile(self, tile_type: int) -> bool:
+        """
+        Check if a tile is part of a building structure
+        
+        Args:
+            tile_type: Tile type to check
+            
+        Returns:
+            True if tile is part of building
+        """
+        building_tiles = {4, 5, 6, 7, 8, 9, 10, 11, 12, 13, 14, 15}  # All wall and door tiles
+        return tile_type in building_tiles
