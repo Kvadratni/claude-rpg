@@ -14,6 +14,61 @@ import math
 import random
 
 
+class Projectile:
+    """Represents a traveling projectile"""
+    
+    def __init__(self, start_x, start_y, target_x, target_y, weapon_type, damage, target_enemy):
+        self.start_x = start_x
+        self.start_y = start_y
+        self.target_x = target_x
+        self.target_y = target_y
+        self.current_x = start_x
+        self.current_y = start_y
+        self.weapon_type = weapon_type
+        self.damage = damage
+        self.target_enemy = target_enemy
+        
+        # Calculate trajectory
+        dx = target_x - start_x
+        dy = target_y - start_y
+        distance = math.sqrt(dx * dx + dy * dy)
+        
+        # Normalize direction and set speed
+        if distance > 0:
+            self.velocity_x = (dx / distance) * 0.3  # Projectile speed
+            self.velocity_y = (dy / distance) * 0.3
+        else:
+            self.velocity_x = 0
+            self.velocity_y = 0
+        
+        self.distance_traveled = 0
+        self.total_distance = distance
+        self.hit = False
+        self.lifetime = 60  # Maximum frames before projectile disappears
+    
+    def update(self):
+        """Update projectile position"""
+        if self.hit:
+            return False
+        
+        # Move projectile
+        self.current_x += self.velocity_x
+        self.current_y += self.velocity_y
+        self.distance_traveled += math.sqrt(self.velocity_x * self.velocity_x + self.velocity_y * self.velocity_y)
+        
+        # Check if reached target or maximum distance
+        if self.distance_traveled >= self.total_distance * 0.95:  # Allow some tolerance
+            self.hit = True
+            return True  # Hit target
+        
+        # Check lifetime
+        self.lifetime -= 1
+        if self.lifetime <= 0:
+            return False  # Projectile expired
+        
+        return None  # Still traveling
+
+
 class CombatSystem:
     """Handles all combat-related functionality for the player"""
     
@@ -26,8 +81,9 @@ class CombatSystem:
         self.attack_range = player.attack_range
         self.defense = player.defense
         
-        # Projectile effects storage
-        self.projectiles = []
+        # Projectile system
+        self.projectiles = []  # Active traveling projectiles
+        self.projectile_effects = []  # Visual effects (trails, impacts)
     
     def get_weapon_stamina_cost(self):
         """Get stamina cost based on equipped weapon"""
@@ -183,7 +239,19 @@ class CombatSystem:
     
     def ranged_attack(self, enemies, audio):
         """Perform ranged attack on enemies within range"""
-        ranged_attack_range = 8.0  # Much longer range for ranged weapons
+        # Different ranges for different ranged weapons
+        ranged_attack_range = 8.0  # Default range
+        
+        if self.player.equipped_weapon:
+            weapon_name = self.player.equipped_weapon.name
+            if "Magic Bow" in weapon_name:
+                ranged_attack_range = 10.0  # Longest range
+            elif "Crossbow" in weapon_name:
+                ranged_attack_range = 9.0   # Long range, high damage
+            elif "Crystal Staff" in weapon_name:
+                ranged_attack_range = 7.0   # Medium range, magical
+            elif "Throwing Knife" in weapon_name:
+                ranged_attack_range = 6.0   # Shorter range, fast
         
         # Find target enemy (closest enemy within range)
         target_enemy = None
@@ -199,64 +267,83 @@ class CombatSystem:
                 closest_distance = distance
         
         if target_enemy:
-            # Calculate damage
+            # Calculate damage based on weapon type
             base_damage = 12  # Base ranged damage
             damage = base_damage
             
+            weapon_type = "arrow"  # Default projectile type
+            
             if self.player.equipped_weapon:
                 damage += self.player.equipped_weapon.effect.get("damage", 0)
+                weapon_type = self.player.equipped_weapon.name
+                
+                # Weapon-specific damage bonuses
+                if "Magic Bow" in weapon_type:
+                    damage += 3  # Magic bow bonus
+                elif "Crossbow" in weapon_type:
+                    damage += 5  # Crossbow hits hard
+                elif "Crystal Staff" in weapon_type:
+                    damage += 2  # Magic damage
+                    # Staff also has spell power bonus
+                    spell_power = self.player.equipped_weapon.effect.get("spell_power", 0)
+                    damage += spell_power // 2
                 
                 # Play weapon-specific sound
                 if audio:
                     if "Bow" in self.player.equipped_weapon.name:
-                        audio.play_combat_sound("bow_shot")  # We'll need to add this sound
+                        # Use weapon draw sound as bow string sound
+                        audio.play_combat_sound("weapon_draw")
                     elif "Crossbow" in self.player.equipped_weapon.name:
-                        audio.play_combat_sound("crossbow_shot")  # We'll need to add this sound
+                        # Use blade slice as crossbow release sound
+                        audio.play_combat_sound("blade_slice")
                     elif "Throwing Knife" in self.player.equipped_weapon.name:
-                        audio.play_combat_sound("blade_slice")  # Use existing blade sound
+                        # Use blade slice for throwing knife
+                        audio.play_combat_sound("blade_slice")
                     elif "Crystal Staff" in self.player.equipped_weapon.name:
-                        audio.play_magic_sound("spell_cast")  # Use magic sound for staff
+                        # Use magic sound for staff
+                        audio.play_magic_sound("spell_cast")
                     else:
-                        audio.play_combat_sound("weapon_hit")  # Fallback
+                        audio.play_combat_sound("weapon_draw")  # Fallback
             
             # Random damage variation
             damage += random.randint(-2, 2)
             
-            # Create projectile effect (visual)
-            self.create_projectile_effect(target_enemy)
+            # Create traveling projectile with weapon-specific speed
+            projectile_speed = 0.3  # Default speed
+            if self.player.equipped_weapon:
+                if "Throwing Knife" in weapon_type:
+                    projectile_speed = 0.5  # Knives are faster
+                elif "Crossbow" in weapon_type:
+                    projectile_speed = 0.4  # Bolts are fast
+                elif "Crystal Staff" in weapon_type:
+                    projectile_speed = 0.25  # Magic is slower but tracking
             
-            # Apply damage
-            if target_enemy.take_damage(damage):
-                if self.player.game_log:
-                    self.player.game_log.add_message(f"Enemy {target_enemy.name} defeated!", "combat")
+            projectile = Projectile(
+                self.player.x, self.player.y,
+                target_enemy.x, target_enemy.y,
+                weapon_type, damage, target_enemy
+            )
+            # Override speed for specific weapons
+            if projectile_speed != 0.3:
+                distance = math.sqrt((target_enemy.x - self.player.x)**2 + (target_enemy.y - self.player.y)**2)
+                if distance > 0:
+                    projectile.velocity_x = ((target_enemy.x - self.player.x) / distance) * projectile_speed
+                    projectile.velocity_y = ((target_enemy.y - self.player.y) / distance) * projectile_speed
+            
+            self.projectiles.append(projectile)
             
             if self.player.game_log:
                 weapon_name = self.player.equipped_weapon.name if self.player.equipped_weapon else "ranged attack"
-                self.player.game_log.add_message(f"Hit {target_enemy.name} with {weapon_name} for {damage} damage!", "combat")
+                self.player.game_log.add_message(f"Fired {weapon_name} at {target_enemy.name}!", "combat")
             
             # Trigger combat music when player attacks
             if audio and not audio.is_combat_music_active():
                 audio.start_combat_music()
         else:
             if self.player.game_log:
-                self.player.game_log.add_message("No enemies in ranged attack range!", "combat")
-    
-    def create_projectile_effect(self, target_enemy):
-        """Create a visual projectile effect (placeholder for now)"""
-        # For now, we'll just add a visual indicator
-        # In a more advanced implementation, we could create actual projectile entities
-        # that travel from player to target
-        
-        projectile = {
-            'start_x': self.player.x,
-            'start_y': self.player.y,
-            'end_x': target_enemy.x,
-            'end_y': target_enemy.y,
-            'timer': 30,  # Show effect for 30 frames (0.5 seconds at 60 FPS)
-            'weapon_type': self.player.equipped_weapon.name if self.player.equipped_weapon else "arrow"
-        }
-        
-        self.projectiles.append(projectile)
+                weapon_name = self.player.equipped_weapon.name if self.player.equipped_weapon else "ranged weapon"
+                self.player.game_log.add_message(f"No enemies in {weapon_name} range! (Range: {ranged_attack_range:.1f})", "combat")
+
     
     def take_damage(self, damage):
         """Take damage"""
@@ -282,43 +369,123 @@ class CombatSystem:
     
     def update(self):
         """Update combat system (projectile effects, etc.)"""
-        # Update projectile effects
+        # Update traveling projectiles
         for projectile in self.projectiles[:]:
-            projectile['timer'] -= 1
-            if projectile['timer'] <= 0:
+            result = projectile.update()
+            
+            if result is True:  # Projectile hit target
+                # Apply damage to target
+                if projectile.target_enemy.take_damage(projectile.damage):
+                    if self.player.game_log:
+                        self.player.game_log.add_message(f"Enemy {projectile.target_enemy.name} defeated!", "combat")
+                
+                if self.player.game_log:
+                    weapon_name = projectile.weapon_type if projectile.weapon_type != "arrow" else "ranged attack"
+                    self.player.game_log.add_message(f"Hit {projectile.target_enemy.name} with {weapon_name} for {projectile.damage} damage!", "combat")
+                
+                # Create impact effect
+                self.create_impact_effect(projectile)
+                
+                # Remove projectile
                 self.projectiles.remove(projectile)
+                
+            elif result is False:  # Projectile expired or missed
+                # Remove projectile
+                self.projectiles.remove(projectile)
+        
+        # Update visual effects
+        for effect in self.projectile_effects[:]:
+            effect['timer'] -= 1
+            if effect['timer'] <= 0:
+                self.projectile_effects.remove(effect)
+    
+    def create_impact_effect(self, projectile):
+        """Create visual impact effect when projectile hits"""
+        impact_effect = {
+            'x': projectile.current_x,
+            'y': projectile.current_y,
+            'weapon_type': projectile.weapon_type,
+            'timer': 20,  # Show impact for 20 frames
+            'type': 'impact'
+        }
+        self.projectile_effects.append(impact_effect)
     
     def render_projectile_effects(self, screen, iso_renderer, camera_x, camera_y):
         """Render projectile effects"""
+        # Render traveling projectiles
         for projectile in self.projectiles:
-            self.render_projectile_effect(screen, projectile, iso_renderer, camera_x, camera_y)
+            self.render_projectile(screen, projectile, iso_renderer, camera_x, camera_y)
+        
+        # Render visual effects (impacts, trails)
+        for effect in self.projectile_effects:
+            self.render_effect(screen, effect, iso_renderer, camera_x, camera_y)
     
-    def render_projectile_effect(self, screen, projectile, iso_renderer, camera_x, camera_y):
-        """Render projectile effect"""
+    def render_projectile(self, screen, projectile, iso_renderer, camera_x, camera_y):
+        """Render a traveling projectile"""
         # Convert world coordinates to screen coordinates
-        start_screen_x, start_screen_y = iso_renderer.world_to_screen(projectile['start_x'], projectile['start_y'], camera_x, camera_y)
-        end_screen_x, end_screen_y = iso_renderer.world_to_screen(projectile['end_x'], projectile['end_y'], camera_x, camera_y)
+        screen_x, screen_y = iso_renderer.world_to_screen(projectile.current_x, projectile.current_y, camera_x, camera_y)
         
-        # Calculate projectile color based on weapon type
-        if "Bow" in projectile['weapon_type']:
+        # Calculate projectile appearance based on weapon type
+        if "Bow" in projectile.weapon_type:
+            # Draw arrow
             color = (139, 69, 19)  # Brown for arrows
-        elif "Crossbow" in projectile['weapon_type']:
+            pygame.draw.circle(screen, color, (int(screen_x), int(screen_y)), 3)
+            # Draw arrow fletching
+            pygame.draw.circle(screen, (255, 255, 255), (int(screen_x), int(screen_y)), 2)
+        elif "Crossbow" in projectile.weapon_type:
+            # Draw crossbow bolt
             color = (100, 100, 100)  # Gray for bolts
-        elif "Knife" in projectile['weapon_type']:
+            pygame.draw.circle(screen, color, (int(screen_x), int(screen_y)), 2)
+        elif "Knife" in projectile.weapon_type:
+            # Draw spinning knife
             color = (192, 192, 192)  # Silver for knives
-        elif "Staff" in projectile['weapon_type']:
+            # Create spinning effect
+            angle = (projectile.distance_traveled * 10) % 360
+            offset = 4
+            x1 = screen_x + math.cos(math.radians(angle)) * offset
+            y1 = screen_y + math.sin(math.radians(angle)) * offset
+            x2 = screen_x - math.cos(math.radians(angle)) * offset
+            y2 = screen_y - math.sin(math.radians(angle)) * offset
+            pygame.draw.line(screen, color, (int(x1), int(y1)), (int(x2), int(y2)), 3)
+        elif "Staff" in projectile.weapon_type:
+            # Draw magic projectile with glowing effect
             color = (138, 43, 226)  # Purple for magic
+            # Draw multiple circles for glow effect
+            for i in range(3, 0, -1):
+                alpha = 100 - (i * 20)
+                glow_color = (*color, alpha)
+                pygame.draw.circle(screen, color, (int(screen_x), int(screen_y)), i * 2)
         else:
+            # Default projectile
             color = (255, 255, 0)  # Yellow default
+            pygame.draw.circle(screen, color, (int(screen_x), int(screen_y)), 2)
+    
+    def render_effect(self, screen, effect, iso_renderer, camera_x, camera_y):
+        """Render visual effects"""
+        screen_x, screen_y = iso_renderer.world_to_screen(effect['x'], effect['y'], camera_x, camera_y)
         
-        # Draw projectile trail
-        pygame.draw.line(screen, color, (start_screen_x, start_screen_y), (end_screen_x, end_screen_y), 3)
-        
-        # Add a glowing effect for magic weapons
-        if "Staff" in projectile['weapon_type']:
-            # Draw additional glow lines
-            for i in range(1, 4):
-                glow_color = (138, 43, 226, 100 - i * 25)  # Fading purple
-                pygame.draw.line(screen, glow_color[:3], 
-                               (start_screen_x, start_screen_y), 
-                               (end_screen_x, end_screen_y), 3 + i)
+        if effect['type'] == 'impact':
+            # Draw impact explosion
+            size = max(1, effect['timer'] // 2)
+            
+            if "Bow" in effect['weapon_type']:
+                color = (255, 200, 0)  # Orange impact
+            elif "Crossbow" in effect['weapon_type']:
+                color = (255, 255, 255)  # White impact
+            elif "Knife" in effect['weapon_type']:
+                color = (255, 100, 100)  # Red impact
+            elif "Staff" in effect['weapon_type']:
+                color = (200, 100, 255)  # Purple magic impact
+            else:
+                color = (255, 255, 0)  # Yellow default
+            
+            # Draw impact burst
+            pygame.draw.circle(screen, color, (int(screen_x), int(screen_y)), size)
+            
+            # Draw impact sparks for non-magic weapons
+            if "Staff" not in effect['weapon_type']:
+                for i in range(4):
+                    angle = (i * 90 + effect['timer'] * 20) % 360
+                    spark_x = screen_x + math.cos(math.radians(angle)) * size * 2
+                    spark_y = screen_y + math.sin(math.radians(angle)) * size * 2
+                    pygame.draw.circle(screen, color, (int(spark_x), int(spark_y)), 1)
