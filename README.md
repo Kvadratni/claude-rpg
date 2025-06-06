@@ -219,6 +219,9 @@ python main.py
 - **🛠️ Asset Verification System**: AI only uses items that exist in the game
 - **⚙️ Model Selection**: Choose your preferred AI model in settings
 - **🛒 Tool Integration**: Seamless NPC actions with conversational responses
+- **🏠 Building Visibility System**: Advanced occlusion system for building interiors ⭐ **NEW!**
+- **⚡ Performance Optimizations**: Massive performance improvements around buildings ⭐ **NEW!**
+- **🪑 Furniture System**: Properly scaled furniture with interaction support ⭐ **NEW!**
 
 ### Planned Features 🚀
 - **🗺️ Advanced Procedural Features**: Dungeons, caves, and special locations
@@ -267,6 +270,24 @@ The game is actively developed with new features and improvements added regularl
 - **Real-time Quest Generation**: Procedural content creation during gameplay
 - **Adaptive Dialogue System**: Context-aware conversations that evolve with gameplay
 - **Background Population System**: Realistic settlement atmosphere with mixed NPC types
+- **Advanced Building Occlusion**: Intelligent building visibility system with interior exploration ⭐ **NEW!**
+- **Memoized Performance Caching**: Multi-layer caching system for smooth gameplay ⭐ **NEW!**
+- **Furniture Integration**: Properly scaled furniture with building template support ⭐ **NEW!**
+
+#### 🏠 **Building Visibility System** ⭐ **NEW!**
+- **Smart Occlusion**: Buildings automatically become transparent when player approaches
+- **Whole-Building Flattening**: Entire buildings show/hide together for consistent experience
+- **Restrictive Proximity**: Only flattens when player is within 1 tile of building edge
+- **State Persistence**: Buildings remember their visibility state until player moves
+- **Interior Exploration**: NPCs and furniture become visible inside flattened buildings
+- **Performance Optimized**: Memoized flood-fill with cached building bounds
+
+#### ⚡ **Performance Optimizations** ⭐ **NEW!**
+- **Memoized Building Detection**: Flood-fill calculations cached per building
+- **Entity Visibility Caching**: Pre-computed entity visibility states
+- **Tile Visibility Caching**: Fast dictionary lookups instead of per-frame calculations
+- **Building State Management**: Efficient state tracking with minimal recalculation
+- **Optimized Rendering Pipeline**: Eliminated expensive per-frame proximity checks
 
 ### 🌟 **Achievements**
 - **First AI-Generated Procedural RPG**: Pioneering infinite world generation with AI NPCs

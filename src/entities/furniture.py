@@ -312,8 +312,12 @@ class Furniture(Entity):
         # Scale to a fixed size while maintaining aspect ratio
         base_size = 48  # Same as other entities
         
-        # For multi-tile furniture, scale proportionally
-        scaled_size = base_size * max(self.width, self.height)
+        # For multi-tile furniture, scale slightly larger but not proportionally
+        # This prevents huge furniture while still showing they're bigger
+        if max(self.width, self.height) > 1:
+            scaled_size = base_size + 16  # Just 16px larger for multi-tile furniture
+        else:
+            scaled_size = base_size
         
         # Scale the sprite maintaining aspect ratio
         original_rect = self.sprite.get_rect()

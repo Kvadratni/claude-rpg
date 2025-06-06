@@ -33,12 +33,6 @@ class LevelRendererMixin:
         # OPTIMIZATION: Cache player building detection for this frame
         player_x, player_y = int(self.player.x), int(self.player.y)
         
-        # Only recalculate building detection if player moved to a new tile
-        if not hasattr(self, '_last_player_pos') or self._last_player_pos != (player_x, player_y):
-            self._update_building_states(player_x, player_y)
-            self._update_entity_visibility_cache()  # Cache entity visibility too
-            self._last_player_pos = (player_x, player_y)
-        
         # Calculate visible tile range - much larger rendering area
         visible_width = (screen_width // self.tile_width) + 10  # Optimized for large worlds
         visible_height = (game_area_height // (self.tile_height // 2)) + 30  # Much larger area
@@ -53,6 +47,13 @@ class LevelRendererMixin:
         end_x = center_x + visible_width
         start_y = center_y - visible_height
         end_y = center_y + visible_height
+        
+        # Only recalculate building detection if player moved to a new tile
+        if not hasattr(self, '_last_player_pos') or self._last_player_pos != (player_x, player_y):
+            self._update_building_states(player_x, player_y)
+            self._update_entity_visibility_cache()  # Cache entity visibility too
+            self._update_tile_visibility_cache(start_x, end_x, start_y, end_y)  # Cache tile visibility too
+            self._last_player_pos = (player_x, player_y)
         
         # Render tiles in proper isometric order (back to front)
         # This ensures proper depth sorting for buildings
@@ -144,8 +145,8 @@ class LevelRendererMixin:
         should_render_roof = False  # Default to NO roof
         
         if is_building_tile:
-            # OPTIMIZATION: Use cached building detection instead of expensive bounds calculation
-            should_render_roof = not self._is_player_near_building_tile(x, y)
+            # OPTIMIZATION: Use cached tile visibility instead of expensive per-tile checks
+            should_render_roof = not self._get_cached_tile_visibility(x, y)
         
         # ALWAYS render floor tile first (even under walls)
         floor_sprite = None
@@ -708,3 +709,59 @@ class LevelRendererMixin:
         
         # Fallback to always visible if cache not ready
         return True
+    
+    def _update_tile_visibility_cache(self, start_x, end_x, start_y, end_y):
+        """
+        Cache tile visibility states for all visible tiles using already-computed building states
+        """
+        if not hasattr(self, '_tile_visibility_cache'):
+            self._tile_visibility_cache = {}
+        
+        # Clear old cache entries (only keep current visible area)
+        self._tile_visibility_cache.clear()
+        
+        # Use already-computed building states instead of expensive per-tile checks
+        if not hasattr(self, '_building_states') or not hasattr(self, '_building_cache'):
+            return  # No building data available
+        
+        # Cache visibility for all visible building tiles
+        for y in range(start_y, end_y):
+            for x in range(start_x, end_x):
+                # Get tile type
+                if hasattr(self, 'get_tile'):
+                    tile_type = self.get_tile(x, y)
+                    if tile_type is None:
+                        continue  # Don't cache unloaded chunks
+                else:
+                    if not hasattr(self, 'tiles') or not self.tiles or len(self.tiles) == 0:
+                        continue
+                    if not (0 <= y < len(self.tiles) and 0 <= x < len(self.tiles[0])):
+                        continue
+                    tile_type = self.tiles[y][x]
+                
+                # Only cache building tiles (others don't need visibility checks)
+                if self.is_simple_building_tile(tile_type):
+                    tile_key = (x, y)
+                    
+                    # Fast lookup using already-cached building bounds and states
+                    cache_key = (x, y)
+                    if cache_key in self._building_cache:
+                        building_bounds = self._building_cache[cache_key]
+                        if building_bounds:
+                            is_visible = self._building_states.get(building_bounds, False)
+                            self._tile_visibility_cache[tile_key] = is_visible
+                        else:
+                            self._tile_visibility_cache[tile_key] = False
+                    else:
+                        self._tile_visibility_cache[tile_key] = False
+    
+    def _get_cached_tile_visibility(self, tile_x, tile_y):
+        """
+        Fast tile visibility check using cached data
+        """
+        if hasattr(self, '_tile_visibility_cache'):
+            tile_key = (tile_x, tile_y)
+            return self._tile_visibility_cache.get(tile_key, False)  # Default to not visible (show roof)
+        
+        # Fallback to expensive check if cache not ready
+        return self._is_player_near_building_tile(tile_x, tile_y)
