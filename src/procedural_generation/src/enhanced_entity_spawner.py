@@ -13,24 +13,33 @@ class EnhancedEntitySpawner:
     Enhanced entity spawner with logical rules and collision detection
     """
     
-    # Existing enemies mapped to biomes
+    # Existing enemies mapped to biomes - now includes ranged enemies
     BIOME_ENEMIES = {
         'FOREST': [
-            {'name': 'Forest Goblin', 'health': 45, 'damage': 9, 'experience': 30},
-            {'name': 'Forest Sprite', 'health': 35, 'damage': 12, 'experience': 40},
-            {'name': 'Ancient Guardian', 'health': 60, 'damage': 15, 'experience': 50}
+            {'name': 'Forest Goblin', 'health': 45, 'damage': 9, 'experience': 30, 'type': 'melee'},
+            {'name': 'Goblin Archer', 'health': 40, 'damage': 12, 'experience': 35, 'type': 'ranged', 'weapon': 'bow'},
+            {'name': 'Forest Sprite', 'health': 35, 'damage': 12, 'experience': 40, 'type': 'melee'},
+            {'name': 'Ancient Guardian', 'health': 60, 'damage': 15, 'experience': 50, 'type': 'melee'},
+            {'name': 'Skeleton Archer', 'health': 50, 'damage': 14, 'experience': 45, 'type': 'ranged', 'weapon': 'bow'}
         ],
         'DESERT': [
-            {'name': 'Giant Scorpion', 'health': 55, 'damage': 16, 'experience': 45},
-            {'name': 'Bandit Scout', 'health': 35, 'damage': 8, 'experience': 20}
+            {'name': 'Giant Scorpion', 'health': 55, 'damage': 16, 'experience': 45, 'type': 'melee'},
+            {'name': 'Bandit Scout', 'health': 35, 'damage': 8, 'experience': 20, 'type': 'melee'},
+            {'name': 'Dark Mage', 'health': 60, 'damage': 18, 'experience': 70, 'type': 'ranged', 'weapon': 'dark_magic'}
         ],
         'PLAINS': [
-            {'name': 'Bandit Scout', 'health': 35, 'damage': 8, 'experience': 20},
-            {'name': 'Orc Warrior', 'health': 80, 'damage': 18, 'experience': 60}
+            {'name': 'Bandit Scout', 'health': 35, 'damage': 8, 'experience': 20, 'type': 'melee'},
+            {'name': 'Orc Warrior', 'health': 80, 'damage': 18, 'experience': 60, 'type': 'melee'},
+            {'name': 'Orc Crossbow', 'health': 70, 'damage': 20, 'experience': 65, 'type': 'ranged', 'weapon': 'crossbow'}
         ],
         'SNOW': [
-            {'name': 'Crystal Elemental', 'health': 70, 'damage': 20, 'experience': 65},
-            {'name': 'Ancient Guardian', 'health': 60, 'damage': 15, 'experience': 50}
+            {'name': 'Crystal Elemental', 'health': 70, 'damage': 20, 'experience': 65, 'type': 'melee'},
+            {'name': 'Ancient Guardian', 'health': 60, 'damage': 15, 'experience': 50, 'type': 'melee'},
+            {'name': 'Dark Mage', 'health': 60, 'damage': 18, 'experience': 70, 'type': 'ranged', 'weapon': 'dark_magic'}
+        ],
+        'SWAMP': [
+            {'name': 'Swamp Troll', 'health': 90, 'damage': 22, 'experience': 70, 'type': 'melee'},
+            {'name': 'Skeleton Archer', 'health': 50, 'damage': 14, 'experience': 45, 'type': 'ranged', 'weapon': 'bow'}
         ]
     }
     
@@ -238,15 +247,15 @@ class EnhancedEntitySpawner:
             
             enemy_config = random.choice(enemy_types)
             
-            # Import Enemy class
+            # Import Enemy and RangedEnemy classes
             try:
-                from ...entities import Enemy
+                from ...entities import Enemy, RangedEnemy
             except ImportError:
                 try:
                     import sys
                     import os
                     sys.path.append(os.path.dirname(os.path.dirname(os.path.dirname(__file__))))
-                    from entities import Enemy
+                    from entities import Enemy, RangedEnemy
                 except ImportError:
                     class MockEnemy:
                         def __init__(self, *args, **kwargs):
@@ -256,12 +265,23 @@ class EnhancedEntitySpawner:
                         def update(self, level):
                             pass
                     Enemy = MockEnemy
+                    RangedEnemy = MockEnemy
             
-            enemy = Enemy(x, y, enemy_config['name'],
-                         health=enemy_config['health'],
-                         damage=enemy_config['damage'],
-                         experience=enemy_config['experience'],
-                         asset_loader=asset_loader)
+            # Create appropriate enemy type
+            if enemy_config.get('type') == 'ranged':
+                weapon_type = enemy_config.get('weapon', 'bow')
+                enemy = RangedEnemy(x, y, enemy_config['name'],
+                                  health=enemy_config['health'],
+                                  damage=enemy_config['damage'],
+                                  experience=enemy_config['experience'],
+                                  asset_loader=asset_loader,
+                                  weapon_type=weapon_type)
+            else:
+                enemy = Enemy(x, y, enemy_config['name'],
+                             health=enemy_config['health'],
+                             damage=enemy_config['damage'],
+                             experience=enemy_config['experience'],
+                             asset_loader=asset_loader)
             enemies.append(enemy)
             
             # Mark position as occupied
