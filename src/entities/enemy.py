@@ -775,7 +775,14 @@ class RangedEnemy(Enemy):
         damage = base_damage + random.randint(-2, 2)  # Small damage variation
         
         # Create projectile
-        from ..systems.combat import Projectile  # Import here to avoid circular imports
+        try:
+            from ..systems.combat import Projectile  # Try relative import first
+        except ImportError:
+            # Fallback for direct execution or testing
+            import sys
+            import os
+            sys.path.insert(0, os.path.join(os.path.dirname(__file__), '..'))
+            from systems.combat import Projectile
         
         projectile = Projectile(
             self.x, self.y,
