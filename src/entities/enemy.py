@@ -565,6 +565,7 @@ class RangedEnemy(Enemy):
             if sprite_name:
                 enemy_image = self.asset_loader.get_image(sprite_name)
                 if enemy_image:
+                    print(f"🏹 Loading sprite for {self.name}: {sprite_name} ({enemy_image.get_size()})")
                     self.sprite = pygame.transform.scale(enemy_image, (size, size))
                     self.direction_sprites = [
                         self.sprite,  # Down (0)
@@ -573,7 +574,12 @@ class RangedEnemy(Enemy):
                         pygame.transform.flip(self.sprite, True, False)   # Right (3) - mirrored
                     ]
                     return
+                else:
+                    print(f"❌ Failed to load sprite for {self.name}: {sprite_name}")
+            else:
+                print(f"❌ No sprite mapping for {self.name}")
         
+        print(f"🎨 Using fallback sprite for {self.name}")
         # Fallback to generated sprite
         self.sprite = pygame.Surface((size, size), pygame.SRCALPHA)
         
