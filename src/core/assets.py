@@ -106,6 +106,11 @@ class AssetLoader:
             "crystal_elemental": "crystal_elemental.png",
             "giant_scorpion": "giant_scorpion.png",
             "swamp_troll": "swamp_troll.png",
+            # Ranged Enemies
+            "goblin_archer": "goblin_archer.png",
+            "orc_crossbow": "orc_crossbow.png",
+            "skeleton_archer": "skeleton_archer.png",
+            "dark_mage": "dark_mage.png",
             "tree": "tree.png",
             "rock": "rock.png",
             # Biome-specific environmental objects
@@ -281,6 +286,11 @@ class AssetLoader:
             "crystal_elemental": (173, 216, 230),  # Light blue
             "giant_scorpion": (160, 82, 45),  # Saddle brown
             "swamp_troll": (85, 107, 47),  # Dark olive green
+            # Ranged Enemies
+            "goblin_archer": (0, 120, 0),  # Dark green
+            "orc_crossbow": (139, 69, 19),  # Brown
+            "skeleton_archer": (245, 245, 220),  # Beige
+            "dark_mage": (75, 0, 130),  # Indigo
             "tree": (34, 139, 34),
             "rock": (128, 128, 128),
             # Biome-specific environmental objects

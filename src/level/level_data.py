@@ -3,9 +3,9 @@ Level data management and serialization
 """
 
 try:
-    from ..entities import Entity, NPC, Enemy, Item, Chest, Furniture
+    from ..entities import Entity, NPC, Enemy, RangedEnemy, Item, Chest, Furniture
 except ImportError:
-    from ..entities import Entity, NPC, Enemy, Item, Chest, Furniture
+    from ..entities import Entity, NPC, Enemy, RangedEnemy, Item, Chest, Furniture
 
 
 class LevelDataMixin:
@@ -55,7 +55,11 @@ class LevelDataMixin:
         # Recreate entities
         level.enemies = []
         for enemy_data in data["enemies"]:
-            enemy = Enemy.from_save_data(enemy_data, asset_loader)
+            # Check if this is a ranged enemy
+            if enemy_data.get("enemy_type") == "ranged":
+                enemy = RangedEnemy.from_save_data(enemy_data, asset_loader)
+            else:
+                enemy = Enemy.from_save_data(enemy_data, asset_loader)
             level.enemies.append(enemy)
         
         level.npcs = []

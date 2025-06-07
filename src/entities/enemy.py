@@ -497,3 +497,374 @@ class Enemy(Entity):
         return enemy
 
 
+class RangedEnemy(Enemy):
+    """Ranged enemy that can attack from distance"""
+    
+    def __init__(self, x, y, name, health=50, damage=10, experience=25, is_boss=False, asset_loader=None, weapon_type="bow"):
+        # Set weapon_type first before calling super().__init__
+        self.weapon_type = weapon_type
+        
+        super().__init__(x, y, name, health, damage, experience, is_boss, asset_loader)
+        
+        # Ranged combat properties
+        self.ranged_attack_range = self.get_weapon_range()
+        self.ranged_attack_cooldown = 0
+        self.max_ranged_attack_cooldown = self.get_weapon_cooldown()
+        self.projectiles = []  # Enemy projectiles
+        
+        # Ranged enemies prefer to keep distance
+        self.preferred_distance = self.ranged_attack_range * 0.7  # Stay at 70% of max range
+        self.min_distance = 3.0  # Don't get too close to player
+        
+        # Override attack range for ranged enemies (they can attack from much further)
+        self.attack_range = self.ranged_attack_range
+        
+        # Ranged enemies are typically more cautious
+        self.detection_range = max(self.detection_range, self.ranged_attack_range + 2)
+    
+    def get_weapon_range(self):
+        """Get attack range based on weapon type"""
+        weapon_ranges = {
+            "bow": 8.0,
+            "crossbow": 9.0,
+            "magic_staff": 7.0,
+            "throwing_knife": 5.0,
+            "dark_magic": 6.0
+        }
+        return weapon_ranges.get(self.weapon_type, 7.0)
+    
+    def get_weapon_cooldown(self):
+        """Get attack cooldown based on weapon type"""
+        weapon_cooldowns = {
+            "bow": 90,          # 1.5 seconds at 60 FPS
+            "crossbow": 120,    # 2 seconds (slower but more damage)
+            "magic_staff": 100, # 1.67 seconds
+            "throwing_knife": 60, # 1 second (fast)
+            "dark_magic": 110   # 1.83 seconds
+        }
+        return weapon_cooldowns.get(self.weapon_type, 90)
+    
+    def create_enemy_sprite(self):
+        """Create ranged enemy sprite"""
+        size = 60 if self.is_boss else 48
+        
+        # Try to use loaded sprite first
+        if self.asset_loader:
+            sprite_mappings = {
+                "Goblin Archer": "goblin_archer",
+                "Orc Crossbow": "orc_crossbow", 
+                "Skeleton Archer": "skeleton_archer",
+                "Dark Mage": "dark_mage",
+                # Boss variants
+                "Goblin Archer Chief": "goblin_archer",
+                "Orc Crossbow Captain": "orc_crossbow",
+                "Lich": "dark_mage"
+            }
+            
+            sprite_name = sprite_mappings.get(self.name)
+            if sprite_name:
+                enemy_image = self.asset_loader.get_image(sprite_name)
+                if enemy_image:
+                    self.sprite = pygame.transform.scale(enemy_image, (size, size))
+                    self.direction_sprites = [
+                        self.sprite,  # Down (0)
+                        self.sprite,  # Left (1) - original (facing left)
+                        self.sprite,  # Up (2)
+                        pygame.transform.flip(self.sprite, True, False)   # Right (3) - mirrored
+                    ]
+                    return
+        
+        # Fallback to generated sprite
+        self.sprite = pygame.Surface((size, size), pygame.SRCALPHA)
+        
+        # Different colors for different ranged enemy types
+        enemy_styles = {
+            "Goblin Archer": {"color": (0, 120, 0), "eye_color": (255, 255, 0), "weapon_color": (139, 69, 19)},
+            "Orc Crossbow": {"color": (139, 69, 19), "eye_color": (255, 0, 0), "weapon_color": (101, 67, 33)},
+            "Skeleton Archer": {"color": (245, 245, 220), "eye_color": (255, 0, 0), "weapon_color": (220, 220, 190)},
+            "Dark Mage": {"color": (75, 0, 130), "eye_color": (138, 43, 226), "weapon_color": (139, 69, 19)},
+            # Boss variants
+            "Goblin Archer Chief": {"color": (0, 100, 0), "eye_color": (255, 215, 0), "weapon_color": (139, 69, 19)},
+            "Orc Crossbow Captain": {"color": (139, 0, 0), "eye_color": (255, 0, 0), "weapon_color": (101, 67, 33)},
+            "Lich": {"color": (25, 25, 112), "eye_color": (0, 255, 255), "weapon_color": (139, 69, 19)}
+        }
+        
+        style = enemy_styles.get(self.name, {
+            "color": (139, 69, 19), 
+            "eye_color": (255, 0, 0), 
+            "weapon_color": (139, 69, 19)
+        })
+        
+        center = (size // 2, size // 2)
+        
+        # Draw enemy body
+        pygame.draw.circle(self.sprite, style["color"], center, size // 3)
+        
+        # Draw eyes
+        eye_size = 6 if self.is_boss else 5
+        pygame.draw.circle(self.sprite, style["eye_color"], (center[0] - 9, center[1] - 6), eye_size)
+        pygame.draw.circle(self.sprite, style["eye_color"], (center[0] + 9, center[1] - 6), eye_size)
+        
+        # Draw weapon based on type
+        if self.weapon_type in ["bow", "crossbow"]:
+            # Draw bow/crossbow
+            weapon_rect = pygame.Rect(center[0] - 20, center[1] - 5, 15, 3)
+            pygame.draw.rect(self.sprite, style["weapon_color"], weapon_rect)
+            # Draw string
+            pygame.draw.line(self.sprite, (255, 255, 255), 
+                           (center[0] - 20, center[1] - 3), 
+                           (center[0] - 20, center[1] + 3), 1)
+        elif self.weapon_type in ["magic_staff", "dark_magic"]:
+            # Draw staff
+            pygame.draw.line(self.sprite, style["weapon_color"], 
+                           (center[0] - 18, center[1] + 10), 
+                           (center[0] - 15, center[1] - 8), 3)
+            # Draw crystal/orb at top
+            pygame.draw.circle(self.sprite, style["eye_color"], (center[0] - 15, center[1] - 8), 4)
+        
+        # Draw border
+        pygame.draw.circle(self.sprite, (0, 0, 0), center, size // 3, 3)
+        
+        # Create direction sprites
+        self.direction_sprites = [
+            self.sprite,  # Down (0)
+            self.sprite,  # Left (1) - original
+            self.sprite,  # Up (2)
+            pygame.transform.flip(self.sprite, True, False)   # Right (3) - mirrored
+        ]
+    
+    def update(self, level, player):
+        """Update ranged enemy AI"""
+        if self.attack_cooldown > 0:
+            self.attack_cooldown -= 1
+        if self.ranged_attack_cooldown > 0:
+            self.ranged_attack_cooldown -= 1
+        
+        # Update projectiles
+        for projectile in self.projectiles[:]:
+            result = projectile.update()
+            if result is True:  # Hit target
+                # Apply damage to player
+                if hasattr(player, 'combat_system'):
+                    player.combat_system.take_damage(projectile.damage)
+                else:
+                    # Fallback damage application
+                    player.health = max(0, player.health - projectile.damage)
+                
+                self.projectiles.remove(projectile)
+            elif result is False:  # Projectile expired
+                self.projectiles.remove(projectile)
+        
+        # Calculate distance to player
+        dx = player.x - self.x
+        dy = player.y - self.y
+        distance = math.sqrt(dx * dx + dy * dy)
+        
+        # AI state machine for ranged enemies
+        if distance < self.detection_range:
+            # Play detection sound only when first seeing the player
+            if self.state == "idle":
+                audio = getattr(self.asset_loader, 'audio_manager', None) if self.asset_loader else None
+                if audio:
+                    if "Goblin" in self.name:
+                        audio.play_creature_sound("goblin")
+                    elif "Orc" in self.name:
+                        audio.play_creature_sound("orc", "voice")
+            
+            # Ranged enemy behavior
+            if distance <= self.ranged_attack_range and distance >= self.min_distance:
+                # In optimal range - attack if possible
+                self.state = "attacking"
+                if self.ranged_attack_cooldown <= 0:
+                    self.ranged_attack_player(player)
+                    self.ranged_attack_cooldown = self.max_ranged_attack_cooldown
+            elif distance < self.min_distance:
+                # Too close - back away while trying to attack
+                self.state = "retreating"
+                # Move away from player
+                if distance > 0:
+                    move_x = -(dx / distance) * self.speed * 1.2  # Move away faster
+                    move_y = -(dy / distance) * self.speed * 1.2
+                    
+                    new_x = self.x + move_x
+                    new_y = self.y + move_y
+                    
+                    if not level.check_collision(new_x, new_y, self.size, exclude_entity=self):
+                        self.x = new_x
+                        self.y = new_y
+                        
+                        # Update direction based on movement
+                        if abs(move_x) > abs(move_y):
+                            self.direction = 3 if move_x > 0 else 1
+                        else:
+                            self.direction = 0 if move_y > 0 else 2
+                
+                # Still try to attack while retreating
+                if self.ranged_attack_cooldown <= 0:
+                    self.ranged_attack_player(player)
+                    self.ranged_attack_cooldown = self.max_ranged_attack_cooldown
+            elif distance > self.ranged_attack_range:
+                # Too far - move closer to preferred distance
+                self.state = "positioning"
+                target_distance = self.preferred_distance
+                move_distance = distance - target_distance
+                
+                if move_distance > 0.5:  # Only move if significantly out of position
+                    move_x = (dx / distance) * self.speed * 0.8  # Move slower when positioning
+                    move_y = (dy / distance) * self.speed * 0.8
+                    
+                    new_x = self.x + move_x
+                    new_y = self.y + move_y
+                    
+                    if not level.check_collision(new_x, new_y, self.size, exclude_entity=self):
+                        self.x = new_x
+                        self.y = new_y
+                        
+                        # Update direction based on movement
+                        if abs(dx) > abs(dy):
+                            self.direction = 3 if dx > 0 else 1
+                        else:
+                            self.direction = 0 if dy > 0 else 2
+            else:
+                # In range but not optimal - try to maintain preferred distance
+                self.state = "positioning"
+                # Slight positioning adjustments
+                if random.random() < 0.1:  # 10% chance to adjust position
+                    angle = random.uniform(0, 2 * math.pi)
+                    move_x = math.cos(angle) * self.speed * 0.3
+                    move_y = math.sin(angle) * self.speed * 0.3
+                    
+                    new_x = self.x + move_x
+                    new_y = self.y + move_y
+                    
+                    if not level.check_collision(new_x, new_y, self.size, exclude_entity=self):
+                        self.x = new_x
+                        self.y = new_y
+        else:
+            # Out of detection range - idle behavior
+            self.state = "idle"
+            if random.random() < 0.005:  # Less frequent idle movement for ranged enemies
+                move_x = random.uniform(-self.speed * 0.2, self.speed * 0.2)
+                move_y = random.uniform(-self.speed * 0.2, self.speed * 0.2)
+                
+                new_x = self.x + move_x
+                new_y = self.y + move_y
+                
+                if not level.check_collision(new_x, new_y, self.size, exclude_entity=self):
+                    self.x = new_x
+                    self.y = new_y
+    
+    def ranged_attack_player(self, player):
+        """Perform ranged attack on player"""
+        # Get audio manager
+        audio = getattr(self.asset_loader, 'audio_manager', None) if self.asset_loader else None
+        
+        # Play weapon-specific attack sound
+        if audio:
+            if self.weapon_type == "bow":
+                audio.play_combat_sound("weapon_draw")  # Bow string sound
+            elif self.weapon_type == "crossbow":
+                audio.play_combat_sound("blade_slice")  # Crossbow release
+            elif self.weapon_type in ["magic_staff", "dark_magic"]:
+                audio.play_magic_sound("spell_cast")
+            elif self.weapon_type == "throwing_knife":
+                audio.play_combat_sound("blade_slice")
+        
+        # Calculate damage
+        base_damage = self.damage
+        damage = base_damage + random.randint(-2, 2)  # Small damage variation
+        
+        # Create projectile
+        from ..systems.combat import Projectile  # Import here to avoid circular imports
+        
+        projectile = Projectile(
+            self.x, self.y,
+            player.x, player.y,
+            self.weapon_type, damage, player
+        )
+        
+        # Adjust projectile speed based on weapon type
+        distance = math.sqrt((player.x - self.x)**2 + (player.y - self.y)**2)
+        if distance > 0:
+            if self.weapon_type == "throwing_knife":
+                speed = 0.5  # Fast
+            elif self.weapon_type == "crossbow":
+                speed = 0.4  # Fast
+            elif self.weapon_type == "bow":
+                speed = 0.35  # Medium
+            elif self.weapon_type in ["magic_staff", "dark_magic"]:
+                speed = 0.25  # Slower but tracking
+            else:
+                speed = 0.3  # Default
+            
+            projectile.velocity_x = ((player.x - self.x) / distance) * speed
+            projectile.velocity_y = ((player.y - self.y) / distance) * speed
+        
+        self.projectiles.append(projectile)
+        
+        print(f"{self.name} fires {self.weapon_type} at player for {damage} damage!")
+    
+    def render(self, screen, camera_x, camera_y, iso_renderer):
+        """Render the ranged enemy and its projectiles"""
+        # Render the enemy itself
+        super().render(screen, camera_x, camera_y, iso_renderer)
+        
+        # Render projectiles
+        for projectile in self.projectiles:
+            self.render_projectile(screen, projectile, iso_renderer, camera_x, camera_y)
+    
+    def render_projectile(self, screen, projectile, iso_renderer, camera_x, camera_y):
+        """Render enemy projectile"""
+        screen_x, screen_y = iso_renderer.world_to_screen(projectile.current_x, projectile.current_y, camera_x, camera_y)
+        
+        # Different projectile appearances based on weapon type
+        if self.weapon_type == "bow":
+            # Arrow
+            color = (139, 69, 19)  # Brown
+            pygame.draw.circle(screen, color, (int(screen_x), int(screen_y)), 3)
+            pygame.draw.circle(screen, (255, 255, 255), (int(screen_x), int(screen_y)), 2)
+        elif self.weapon_type == "crossbow":
+            # Crossbow bolt
+            color = (100, 100, 100)  # Gray
+            pygame.draw.circle(screen, color, (int(screen_x), int(screen_y)), 2)
+            pygame.draw.circle(screen, (255, 255, 255), (int(screen_x), int(screen_y)), 1)
+        elif self.weapon_type in ["magic_staff", "dark_magic"]:
+            # Magic projectile
+            color = (138, 43, 226) if self.weapon_type == "magic_staff" else (75, 0, 130)
+            # Glowing effect
+            for i in range(3, 0, -1):
+                pygame.draw.circle(screen, color, (int(screen_x), int(screen_y)), i * 2)
+        elif self.weapon_type == "throwing_knife":
+            # Spinning knife
+            color = (192, 192, 192)
+            angle = (projectile.distance_traveled * 10) % 360
+            offset = 4
+            x1 = screen_x + math.cos(math.radians(angle)) * offset
+            y1 = screen_y + math.sin(math.radians(angle)) * offset
+            x2 = screen_x - math.cos(math.radians(angle)) * offset
+            y2 = screen_y - math.sin(math.radians(angle)) * offset
+            pygame.draw.line(screen, color, (int(x1), int(y1)), (int(x2), int(y2)), 3)
+        else:
+            # Default projectile
+            pygame.draw.circle(screen, (255, 255, 0), (int(screen_x), int(screen_y)), 2)
+    
+    def get_save_data(self):
+        """Get data for saving"""
+        data = super().get_save_data()
+        data.update({
+            "weapon_type": self.weapon_type,
+            "enemy_type": "ranged"  # Mark as ranged enemy for loading
+        })
+        return data
+    
+    @classmethod
+    def from_save_data(cls, data, asset_loader=None):
+        """Create ranged enemy from save data"""
+        weapon_type = data.get("weapon_type", "bow")
+        enemy = cls(data["x"], data["y"], data["name"], data["max_health"], 
+                   data["damage"], data["experience"], data["is_boss"], 
+                   asset_loader, weapon_type)
+        enemy.health = data["health"]
+        return enemy
+
+

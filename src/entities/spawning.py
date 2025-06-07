@@ -9,6 +9,7 @@ import random
 import math
 try:
     from . import Enemy, NPC, Item, Entity, Chest
+    from .enemy import RangedEnemy  # Import RangedEnemy class
     # Import AI NPC classes
     from .npcs import (
         VillageElderNPC, MasterMerchantNPC, GuardCaptainNPC,
@@ -18,6 +19,10 @@ try:
 except ImportError:
     # Fallback for direct execution
     from . import Enemy, NPC, Item, Entity, Chest
+    try:
+        from .enemy import RangedEnemy
+    except ImportError:
+        RangedEnemy = Enemy  # Fallback to regular enemy
     # Try to import AI NPCs, fallback to regular NPC if not available
     try:
         from .npcs import (
@@ -63,17 +68,22 @@ class SpawningMixin:
 
     def spawn_story_enemies(self):
         """Spawn enemies in specific story locations across the expanded world"""
-        # Dark Forest Goblins (North-West)
+        # Dark Forest Goblins (North-West) - Mix of melee and ranged
         dark_forest_positions = [
             (35, 35), (40, 38), (45, 40), (38, 45), (42, 42),
             (30, 40), (45, 35), (35, 45), (40, 30), (50, 45),
             (32, 50), (48, 32), (55, 38), (38, 55), (42, 48)
         ]
         
-        for x, y in dark_forest_positions:
+        for i, (x, y) in enumerate(dark_forest_positions):
             if self.is_valid_story_position(x, y):
-                goblin = Enemy(x, y, "Forest Goblin", health=45, damage=9, experience=30, asset_loader=self.asset_loader)
-                self.enemies.append(goblin)
+                if i % 3 == 0:  # Every 3rd goblin is an archer
+                    goblin_archer = RangedEnemy(x, y, "Goblin Archer", health=40, damage=12, 
+                                              experience=35, asset_loader=self.asset_loader, weapon_type="bow")
+                    self.enemies.append(goblin_archer)
+                else:
+                    goblin = Enemy(x, y, "Forest Goblin", health=45, damage=9, experience=30, asset_loader=self.asset_loader)
+                    self.enemies.append(goblin)
         
         # Enchanted Grove - Magical creatures
         grove_positions = [
@@ -86,19 +96,24 @@ class SpawningMixin:
                 sprite_enemy = Enemy(x, y, "Forest Sprite", health=35, damage=12, experience=40, asset_loader=self.asset_loader)
                 self.enemies.append(sprite_enemy)
         
-        # Ancient Woods - Undead guardians
+        # Ancient Woods - Undead guardians with skeleton archers
         ancient_positions = [
             (145, 35), (150, 40), (155, 35), (148, 50), (152, 45),
             (160, 40), (165, 45), (170, 38), (155, 55), (162, 50),
             (175, 42), (168, 35), (158, 60), (172, 55), (165, 32)
         ]
         
-        for x, y in ancient_positions:
+        for i, (x, y) in enumerate(ancient_positions):
             if self.is_valid_story_position(x, y):
-                skeleton = Enemy(x, y, "Ancient Guardian", health=60, damage=15, experience=50, asset_loader=self.asset_loader)
-                self.enemies.append(skeleton)
+                if i % 4 == 0:  # Every 4th enemy is a skeleton archer
+                    skeleton_archer = RangedEnemy(x, y, "Skeleton Archer", health=50, damage=14, 
+                                                experience=45, asset_loader=self.asset_loader, weapon_type="bow")
+                    self.enemies.append(skeleton_archer)
+                else:
+                    skeleton = Enemy(x, y, "Ancient Guardian", health=60, damage=15, experience=50, asset_loader=self.asset_loader)
+                    self.enemies.append(skeleton)
         
-        # Orc Stronghold (Far North-East) - Multiple bosses and minions
+        # Orc Stronghold (Far North-East) - Multiple bosses and minions with crossbow orcs
         stronghold_positions = [
             (165, 25), (170, 30), (175, 25), (168, 35), (172, 32),
             (180, 28), (175, 35), (185, 30), (178, 40), (182, 35)
@@ -111,6 +126,10 @@ class SpawningMixin:
                                     health=400, damage=30, experience=300, 
                                     is_boss=True, asset_loader=self.asset_loader)
                     self.enemies.append(orc_chief)
+                elif i % 3 == 1:  # Every 3rd orc is a crossbow user
+                    orc_crossbow = RangedEnemy(x, y, "Orc Crossbow", health=70, damage=20, 
+                                             experience=65, asset_loader=self.asset_loader, weapon_type="crossbow")
+                    self.enemies.append(orc_crossbow)
                 else:
                     orc = Enemy(x, y, "Orc Warrior", health=80, damage=18, experience=60, asset_loader=self.asset_loader)
                     self.enemies.append(orc)
@@ -131,16 +150,21 @@ class SpawningMixin:
                     drake = Enemy(x, y, "Fire Drake", health=120, damage=25, experience=80, asset_loader=self.asset_loader)
                     self.enemies.append(drake)
         
-        # Crystal Caves - Crystal elementals
+        # Crystal Caves - Crystal elementals with dark mages
         crystal_positions = [
             (175, 85), (180, 90), (185, 85), (178, 95), (182, 100),
             (175, 105), (180, 110), (185, 105), (188, 95), (192, 88)
         ]
         
-        for x, y in crystal_positions:
+        for i, (x, y) in enumerate(crystal_positions):
             if self.is_valid_story_position(x, y):
-                elemental = Enemy(x, y, "Crystal Elemental", health=70, damage=20, experience=65, asset_loader=self.asset_loader)
-                self.enemies.append(elemental)
+                if i % 3 == 0:  # Every 3rd enemy is a dark mage
+                    dark_mage = RangedEnemy(x, y, "Dark Mage", health=60, damage=18, 
+                                          experience=70, asset_loader=self.asset_loader, weapon_type="dark_magic")
+                    self.enemies.append(dark_mage)
+                else:
+                    elemental = Enemy(x, y, "Crystal Elemental", health=70, damage=20, experience=65, asset_loader=self.asset_loader)
+                    self.enemies.append(elemental)
         
         # Desert enemies
         desert_positions = [
