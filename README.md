@@ -72,9 +72,25 @@ An immersive isometric RPG game featuring **procedural world generation**, **int
 - **📖 Quest Log**: Comprehensive quest management with active and available quest tracking
 - **🔄 Quest Completion**: Automatic reward distribution and progress updates
 
+### 🏹 **Advanced Ranged Combat System** ⭐ **NEW!**
+- **🎯 Realistic Projectile Physics**: Arrows, bolts, and magic projectiles travel with realistic trajectories
+- **🏹 Diverse Ranged Weapons**: Multiple weapon types with unique characteristics:
+  - **Magic Bow** (10.0 range): Longest range magical weapon with golden arrows
+  - **Crossbow** (9.0 range): High damage mechanical weapon with heavy bolts
+  - **Crystal Staff** (7.0 range): Magical staff shooting crystal shards
+  - **Throwing Knife** (6.0 range): Fast, precise thrown weapon
+- **⚡ Weapon-Specific Projectiles**: Each weapon fires unique visual projectiles
+- **🎵 Dynamic Audio**: Weapon-specific firing sounds and impact effects
+- **🎯 Smart Targeting**: Click enemies to attack at proper range automatically
+- **⚔️ Range-Based Combat**: Different weapons excel at different combat distances
+- **💨 Projectile Speed Variation**: Faster weapons like throwing knives vs. slower magic
+- **🔥 Impact Effects**: Visual feedback when projectiles hit targets
+- **🛡️ Stamina-Based System**: Each weapon has appropriate stamina costs
+
 ### Core Gameplay ✅
 - **🗺️ Isometric World**: Classic RPG perspective with rich, detailed environments
-- **⚔️ Real-time Combat**: Click-to-attack combat system with multiple enemy types
+- **⚔️ Advanced Combat System**: Real-time combat with both melee and ranged weapons ⭐
+- **🏹 Ranged Weapon Mastery**: Master bows, crossbows, and magical ranged weapons ⭐
 - **🎒 Inventory System**: Collect, manage, and equip weapons, armor, and consumables
 - **👥 NPC Interactions**: Talk to shopkeepers, traders, and other characters
 - **💾 Save/Load System**: Automatic progress saving with manual save options
@@ -161,7 +177,8 @@ python main.py
 | Action | Control |
 |--------|---------|
 | **Move Character** | Left Click on destination |
-| **Attack Enemy** | Left Click on enemy |
+| **Attack Enemy (Melee)** | Left Click on enemy (close range) |
+| **Attack Enemy (Ranged)** | Left Click on enemy (any range) ⭐ **NEW!** |
 | **Pick Up Items** | Left Click on items |
 | **Talk to NPCs** | Left Click on characters |
 | **Get Information** | Right Click on anything |
@@ -173,14 +190,15 @@ python main.py
 ### Getting Started Guide
 1. **🎯 Movement**: Left-click anywhere to move your character
 2. **🔍 Exploration**: Right-click on objects to learn about them
-3. **⚔️ Combat**: Click on enemies to engage in battle
-4. **💰 Looting**: Click on items scattered around the world
-5. **🎒 Inventory**: Press 'I' to manage items and equipment
-6. **💬 NPCs**: Click on characters to start **AI-powered conversations** ⭐
-7. **📜 Quests**: Talk to NPCs to receive **dynamically generated quests** ⭐
-8. **📖 Quest Log**: Press 'Q' to track your active and available quests ⭐
-9. **🛒 Trading**: Visit shops to buy and sell equipment
-10. **💾 Saving**: Use ESC menu to save your progress
+3. **⚔️ Combat**: Click on enemies to engage in battle (melee or ranged automatically) ⭐
+4. **🏹 Ranged Weapons**: Equip bows, crossbows, or magical weapons for distance combat ⭐
+5. **💰 Looting**: Click on items scattered around the world
+6. **🎒 Inventory**: Press 'I' to manage items and equipment
+7. **💬 NPCs**: Click on characters to start **AI-powered conversations** ⭐
+8. **📜 Quests**: Talk to NPCs to receive **dynamically generated quests** ⭐
+9. **📖 Quest Log**: Press 'Q' to track your active and available quests ⭐
+10. **🛒 Trading**: Visit shops to buy and sell equipment
+11. **💾 Saving**: Use ESC menu to save your progress
 
 ### Tips for New Players
 - **Start by exploring** the immediate area to get familiar with controls
@@ -189,6 +207,9 @@ python main.py
 - **Check your Quest Log** (Q key) regularly to track objectives ⭐
 - **Follow quest directions** - items and enemies spawn in the world based on quest needs ⭐
 - **Collect all items** you find - they can be sold or equipped
+- **Try different weapon types** - ranged weapons excel at different combat ranges ⭐
+- **Master ranged combat** - bows and crossbows let you fight from safety ⭐
+- **Watch your stamina** - ranged weapons consume stamina per shot ⭐
 - **Save frequently** using the ESC menu
 
 ## 🔧 Development Status
@@ -219,6 +240,8 @@ python main.py
 - **🛠️ Asset Verification System**: AI only uses items that exist in the game
 - **⚙️ Model Selection**: Choose your preferred AI model in settings
 - **🛒 Tool Integration**: Seamless NPC actions with conversational responses
+- **🏹 Advanced Ranged Combat System**: Realistic projectile physics with diverse weapons ⭐ **NEW!**
+- **🎯 Weapon-Specific Projectiles**: Unique visual effects for each ranged weapon ⭐ **NEW!**
 - **🏠 Building Visibility System**: Advanced occlusion system for building interiors ⭐ **NEW!**
 - **⚡ Performance Optimizations**: Massive performance improvements around buildings ⭐ **NEW!**
 - **🪑 Furniture System**: Properly scaled furniture with interaction support ⭐ **NEW!**
@@ -270,9 +293,21 @@ The game is actively developed with new features and improvements added regularl
 - **Real-time Quest Generation**: Procedural content creation during gameplay
 - **Adaptive Dialogue System**: Context-aware conversations that evolve with gameplay
 - **Background Population System**: Realistic settlement atmosphere with mixed NPC types
+- **Advanced Ranged Combat Engine**: Real-time projectile physics with weapon-specific behaviors ⭐ **NEW!**
+- **Projectile Rendering System**: Dynamic visual effects for arrows, bolts, and magic projectiles ⭐ **NEW!**
 - **Advanced Building Occlusion**: Intelligent building visibility system with interior exploration ⭐ **NEW!**
 - **Memoized Performance Caching**: Multi-layer caching system for smooth gameplay ⭐ **NEW!**
 - **Furniture Integration**: Properly scaled furniture with building template support ⭐ **NEW!**
+
+#### 🏹 **Advanced Ranged Combat System** ⭐ **NEW!**
+- **Realistic Projectile Physics**: Projectiles travel from weapon to target with proper trajectories
+- **Weapon-Specific Behaviors**: Each ranged weapon has unique range, speed, and projectile type
+- **Visual Projectile Rendering**: Real-time rendering of arrows, bolts, magic shards, and thrown weapons
+- **Dynamic Audio Integration**: Weapon-specific firing sounds and impact effects
+- **Smart Range Detection**: Automatic weapon selection based on target distance
+- **Stamina-Based Combat**: Balanced stamina costs prevent ranged weapon spam
+- **Impact Effect System**: Visual feedback when projectiles hit enemies or obstacles
+- **Multi-Weapon Support**: Seamless switching between melee and ranged combat modes
 
 #### 🏠 **Building Visibility System** ⭐ **NEW!**
 - **Smart Occlusion**: Buildings automatically become transparent when player approaches

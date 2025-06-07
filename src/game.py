@@ -135,6 +135,8 @@ class Game:
         self.player = Player(start_x, start_y, self.asset_loader, self.game_log)
         self.current_level.player = self.player
         
+
+        
         # Initialize quest system with level reference
         from .quest_system import QuestManager
         self.quest_manager = QuestManager(self.player, self.game_log, self.current_level)
@@ -153,6 +155,8 @@ class Game:
         if seed:
             self.game_log.add_message(f"World seed: {seed}", "system")
         self.game_log.add_message(f"You find yourself near a settlement...", "story")
+    
+
     
     def load_game(self, save_name):
         """Load a saved game with procedural world support"""
@@ -239,6 +243,9 @@ class Game:
         for event in pygame.event.get():
             if event.type == pygame.QUIT:
                 self.running = False
+            elif event.type == pygame.USEREVENT + 1:
+                # Reset cursor after attack
+                pygame.mouse.set_cursor(pygame.SYSTEM_CURSOR_ARROW)
             elif event.type == pygame.VIDEORESIZE:
                 # Handle window resize
                 self.width = max(self.min_width, event.w)

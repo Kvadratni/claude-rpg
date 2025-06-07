@@ -160,6 +160,7 @@ class MovementSystem:
         
         # Get audio manager
         audio = getattr(self.player.asset_loader, 'audio_manager', None) if self.player.asset_loader else None
+        
         # Check if clicking on an entity first
         clicked_entity = self._check_entity_click(target_tile_x, target_tile_y, level)
         
@@ -169,6 +170,33 @@ class MovementSystem:
         else:
             # Move to the clicked tile
             self._move_to_tile(target_tile_x, target_tile_y, level)
+    
+    def handle_mouse_hover(self, world_x, world_y, level):
+        """Handle mouse hover for cursor changes"""
+        if not level:
+            return
+            
+        # Convert world coordinates to tile coordinates
+        target_tile_x = int(world_x)
+        target_tile_y = int(world_y)
+        
+        # Check if hovering over an entity
+        hovered_entity = self._check_entity_click(target_tile_x, target_tile_y, level)
+        
+        if hovered_entity and hovered_entity.entity_type == "enemy":
+            # Check if enemy is in weapon range
+            weapon_range = self._get_current_weapon_range()
+            distance = math.sqrt((self.player.x - hovered_entity.x)**2 + (self.player.y - hovered_entity.y)**2)
+            
+            if distance <= weapon_range:
+                # In range - show attack cursor
+                pygame.mouse.set_cursor(pygame.SYSTEM_CURSOR_CROSSHAIR)
+            else:
+                # Out of range - show move cursor
+                pygame.mouse.set_cursor(pygame.SYSTEM_CURSOR_HAND)
+        else:
+            # Default cursor
+            pygame.mouse.set_cursor(pygame.SYSTEM_CURSOR_ARROW)
     
     def _check_entity_click(self, tile_x, tile_y, level):
         """Check if click is on an entity - with more forgiving click detection"""
@@ -209,10 +237,56 @@ class MovementSystem:
         # Calculate distance to entity's actual position
         entity_tile_x = int(entity.x)
         entity_tile_y = int(entity.y)
-        distance = max(abs(self.player.tile_x - entity_tile_x), abs(self.player.tile_y - entity_tile_y))
+        distance = math.sqrt((self.player.x - entity.x)**2 + (self.player.y - entity.y)**2)
         
-        if distance <= 1:
-            # Adjacent or same tile - interact directly
+        if entity.entity_type == "enemy":
+            # For enemies, check weapon range
+            weapon_range = self._get_current_weapon_range()
+            
+            if distance <= weapon_range:
+                # Within weapon range - attack directly
+                stamina_cost = self.player.combat_system.get_weapon_stamina_cost()
+                if self.player.stamina >= stamina_cost:
+                    # Set attack cursor
+                    pygame.mouse.set_cursor(pygame.SYSTEM_CURSOR_CROSSHAIR)
+                    self.player.combat_system.attack([entity], level)
+                    if self.player.game_log:
+                        weapon_name = self.player.equipped_weapon.name if self.player.equipped_weapon else "fists"
+                        self.player.game_log.add_message(f"Attacking {entity.name} with {weapon_name}!", "combat")
+                    # Reset cursor after a short delay
+                    pygame.time.set_timer(pygame.USEREVENT + 1, 500)  # Reset after 500ms
+                else:
+                    if self.player.game_log:
+                        weapon_name = self.player.equipped_weapon.name if self.player.equipped_weapon else "fists"
+                        self.player.game_log.add_message(f"Not enough stamina to attack with {weapon_name}! (Need {stamina_cost})", "combat")
+            else:
+                # Too far for weapon range - move closer but not all the way
+                # Calculate how close we need to get (weapon range - 0.5 for safety margin)
+                target_distance = max(weapon_range - 0.8, 1.0)  # At least 1 tile away
+                
+                # Calculate direction to enemy
+                dx = entity.x - self.player.x
+                dy = entity.y - self.player.y
+                distance_to_enemy = math.sqrt(dx*dx + dy*dy)
+                
+                if distance_to_enemy > 0:
+                    # Calculate target position
+                    ratio = target_distance / distance_to_enemy
+                    target_x = self.player.x + dx * ratio
+                    target_y = self.player.y + dy * ratio
+                    
+                    # Convert to tile coordinates
+                    target_tile_x = int(target_x)
+                    target_tile_y = int(target_y)
+                    
+                    # Move to attack position
+                    self._move_to_tile(target_tile_x, target_tile_y, level)
+                    if self.player.game_log:
+                        weapon_name = self.player.equipped_weapon.name if self.player.equipped_weapon else "fists"
+                        self.player.game_log.add_message(f"Moving into {weapon_name} range of {entity.name}...", "combat")
+        
+        elif distance <= 1.5:  # For non-enemies, use standard interaction range
+            # Adjacent or close - interact directly
             if hasattr(entity, 'interact'):
                 entity.interact(self.player)
             elif entity.entity_type == "item":
@@ -224,20 +298,25 @@ class MovementSystem:
                 else:
                     if self.player.game_log:
                         self.player.game_log.add_message("Inventory is full!", "system")
-            elif entity.entity_type == "enemy":
-                # Attack enemy
-                stamina_cost = self.player.combat_system.get_weapon_stamina_cost()
-                if self.player.stamina >= stamina_cost:
-                    self.player.combat_system.attack([entity], level)
-                    if self.player.game_log:
-                        self.player.game_log.add_message(f"Attacking {entity.name}!", "combat")
-                else:
-                    if self.player.game_log:
-                        weapon_name = self.player.equipped_weapon.name if self.player.equipped_weapon else "fists"
-                        self.player.game_log.add_message(f"Not enough stamina to attack with {weapon_name}! (Need {stamina_cost})", "combat")
         else:
             # Too far - move towards entity's position
             self._move_to_tile(entity_tile_x, entity_tile_y, level)
+    
+    def _get_current_weapon_range(self):
+        """Get the range of the currently equipped weapon"""
+        # Check if equipped weapon is ranged
+        ranged_weapons = {
+            "Magic Bow": 10.0,
+            "Crossbow": 9.0,
+            "Crystal Staff": 7.0,
+            "Throwing Knife": 6.0
+        }
+        
+        if self.player.equipped_weapon and self.player.equipped_weapon.name in ranged_weapons:
+            return ranged_weapons[self.player.equipped_weapon.name]
+        else:
+            # Melee weapon or unarmed
+            return self.player.attack_range  # Default melee range (1.5)
     
     def _move_to_tile(self, target_tile_x, target_tile_y, level):
         """Move to a target tile using pathfinding"""

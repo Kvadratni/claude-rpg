@@ -82,3 +82,18 @@ settings.json
 # Development/refactoring documentation
 PROPOSED_STRUCTURE.md
 REFACTORING_PHASES.md
+
+# Test files and temporary documentation
+test_*.py
+*_test.py
+test_*.sh
+FINAL_*.md
+RANGED_*.md
+ENHANCED_*.md
+COMPLETE_*.md
+*_COMPLETE.md
+*_STATUS.md
+*_IMPLEMENTATION.md
+*_FIXES.md
+*_COMPARISON.md
+*_SUMMARY.md

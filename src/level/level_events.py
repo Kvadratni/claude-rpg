@@ -72,6 +72,21 @@ class EventHandlingMixin:
                 elif hasattr(self, 'player') and hasattr(self.player, 'game_log'):
                     if self.player.game_log.handle_scroll(-1):  # Scroll down
                         pass  # Successfully scrolled
+        
+        # Handle mouse motion for cursor changes
+        elif event.type == pygame.MOUSEMOTION:
+            self.handle_mouse_hover(event.pos)
+    
+    def handle_mouse_hover(self, pos):
+        """Handle mouse hover for cursor changes"""
+        # Only handle hover in mouse mode
+        if (hasattr(self.player, 'movement_system') and 
+            self.player.movement_system.movement_mode == "mouse"):
+            # Convert screen position to world position
+            world_x, world_y = self.iso_renderer.screen_to_world(pos[0], pos[1], self.camera_x, self.camera_y)
+            
+            # Let the movement system handle hover
+            self.player.movement_system.handle_mouse_hover(world_x, world_y, self)
     
     def handle_click(self, pos):
         """Handle mouse click at position"""
