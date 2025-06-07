@@ -2,7 +2,7 @@
 Entities module for the RPG
 
 This module contains all game entities including the base Entity class,
-NPCs, enemies, items, chests, furniture, and spawning logic.
+NPCs, enemies, items, chests, and furniture.
 """
 
 from .base import Entity
@@ -11,7 +11,6 @@ from .enemy import Enemy, RangedEnemy
 from .item import Item
 from .chest import Chest
 from .furniture import Furniture
-from .spawning import SpawningMixin
 
 __all__ = [
     'Entity',
@@ -20,6 +19,5 @@ __all__ = [
     'RangedEnemy',
     'Item',
     'Chest',
-    'Furniture',
-    'SpawningMixin'
+    'Furniture'
 ]

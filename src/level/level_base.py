@@ -15,7 +15,6 @@ try:
     from ..door_renderer import DoorRenderer
     from ..wall_renderer import WallRenderer
     from ..roof_renderer import RoofRenderer
-    from ..entities.spawning import SpawningMixin
 except ImportError:
     # Fallback for direct execution
     from src.core.isometric import IsometricRenderer, sort_by_depth
@@ -25,10 +24,9 @@ except ImportError:
     from src.door_renderer import DoorRenderer
     from src.wall_renderer import WallRenderer
     from src.roof_renderer import RoofRenderer
-    from src.entities.spawning import SpawningMixin
 
 
-class LevelBase(SpawningMixin):
+class LevelBase:
     """Base Level class with core initialization and constants"""
     
     # Tile types
