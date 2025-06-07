@@ -135,8 +135,7 @@ class Game:
         self.player = Player(start_x, start_y, self.asset_loader, self.game_log)
         self.current_level.player = self.player
         
-        # DEBUG: Add Magic Bow for testing ranged weapons
-        self._add_debug_starting_bow_to_player()
+
         
         # Initialize quest system with level reference
         from .quest_system import QuestManager
@@ -157,42 +156,7 @@ class Game:
             self.game_log.add_message(f"World seed: {seed}", "system")
         self.game_log.add_message(f"You find yourself near a settlement...", "story")
     
-    def _add_debug_starting_bow_to_player(self):
-        """DEBUG: Add a Magic Bow to the player for testing ranged weapons"""
-        try:
-            from .entities.item import Item
-            
-            # Create a Magic Bow (x, y coordinates don't matter for equipped items)
-            magic_bow = Item(
-                x=0, y=0,  # Dummy coordinates since it will be equipped
-                name="Magic Bow",
-                item_type="weapon",
-                effect={"damage": 22},
-                value=180,
-                asset_loader=self.asset_loader
-            )
-            
-            # Equip it directly
-            self.player.equipped_weapon = magic_bow
-            
-            # Add 3 health potions to inventory
-            for _ in range(3):
-                health_potion = Item(
-                    x=0, y=0,  # Dummy coordinates for inventory items
-                    name="Health Potion",
-                    item_type="consumable",
-                    effect={"health": 50},
-                    value=25,
-                    asset_loader=self.asset_loader
-                )
-                self.player.add_item(health_potion)
-            
-            self.game_log.add_message("🏹 DEBUG: Magic Bow equipped and health potions added!", "item")
-            self.game_log.add_message("🎯 Test ranged combat by attacking enemies from distance!", "system")
-                
-        except Exception as e:
-            print(f"DEBUG: Could not add starting bow: {e}")
-            self.game_log.add_message(f"⚠️ DEBUG: Failed to add starting bow: {e}", "system")
+
     
     def load_game(self, save_name):
         """Load a saved game with procedural world support"""
