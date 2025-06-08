@@ -575,9 +575,13 @@ class RangedEnemy(Enemy):
                     ]
                     return
                 else:
-                    print(f"❌ Failed to load sprite for {self.name}: {sprite_name}")
+                    print(f"❌ Failed to load sprite for {self.name}: {sprite_name} - image is None")
+                    print(f"   🔍 Available images: {[k for k in self.asset_loader.images.keys() if 'archer' in k.lower() or 'crossbow' in k.lower() or 'mage' in k.lower()]}")
             else:
                 print(f"❌ No sprite mapping for {self.name}")
+                print(f"   🔍 Available mappings: {list(sprite_mappings.keys())}")
+        else:
+            print(f"❌ No asset_loader for {self.name}")
         
         print(f"🎨 Using fallback sprite for {self.name}")
         # Fallback to generated sprite

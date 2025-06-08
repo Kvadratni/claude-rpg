@@ -245,6 +245,7 @@ python main.py
 - **🏠 Building Visibility System**: Advanced occlusion system for building interiors ⭐ **NEW!**
 - **⚡ Performance Optimizations**: Massive performance improvements around buildings ⭐ **NEW!**
 - **🪑 Furniture System**: Properly scaled furniture with interaction support ⭐ **NEW!**
+- **🏹 Ranged Enemy System**: Procedural worlds now properly spawn ranged enemies with diverse weapons ⭐ **FIXED!**
 
 ### Planned Features 🚀
 - **🗺️ Advanced Procedural Features**: Dungeons, caves, and special locations

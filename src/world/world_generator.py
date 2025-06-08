@@ -31,7 +31,7 @@ class WorldGenerator:
         self.pattern_generator = SettlementPatternGenerator()
         random.seed(world_seed)
         
-    def generate_chunk(self, chunk_x: int, chunk_y: int) -> Chunk:
+    def generate_chunk(self, chunk_x: int, chunk_y: int, asset_loader=None) -> Chunk:
         """
         Generate a single chunk with settlements as final override step
         
@@ -64,7 +64,7 @@ class WorldGenerator:
         
         # Generate objects for this chunk
         try:
-            objects = entity_spawner.spawn_objects(chunk.tiles, chunk.biomes, [], None)
+            objects = entity_spawner.spawn_objects(chunk.tiles, chunk.biomes, [], asset_loader)
             for obj in objects:
                 entity_data = {
                     'type': 'object',
@@ -76,7 +76,7 @@ class WorldGenerator:
                 chunk.add_entity(entity_data)
             
             # Generate enemies for this chunk
-            enemies = entity_spawner.spawn_enemies(chunk.tiles, chunk.biomes, [], None)
+            enemies = entity_spawner.spawn_enemies(chunk.tiles, chunk.biomes, [], asset_loader)
             for enemy in enemies[:10]:
                 entity_data = {
                     'type': 'enemy',
@@ -87,6 +87,16 @@ class WorldGenerator:
                     'damage': enemy.damage if hasattr(enemy, 'damage') else 10,
                     'id': f"{enemy.name}_{enemy.x}_{enemy.y}" if hasattr(enemy, 'name') and hasattr(enemy, 'x') and hasattr(enemy, 'y') else f"enemy_{len(chunk.entities)}"
                 }
+                
+                # Check if this is a ranged enemy and store ranged-specific data
+                if hasattr(enemy, 'weapon_type'):
+                    entity_data['enemy_subtype'] = 'ranged'
+                    entity_data['weapon_type'] = enemy.weapon_type
+                    print(f"  🏹 Storing ranged enemy: {enemy.name} with weapon {enemy.weapon_type}")
+                else:
+                    entity_data['enemy_subtype'] = 'melee'
+                    print(f"  ⚔️  Storing melee enemy: {enemy.name}")
+                
                 chunk.add_entity(entity_data)
             
             print(f"  ✅ Generated {len(objects)} objects and {len(enemies)} enemies")

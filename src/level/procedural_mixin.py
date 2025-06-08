@@ -27,7 +27,7 @@ class ProceduralGenerationMixin:
         
         # Initialize chunk manager for this world
         world_name = f"procedural_{seed}"
-        self.chunk_manager = ChunkManager(seed, world_name)
+        self.chunk_manager = ChunkManager(seed, world_name, self.asset_loader)
         
         # Set up world dimensions
         self.width = 1000  # Large but finite for compatibility
@@ -542,24 +542,49 @@ class ProceduralGenerationMixin:
             return None
     
     def create_enemy_from_data(self, entity_data, world_x, world_y):
-        """Create Enemy object from entity data"""
+        """Create Enemy object from entity data - supports both melee and ranged enemies"""
         try:
-            from ..entities.enemy import Enemy
+            # Check if this is a ranged enemy
+            enemy_subtype = entity_data.get('enemy_subtype', 'melee')
             
-            # Create Enemy with data from chunk
-            enemy = Enemy(
-                x=world_x,
-                y=world_y,
-                name=entity_data.get('name', 'Unknown Enemy'),
-                health=entity_data.get('health', 50),
-                damage=entity_data.get('damage', 10),
-                experience=25,
-                is_boss=False,
-                asset_loader=self.asset_loader
-            )
-            return enemy
+            if enemy_subtype == 'ranged':
+                # Import and create RangedEnemy
+                from ..entities.enemy import RangedEnemy
+                
+                weapon_type = entity_data.get('weapon_type', 'bow')
+                enemy = RangedEnemy(
+                    x=world_x,
+                    y=world_y,
+                    name=entity_data.get('name', 'Unknown Ranged Enemy'),
+                    health=entity_data.get('health', 50),
+                    damage=entity_data.get('damage', 10),
+                    experience=25,
+                    is_boss=False,
+                    asset_loader=self.asset_loader,
+                    weapon_type=weapon_type
+                )
+                print(f"  🏹 Created ranged enemy: {enemy.name} with {weapon_type}")
+                return enemy
+            else:
+                # Import and create regular Enemy
+                from ..entities.enemy import Enemy
+                
+                enemy = Enemy(
+                    x=world_x,
+                    y=world_y,
+                    name=entity_data.get('name', 'Unknown Enemy'),
+                    health=entity_data.get('health', 50),
+                    damage=entity_data.get('damage', 10),
+                    experience=25,
+                    is_boss=False,
+                    asset_loader=self.asset_loader
+                )
+                print(f"  ⚔️  Created melee enemy: {enemy.name}")
+                return enemy
         except Exception as e:
             print(f"Error creating Enemy from data: {e}")
+            import traceback
+            traceback.print_exc()
             return None
     
     def create_object_from_data(self, entity_data, world_x, world_y):

@@ -14,16 +14,18 @@ class ChunkManager:
     Manages world chunks - loading, unloading, and streaming
     """
     
-    def __init__(self, world_seed: int, world_name: str = "default"):
+    def __init__(self, world_seed: int, world_name: str = "default", asset_loader=None):
         """
         Initialize chunk manager
         
         Args:
             world_seed: Seed for world generation
             world_name: Name of the world (for save directory)
+            asset_loader: Asset loader for entities
         """
         self.world_seed = world_seed
         self.world_name = world_name
+        self.asset_loader = asset_loader
         self.world_generator = WorldGenerator(world_seed)
         
         # Loaded chunks cache
@@ -66,7 +68,7 @@ class ChunkManager:
             return chunk
         
         # Generate new chunk
-        chunk = self.world_generator.generate_chunk(chunk_x, chunk_y)
+        chunk = self.world_generator.generate_chunk(chunk_x, chunk_y, self.asset_loader)
         chunk.save_to_file(self.world_dir)
         self.loaded_chunks[chunk_key] = chunk
         
