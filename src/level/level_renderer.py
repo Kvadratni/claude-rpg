@@ -33,9 +33,9 @@ class LevelRendererMixin:
         # OPTIMIZATION: Cache player building detection for this frame
         player_x, player_y = int(self.player.x), int(self.player.y)
         
-        # Calculate visible tile range - much larger rendering area
-        visible_width = (screen_width // self.tile_width) + 10  # Optimized for large worlds
-        visible_height = (game_area_height // (self.tile_height // 2)) + 30  # Much larger area
+        # Calculate visible tile range - REDUCED for better performance
+        visible_width = (screen_width // self.tile_width) + 4  # Reduced from 10 to 4
+        visible_height = (game_area_height // (self.tile_height // 2)) + 8  # Reduced from 30 to 8
         
         # Calculate center tile
         center_x = int(self.player.x)
@@ -53,6 +53,7 @@ class LevelRendererMixin:
             self._update_building_states(player_x, player_y)
             self._update_entity_visibility_cache()  # Cache entity visibility too
             self._update_tile_visibility_cache(start_x, end_x, start_y, end_y)  # Cache tile visibility too
+            self._update_entity_sorting_cache()  # Cache entity sorting too
             self._last_player_pos = (player_x, player_y)
         
         # Render tiles in proper isometric order (back to front)
@@ -61,21 +62,8 @@ class LevelRendererMixin:
             for x in range(start_x, end_x):
                 self.render_tile_at_position(game_surface, x, y)
         
-        # Clear cached building data after rendering
-        # Building states persist until player moves
-        
-        # Collect all entities for depth sorting
-        all_entities = []
-        all_entities.append(self.player)
-        all_entities.extend(self.enemies)
-        all_entities.extend(self.npcs)
-        all_entities.extend(self.items)
-        all_entities.extend(self.objects)
-        all_entities.extend(self.chests)
-        all_entities.extend(getattr(self, 'furniture', []))
-        
-        # Sort entities by depth
-        sorted_entities = sort_by_depth(all_entities)
+        # Use cached sorted entities instead of sorting every frame
+        sorted_entities = self._get_cached_sorted_entities()
         
         # Render entities to game surface using cached visibility
         for entity in sorted_entities:
@@ -414,75 +402,83 @@ class LevelRendererMixin:
             surface.blit(roof_surface, roof_rect)
     
     def render_roof_tile_at_floor_level(self, surface, screen_x, screen_y):
-        """Render a roof tile at floor level (for interior floors)"""
-        roof_texture = self.asset_loader.get_image('roof_texture')
-        if roof_texture:
-            # FIXED: Rotate the roof texture 45 degrees to match isometric tiles
-            rotated_roof = pygame.transform.rotate(roof_texture, 45)
-            # FIXED: Make roof tiles slightly bigger to eliminate gaps (2% larger)
-            scaled_roof = pygame.transform.scale(rotated_roof, (int(self.tile_width * 1.02), int(self.tile_height * 1.02)))
-            
+        """Render a roof tile at floor level (for interior floors) with cached textures"""
+        # Cache the transformed roof texture to avoid repeated transforms
+        if not hasattr(self, '_cached_roof_texture'):
+            roof_texture = self.asset_loader.get_image('roof_texture')
+            if roof_texture:
+                # FIXED: Rotate the roof texture 45 degrees to match isometric tiles
+                rotated_roof = pygame.transform.rotate(roof_texture, 45)
+                # FIXED: Make roof tiles slightly bigger to eliminate gaps (2% larger)
+                self._cached_roof_texture = pygame.transform.scale(rotated_roof, (int(self.tile_width * 1.02), int(self.tile_height * 1.02)))
+            else:
+                # Fallback: simple dark rectangle (also rotated for consistency)
+                roof_surface = pygame.Surface((int(self.tile_width * 1.02), int(self.tile_height * 1.02)), pygame.SRCALPHA)
+                roof_surface.fill((80, 40, 20))  # Dark brown
+                self._cached_roof_texture = roof_surface
+        
+        if self._cached_roof_texture:
             # FIXED: Position interior roofs slightly lower (2px down from 3/4 height)
             wall_height = 48
             roof_y = screen_y - self.tile_height // 2 - (wall_height * 3 // 4) + 2
-            roof_rect = scaled_roof.get_rect()
+            roof_rect = self._cached_roof_texture.get_rect()
             roof_rect.center = (screen_x, roof_y)
-            surface.blit(scaled_roof, roof_rect)
-        else:
-            # Fallback: simple dark rectangle (also rotated for consistency)
-            roof_surface = pygame.Surface((int(self.tile_width * 1.02), int(self.tile_height * 1.02)), pygame.SRCALPHA)
-            roof_surface.fill((80, 40, 20))  # Dark brown
-            wall_height = 48
-            roof_y = screen_y - self.tile_height // 2 - (wall_height * 3 // 4) + 2
-            roof_rect = roof_surface.get_rect()
-            roof_rect.center = (screen_x, roof_y)
-            surface.blit(roof_surface, roof_rect)
+            surface.blit(self._cached_roof_texture, roof_rect)
     
     def render_wall_outline(self, surface, screen_x, screen_y, tile_type):
-        """Render wall outline when player is inside"""
-        # Use window texture for window walls, regular wall texture for others
-        if tile_type in [self.TILE_WALL_WINDOW, self.TILE_WALL_WINDOW_HORIZONTAL, self.TILE_WALL_WINDOW_VERTICAL]:
-            wall_texture = self.asset_loader.get_image('wall_texture_window')
-            if not wall_texture:
-                wall_texture = self.asset_loader.get_image('wall_texture')
-        else:
-            wall_texture = self.asset_loader.get_image('wall_texture')
+        """Render wall outline when player is inside with cached textures"""
+        # Cache wall textures to avoid repeated transforms
+        cache_key = f"wall_outline_{tile_type}"
+        if not hasattr(self, '_cached_wall_textures'):
+            self._cached_wall_textures = {}
         
-        if wall_texture:
-            rotated_wall = pygame.transform.rotate(wall_texture, 45)
-            scaled_wall = pygame.transform.scale(rotated_wall, (self.tile_width, self.tile_height))
-            wall_rect = scaled_wall.get_rect()
-            wall_rect.center = (screen_x, screen_y)
-            surface.blit(scaled_wall, wall_rect)
-        else:
-            # Fallback: gray diamond (or blue-tinted for windows)
-            wall_surface = pygame.Surface((self.tile_width, self.tile_height), pygame.SRCALPHA)
+        if cache_key not in self._cached_wall_textures:
+            # Use window texture for window walls, regular wall texture for others
             if tile_type in [self.TILE_WALL_WINDOW, self.TILE_WALL_WINDOW_HORIZONTAL, self.TILE_WALL_WINDOW_VERTICAL]:
-                wall_surface.fill((150, 150, 200))  # Blue-tinted for windows
+                wall_texture = self.asset_loader.get_image('wall_texture_window')
+                if not wall_texture:
+                    wall_texture = self.asset_loader.get_image('wall_texture')
             else:
-                wall_surface.fill((150, 150, 150))  # Gray for regular walls
-            wall_rect = wall_surface.get_rect()
+                wall_texture = self.asset_loader.get_image('wall_texture')
+            
+            if wall_texture:
+                rotated_wall = pygame.transform.rotate(wall_texture, 45)
+                scaled_wall = pygame.transform.scale(rotated_wall, (self.tile_width, self.tile_height))
+                self._cached_wall_textures[cache_key] = scaled_wall
+            else:
+                # Fallback: gray diamond (or blue-tinted for windows)
+                wall_surface = pygame.Surface((self.tile_width, self.tile_height), pygame.SRCALPHA)
+                if tile_type in [self.TILE_WALL_WINDOW, self.TILE_WALL_WINDOW_HORIZONTAL, self.TILE_WALL_WINDOW_VERTICAL]:
+                    wall_surface.fill((150, 150, 200))  # Blue-tinted for windows
+                else:
+                    wall_surface.fill((150, 150, 150))  # Gray for regular walls
+                self._cached_wall_textures[cache_key] = wall_surface
+        
+        if cache_key in self._cached_wall_textures:
+            wall_rect = self._cached_wall_textures[cache_key].get_rect()
             wall_rect.center = (screen_x, screen_y)
-            surface.blit(wall_surface, wall_rect)
+            surface.blit(self._cached_wall_textures[cache_key], wall_rect)
     
     def render_interior_door(self, surface, screen_x, screen_y):
-        """Render door when player is inside building"""
-        archway_texture = self.asset_loader.get_image('archway_texture')
-        if archway_texture:
-            # Rotate 90 degrees first, then 45 for isometric
-            rotated_archway = pygame.transform.rotate(archway_texture, 90)
-            final_archway = pygame.transform.rotate(rotated_archway, 45)
-            scaled_archway = pygame.transform.scale(final_archway, (self.tile_width, self.tile_height))
-            archway_rect = scaled_archway.get_rect()
+        """Render door when player is inside building with cached texture"""
+        # Cache the transformed archway texture
+        if not hasattr(self, '_cached_archway_texture'):
+            archway_texture = self.asset_loader.get_image('archway_texture')
+            if archway_texture:
+                # Rotate 90 degrees first, then 45 for isometric
+                rotated_archway = pygame.transform.rotate(archway_texture, 90)
+                final_archway = pygame.transform.rotate(rotated_archway, 45)
+                self._cached_archway_texture = pygame.transform.scale(final_archway, (self.tile_width, self.tile_height))
+            else:
+                # Fallback: light brown diamond
+                door_surface = pygame.Surface((self.tile_width, self.tile_height), pygame.SRCALPHA)
+                door_surface.fill((200, 150, 100))
+                self._cached_archway_texture = door_surface
+        
+        if self._cached_archway_texture:
+            archway_rect = self._cached_archway_texture.get_rect()
             archway_rect.center = (screen_x, screen_y)
-            surface.blit(scaled_archway, archway_rect)
-        else:
-            # Fallback: light brown diamond
-            door_surface = pygame.Surface((self.tile_width, self.tile_height), pygame.SRCALPHA)
-            door_surface.fill((200, 150, 100))
-            door_rect = door_surface.get_rect()
-            door_rect.center = (screen_x, screen_y)
-            surface.blit(door_surface, door_rect)
+            surface.blit(self._cached_archway_texture, archway_rect)
     
     def _get_buildings_near_player(self, player_x, player_y):
         """
@@ -765,3 +761,39 @@ class LevelRendererMixin:
         
         # Fallback to expensive check if cache not ready
         return self._is_player_near_building_tile(tile_x, tile_y)
+    
+    def _update_entity_sorting_cache(self):
+        """
+        Cache sorted entities to avoid expensive sorting every frame
+        """
+        # Collect all entities for depth sorting
+        all_entities = []
+        all_entities.append(self.player)
+        all_entities.extend(getattr(self, 'enemies', []))
+        all_entities.extend(getattr(self, 'npcs', []))
+        all_entities.extend(getattr(self, 'items', []))
+        all_entities.extend(getattr(self, 'objects', []))
+        all_entities.extend(getattr(self, 'chests', []))
+        all_entities.extend(getattr(self, 'furniture', []))
+        
+        # Sort entities by depth and cache the result
+        self._cached_sorted_entities = sort_by_depth(all_entities)
+    
+    def _get_cached_sorted_entities(self):
+        """
+        Get cached sorted entities, falling back to immediate sorting if cache not ready
+        """
+        if hasattr(self, '_cached_sorted_entities'):
+            return self._cached_sorted_entities
+        
+        # Fallback: collect and sort immediately (should rarely happen)
+        all_entities = []
+        all_entities.append(self.player)
+        all_entities.extend(getattr(self, 'enemies', []))
+        all_entities.extend(getattr(self, 'npcs', []))
+        all_entities.extend(getattr(self, 'items', []))
+        all_entities.extend(getattr(self, 'objects', []))
+        all_entities.extend(getattr(self, 'chests', []))
+        all_entities.extend(getattr(self, 'furniture', []))
+        
+        return sort_by_depth(all_entities)

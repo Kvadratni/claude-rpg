@@ -17,9 +17,11 @@ class Item(Entity):
         self.value = value
         self.asset_loader = asset_loader
         
-        # Animation
+        # Animation - optimized for performance
         self.bob_offset = 0
         self.bob_speed = 0.1
+        self.cached_bob_y = 0  # Cache the calculated bob position
+        self.bob_update_counter = 0  # Update bob calculation less frequently
         
         # Create item sprite
         self.create_item_sprite()
@@ -103,18 +105,23 @@ class Item(Entity):
         pygame.draw.circle(self.sprite, (0, 0, 0), (size//2, size//2), size//3, 3)  # Thicker border
     
     def update(self, level):
-        """Update item (bobbing animation)"""
-        self.bob_offset += self.bob_speed
-        if self.bob_offset > math.pi * 2:
-            self.bob_offset = 0
+        """Update item (bobbing animation) - optimized to reduce math.sin() calls"""
+        # Only update bob calculation every 3 frames to reduce CPU usage
+        self.bob_update_counter += 1
+        if self.bob_update_counter >= 3:
+            self.bob_update_counter = 0
+            self.bob_offset += self.bob_speed * 3  # Compensate for skipped frames
+            if self.bob_offset > math.pi * 2:
+                self.bob_offset = 0
+            self.cached_bob_y = math.sin(self.bob_offset) * 3
     
     def render(self, screen, camera_x, camera_y, iso_renderer):
-        """Render the item with bobbing animation"""
+        """Render the item with cached bobbing animation"""
         if self.sprite:
             screen_x, screen_y = iso_renderer.world_to_screen(self.x, self.y, camera_x, camera_y)
             
-            # Add bobbing effect
-            bob_y = math.sin(self.bob_offset) * 3
+            # Use cached bob position instead of calculating every frame
+            bob_y = self.cached_bob_y
             
             # Center the sprite
             sprite_rect = self.sprite.get_rect()

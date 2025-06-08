@@ -145,6 +145,10 @@ class Furniture(Entity):
         # Load sprite
         self._load_sprite()
         
+        # Pre-scale sprite for performance (avoid scaling every frame)
+        self.scaled_sprite = None
+        self._load_and_scale_sprite()
+        
         # Furniture-specific properties
         self.inventory = []  # Some furniture can store items
         self.max_inventory_size = 0
@@ -196,6 +200,43 @@ class Furniture(Entity):
         pygame.draw.rect(surface, (0, 0, 0), surface.get_rect(), 2)
         
         return surface
+    
+    def _load_and_scale_sprite(self):
+        """Load and pre-scale the furniture sprite for optimal rendering performance"""
+        if not self.sprite:
+            return
+        
+        # Use the same scaling approach as the original render method
+        base_size = 48  # Same as other entities
+        
+        # For multi-tile furniture, scale slightly larger but not proportionally
+        if max(self.width, self.height) > 1:
+            scaled_size_target = base_size + 16  # Just 16px larger for multi-tile furniture
+        else:
+            scaled_size_target = base_size
+        
+        # Scale the sprite maintaining aspect ratio
+        original_rect = self.sprite.get_rect()
+        if original_rect.width == 0 or original_rect.height == 0:
+            # Avoid division by zero
+            self.scaled_sprite = self.sprite
+            return
+        
+        if original_rect.width > original_rect.height:
+            # Wide sprite
+            new_width = scaled_size_target
+            new_height = int(scaled_size_target * original_rect.height / original_rect.width)
+        else:
+            # Tall or square sprite
+            new_height = scaled_size_target
+            new_width = int(scaled_size_target * original_rect.width / original_rect.height)
+        
+        # Ensure valid dimensions for scaling
+        if new_width > 0 and new_height > 0:
+            self.scaled_sprite = pygame.transform.scale(self.sprite, (new_width, new_height))
+        else:
+            # Fallback if dimensions are invalid
+            self.scaled_sprite = self.sprite
     
     def interact(self, player):
         """Handle player interaction with furniture"""
@@ -301,63 +342,42 @@ class Furniture(Entity):
         pass
     
     def render(self, surface, camera_x, camera_y, iso_renderer):
-        """Render furniture using isometric projection with same scaling as other entities"""
-        if not self.sprite:
+        """Render furniture using isometric projection with pre-scaled sprite for performance"""
+        if not self.scaled_sprite:
             return
         
         # Convert world coordinates to screen coordinates
         screen_x, screen_y = iso_renderer.world_to_screen(self.x, self.y, camera_x, camera_y)
         
-        # Use the same scaling approach as other entities (base.py)
-        # Scale to a fixed size while maintaining aspect ratio
-        base_size = 48  # Same as other entities
-        
-        # For multi-tile furniture, scale slightly larger but not proportionally
-        # This prevents huge furniture while still showing they're bigger
-        if max(self.width, self.height) > 1:
-            scaled_size = base_size + 16  # Just 16px larger for multi-tile furniture
-        else:
-            scaled_size = base_size
-        
-        # Scale the sprite maintaining aspect ratio
-        original_rect = self.sprite.get_rect()
-        if original_rect.width > original_rect.height:
-            # Wide sprite
-            new_width = scaled_size
-            new_height = int(scaled_size * original_rect.height / original_rect.width)
-        else:
-            # Tall or square sprite
-            new_height = scaled_size
-            new_width = int(scaled_size * original_rect.width / original_rect.height)
-        
-        scaled_sprite = pygame.transform.scale(self.sprite, (new_width, new_height))
-        
-        # Center the sprite
-        sprite_rect = scaled_sprite.get_rect()
+        # Center the pre-scaled sprite
+        sprite_rect = self.scaled_sprite.get_rect()
         sprite_rect.center = (screen_x, screen_y)
         
-        # Render the scaled sprite
-        surface.blit(scaled_sprite, sprite_rect)
+        # Render the pre-scaled sprite (no scaling per frame!)
+        surface.blit(self.scaled_sprite, sprite_rect)
         
         # Render interaction prompt if player is nearby
         if hasattr(self, '_show_interaction_prompt') and self._show_interaction_prompt:
             self._render_interaction_prompt(surface, screen_x, screen_y - 30)
     
     def _render_interaction_prompt(self, surface, x, y):
-        """Render interaction prompt above furniture"""
+        """Render interaction prompt above furniture with cached text surface"""
         if not hasattr(self, '_interaction_font'):
             self._interaction_font = pygame.font.Font(None, 20)
         
-        text = self.get_interaction_text()
-        text_surface = self._interaction_font.render(text, True, (255, 255, 255))
-        text_rect = text_surface.get_rect(center=(x, y))
+        # Cache the text surface to avoid re-rendering the same text every frame
+        if not hasattr(self, '_cached_prompt_text') or self._cached_prompt_text != self.get_interaction_text():
+            self._cached_prompt_text = self.get_interaction_text()
+            self._cached_text_surface = self._interaction_font.render(self._cached_prompt_text, True, (255, 255, 255))
+        
+        text_rect = self._cached_text_surface.get_rect(center=(x, y))
         
         # Draw background
         bg_rect = text_rect.inflate(10, 4)
         pygame.draw.rect(surface, (0, 0, 0, 128), bg_rect)
         
-        # Draw text
-        surface.blit(text_surface, text_rect)
+        # Draw cached text
+        surface.blit(self._cached_text_surface, text_rect)
     
     def check_player_proximity(self, player, interaction_distance=1.5):
         """Check if player is close enough to interact"""
