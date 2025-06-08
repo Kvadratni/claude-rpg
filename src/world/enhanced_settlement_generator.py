@@ -5,9 +5,44 @@ Supports non-square settlements, multiple rows, and proper building template int
 
 import random
 import math
-from typing import List, Dict, Tuple, Optional, Any
+from typing import List, Dict, Tuple, Optional, Any, Set
 from dataclasses import dataclass
 from .building_template_manager import BuildingTemplateManager, BuildingTemplate
+
+
+class BuildingRegistry:
+    """Registry to track placed buildings and prevent overlaps"""
+    
+    def __init__(self):
+        self.placed_buildings = []
+        self.occupied_tiles: Set[Tuple[int, int]] = set()
+    
+    def register_building(self, x: int, y: int, width: int, height: int, building_type: str):
+        """Register a building and mark its tiles as occupied"""
+        building_info = {
+            'x': x, 'y': y, 'width': width, 'height': height,
+            'type': building_type, 'bounds': (x, y, x+width-1, y+height-1)
+        }
+        self.placed_buildings.append(building_info)
+        
+        # Mark all tiles as occupied
+        for dy in range(height):
+            for dx in range(width):
+                self.occupied_tiles.add((x + dx, y + dy))
+    
+    def can_place_building(self, x: int, y: int, width: int, height: int, buffer: int = 1) -> bool:
+        """Check if a building can be placed at the given position with buffer zone"""
+        # Check the building area plus buffer zone
+        for dy in range(-buffer, height + buffer):
+            for dx in range(-buffer, width + buffer):
+                check_pos = (x + dx, y + dy)
+                if check_pos in self.occupied_tiles:
+                    return False
+        return True
+    
+    def is_area_free(self, x: int, y: int, width: int, height: int, buffer: int = 1) -> bool:
+        """Check if an area is free with optional buffer zone (alias for can_place_building)"""
+        return self.can_place_building(x, y, width, height, buffer)
 
 
 @dataclass
@@ -400,11 +435,14 @@ class EnhancedSettlementGenerator:
     
     def _place_buildings(self, settlement_type: str, building_areas: List[Tuple[int, int, int, int]], 
                         biome: str, rng: random.Random) -> List[SettlementBuilding]:
-        """Place buildings in the designated areas using templates"""
+        """Place buildings in the designated areas using templates with overlap prevention"""
         buildings = []
         requirements = self.BUILDING_REQUIREMENTS.get(settlement_type, {
             'required': ['house'], 'preferred': ['shop'], 'optional': []
         })
+        
+        # Initialize building registry for overlap prevention
+        building_registry = BuildingRegistry()
         
         # Determine settlement size category for template selection
         total_areas = len(building_areas)
@@ -444,7 +482,7 @@ class EnhancedSettlementGenerator:
         # Shuffle building placement order
         rng.shuffle(building_types_to_place)
         
-        # Place buildings in areas
+        # Place buildings in areas with overlap prevention
         placed_count = 0
         for i, (area_x, area_y, area_w, area_h) in enumerate(building_areas):
             if placed_count >= len(building_types_to_place):
@@ -461,14 +499,21 @@ class EnhancedSettlementGenerator:
             if template:
                 # Check if template fits in area (with some flexibility)
                 if template.width <= area_w + 4 and template.height <= area_h + 4:
-                    building = SettlementBuilding(
-                        template=template,
-                        x=area_x,
-                        y=area_y,
-                        rotation=rng.choice([0, 90, 180, 270]) if rng.random() < 0.1 else 0
-                    )
-                    buildings.append(building)
-                    placed_count += 1
+                    # Check for overlaps with already placed buildings
+                    if building_registry.can_place_building(area_x, area_y, template.width, template.height, buffer=2):
+                        building = SettlementBuilding(
+                            template=template,
+                            x=area_x,
+                            y=area_y,
+                            rotation=rng.choice([0, 90, 180, 270]) if rng.random() < 0.1 else 0
+                        )
+                        buildings.append(building)
+                        
+                        # Register the building to prevent future overlaps
+                        building_registry.register_building(area_x, area_y, template.width, template.height, building_type)
+                        placed_count += 1
+                    else:
+                        print(f"    ⚠️  Skipping {building_type} at ({area_x}, {area_y}) - would overlap with existing building")
                 else:
                     # Try to find a smaller template of the same type
                     smaller_templates = [
@@ -478,16 +523,23 @@ class EnhancedSettlementGenerator:
                     
                     if smaller_templates:
                         template = rng.choice(smaller_templates)
-                        building = SettlementBuilding(
-                            template=template,
-                            x=area_x,
-                            y=area_y,
-                            rotation=0
-                        )
-                        buildings.append(building)
-                        placed_count += 1
+                        # Check for overlaps with the smaller template
+                        if building_registry.can_place_building(area_x, area_y, template.width, template.height, buffer=2):
+                            building = SettlementBuilding(
+                                template=template,
+                                x=area_x,
+                                y=area_y,
+                                rotation=0
+                            )
+                            buildings.append(building)
+                            
+                            # Register the building to prevent future overlaps
+                            building_registry.register_building(area_x, area_y, template.width, template.height, building_type)
+                            placed_count += 1
+                        else:
+                            print(f"    ⚠️  Skipping smaller {building_type} at ({area_x}, {area_y}) - would overlap with existing building")
         
-        print(f"    🏠 Placed {len(buildings)} buildings from {len(building_areas)} areas")
+        print(f"    🏠 Placed {len(buildings)} buildings from {len(building_areas)} areas (prevented overlaps)")
         return buildings
     
     def _generate_pathways(self, layout: SettlementLayout, width: int, height: int, 
