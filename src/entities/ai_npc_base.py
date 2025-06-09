@@ -19,12 +19,23 @@ class BaseAINPC(Entity):
     recipe: Optional[Dict[str, Any]] = None
     
     def __init__(self, x: int, y: int, name: str, dialog: Optional[List[str]] = None, 
-                 asset_loader=None, has_shop: bool = False, shop_items: Optional[List] = None, **kwargs):
+                 asset_loader=None, has_shop: bool = False, shop_items: Optional[List] = None, 
+                 unique_id: Optional[str] = None, **kwargs):
         super().__init__(x, y, name, "npc")
         self.dialog = dialog or ["Hello, traveler!"]
         self.asset_loader = asset_loader
         self.conversation_history: List[Dict[str, str]] = []
-        self.session_name = f"npc_{self.__class__.__name__.lower()}"
+        
+        # Generate unique session name for each NPC instance
+        if unique_id:
+            self.unique_id = unique_id
+        else:
+            # Generate unique ID from position and name
+            self.unique_id = f"{name.lower().replace(' ', '_')}_{x}_{y}_{id(self)}"
+        
+        # Create unique session name that includes NPC's individual identity
+        self.session_name = f"npc_{self.__class__.__name__.lower()}_{self.unique_id}"
+        
         self.ai_enabled = bool(self.recipe)
         self.use_fallback = False
         
@@ -46,8 +57,8 @@ class BaseAINPC(Entity):
         self.goose_process = None
         self.session_initialized = False
         
-        # MCP integration
-        self.npc_id = f"{self.name.lower().replace(' ', '_')}_{id(self)}"
+        # MCP integration - use unique ID for this specific NPC instance
+        self.npc_id = self.unique_id
         
         # Create NPC sprite
         self.create_npc_sprite()
@@ -146,11 +157,11 @@ class BaseAINPC(Entity):
             return False
         
         try:
-            # Start Goose process with recipe
+            # Start Goose process with recipe and NPC-specific context
             cmd = [
                 "goose", "run",
                 "--recipe", recipe_file,
-                "--params", "context=You are in a fantasy RPG village",  # Default context for initialization
+                "--params", f"context=You are {self.name}, a {self.__class__.__name__.replace('NPC', '')} in a fantasy RPG village. Your unique identity is {self.unique_id}. Remember your individual personality and past conversations.",
                 "--interactive",
                 "--name", self.session_name
             ]
@@ -614,8 +625,10 @@ class BaseAINPC(Entity):
         """Get current game context for AI"""
         context_parts = []
         
-        # Add NPC ID for MCP tools
+        # Add NPC's individual identity and name
         context_parts.append(f"NPC ID: {self.npc_id}")
+        context_parts.append(f"NPC Name: {self.name}")
+        context_parts.append(f"NPC Role: {self.__class__.__name__.replace('NPC', '')}")
         
         if player:
             context_parts.append(f"Player Level: {getattr(player, 'level', 1)}")
@@ -638,7 +651,7 @@ class BaseAINPC(Entity):
                 if item_count > 0:
                     context_parts.append(f"Player has {item_count} items in inventory")
         
-        return " | ".join(context_parts) if context_parts else f"NPC ID: {self.npc_id} | Player is exploring the world"
+        return " | ".join(context_parts) if context_parts else f"NPC ID: {self.npc_id} | NPC Name: {self.name} | Player is exploring the world"
     
     def create_npc_sprite(self):
         """Create NPC sprite - override in subclasses for specific appearances"""
@@ -706,7 +719,8 @@ class BaseAINPC(Entity):
             "use_fallback": self.use_fallback,
             "first_interaction": self.first_interaction,
             "has_shop": self.has_shop,
-            "shop_items": self.shop_items
+            "shop_items": self.shop_items,
+            "unique_id": self.unique_id  # Save the unique ID
         })
         return data
     
@@ -719,7 +733,8 @@ class BaseAINPC(Entity):
         """Create NPC from save data"""
         npc = cls(data["x"], data["y"], asset_loader=asset_loader, 
                  has_shop=data.get("has_shop", False), 
-                 shop_items=data.get("shop_items", []))
+                 shop_items=data.get("shop_items", []),
+                 unique_id=data.get("unique_id"))  # Restore the unique ID
         npc.dialog = data.get("dialog", npc.dialog)
         npc.ai_enabled = data.get("ai_enabled", npc.ai_enabled)
         npc.conversation_history = data.get("conversation_history", [])

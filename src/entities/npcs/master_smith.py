@@ -13,7 +13,7 @@ class MasterSmithNPC(BaseAINPC):
         "description": "Master craftsman specializing in weapons and armor"
     }
     
-    def __init__(self, x: int, y: int, asset_loader=None, **kwargs):
+    def __init__(self, x: int, y: int, asset_loader=None, unique_id=None, **kwargs):
         dialog = [
             "The forge burns hot today, perfect for crafting!",
             "I can craft weapons and armor from the finest materials.",
@@ -31,7 +31,7 @@ class MasterSmithNPC(BaseAINPC):
         
         super().__init__(x, y, "Master Smith", dialog=dialog, 
                         asset_loader=asset_loader, has_shop=True,
-                        shop_items=shop_items, **kwargs)
+                        shop_items=shop_items, unique_id=unique_id, **kwargs)
     
     def _get_sprite_name(self):
         """Get sprite name for Master Smith"""

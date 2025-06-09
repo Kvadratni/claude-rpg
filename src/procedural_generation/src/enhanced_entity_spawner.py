@@ -938,6 +938,9 @@ class EnhancedEntitySpawner:
     def create_ai_npc(self, npc_name: str, x: int, y: int, dialog: List[str], has_shop: bool, asset_loader: Any):
         """Create appropriate AI-powered NPC based on name"""
         try:
+            # Generate unique ID for this specific NPC instance
+            unique_id = f"{npc_name.lower().replace(' ', '_')}_{x}_{y}_{hash((npc_name, x, y)) % 10000}"
+            
             # Map NPC names to their AI classes
             ai_npc_mappings = {
                 'Master Merchant': 'MasterMerchantNPC',
@@ -969,14 +972,14 @@ class EnhancedEntitySpawner:
                     # Get the class by name
                     ai_class = locals()[ai_class_name]
                     
-                    # Create AI NPC instance
-                    npc = ai_class(x, y, asset_loader=asset_loader)
+                    # Create AI NPC instance with unique ID
+                    npc = ai_class(x, y, asset_loader=asset_loader, unique_id=unique_id)
                     
                     # Override name if needed (for cases like High Priest using HealerNPC)
                     if npc.name != npc_name:
                         npc.name = npc_name
                     
-                    print(f"        ✓ Created AI-powered {npc_name} using {ai_class_name}")
+                    print(f"        ✓ Created AI-powered {npc_name} using {ai_class_name} with unique ID: {unique_id}")
                     return npc
                     
                 except ImportError as e:
@@ -985,7 +988,7 @@ class EnhancedEntitySpawner:
                     pass
             
             # Fallback: Create regular NPC but mark it as AI-ready
-            print(f"        ⚠️  No AI class found for {npc_name}, creating AI-ready regular NPC")
+            print(f"        ⚠️  No AI class found for {npc_name}, creating AI-ready regular NPC with unique ID: {unique_id}")
             from ...entities import NPC
             
             npc = NPC(x, y, npc_name, dialog=dialog, 
@@ -993,6 +996,8 @@ class EnhancedEntitySpawner:
             
             # Mark as AI-ready so it will be enabled on first interaction
             npc.ai_ready = True
+            # Add unique_id for consistency
+            npc.unique_id = unique_id
             
             return npc
             
@@ -1008,6 +1013,7 @@ class EnhancedEntitySpawner:
                 npc = NPC(x, y, npc_name, dialog=dialog, 
                          asset_loader=asset_loader, has_shop=has_shop)
                 npc.ai_ready = True  # Mark as AI-ready
+                npc.unique_id = unique_id  # Add unique_id for consistency
                 return npc
                 
             except ImportError:
