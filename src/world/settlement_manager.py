@@ -31,8 +31,8 @@ class ChunkSettlementManager:
                 {'name': 'Workshop', 'size': (3, 4), 'npc': 'Craftsman', 'has_shop': True, 'importance': 'medium'}
             ],
             'biomes': ['PLAINS', 'FOREST'],
-            'spawn_chance': 0.45,  # Increased from 0.25
-            'min_distance': 4  # Reduced from 5
+            'spawn_chance': 0.04,  # Further reduced from 0.08 - 4% chance
+            'min_distance': 8  # Increased from 4 for better spacing
         },
         'TOWN': {
             'size': (30, 30),  # New large settlement type
@@ -51,8 +51,8 @@ class ChunkSettlementManager:
                 {'name': 'Merchant House', 'size': (4, 4), 'npc': 'Rich Merchant', 'has_shop': True, 'importance': 'low'}
             ],
             'biomes': ['PLAINS', 'FOREST'],
-            'spawn_chance': 0.15,  # Rare but significant
-            'min_distance': 8  # Towns need more space
+            'spawn_chance': 0.03,  # Drastically reduced from 0.15 - 3% chance (rare but significant)
+            'min_distance': 12  # Increased from 8 - towns need even more space
         },
         'DESERT_OUTPOST': {
             'size': (18, 18),  # Slightly larger
@@ -65,8 +65,8 @@ class ChunkSettlementManager:
                 {'name': 'Supply Cache', 'size': (3, 2), 'importance': 'low'}  # No NPC
             ],
             'biomes': ['DESERT'],
-            'spawn_chance': 0.55,  # Increased from 0.35
-            'min_distance': 3
+            'spawn_chance': 0.06,  # Further reduced from 0.12 - 6% chance
+            'min_distance': 6  # Increased from 3
         },
         'SNOW_SETTLEMENT': {
             'size': (16, 16),  # Slightly larger
@@ -80,8 +80,8 @@ class ChunkSettlementManager:
                 {'name': 'Woodshed', 'size': (3, 2), 'importance': 'low'}  # No NPC
             ],
             'biomes': ['SNOW', 'TUNDRA'],
-            'spawn_chance': 0.50,  # Increased from 0.30
-            'min_distance': 3
+            'spawn_chance': 0.10,  # Drastically reduced from 0.50 - 10% chance
+            'min_distance': 6  # Increased from 3
         },
         'SWAMP_VILLAGE': {
             'size': (20, 20),  # Larger for more buildings
@@ -95,8 +95,8 @@ class ChunkSettlementManager:
                 {'name': 'Mushroom Farm', 'size': (4, 3), 'npc': 'Mushroom Farmer', 'has_shop': True, 'importance': 'low'}
             ],
             'biomes': ['SWAMP'],
-            'spawn_chance': 0.40,  # Increased from 0.20
-            'min_distance': 3
+            'spawn_chance': 0.08,  # Drastically reduced from 0.40 - 8% chance
+            'min_distance': 6  # Increased from 3
         },
         'FOREST_CAMP': {
             'size': (14, 14),  # Slightly larger
@@ -109,8 +109,8 @@ class ChunkSettlementManager:
                 {'name': 'Forest Shrine', 'size': (3, 3), 'npc': 'Forest Priest', 'has_shop': False, 'importance': 'low'}
             ],
             'biomes': ['FOREST'],
-            'spawn_chance': 0.35,  # Increased from 0.18
-            'min_distance': 3
+            'spawn_chance': 0.07,  # Drastically reduced from 0.35 - 7% chance
+            'min_distance': 6  # Increased from 3
         },
         'MINING_CAMP': {
             'size': (16, 16),  # New settlement type
@@ -124,8 +124,8 @@ class ChunkSettlementManager:
                 {'name': 'Supply Shed', 'size': (3, 2), 'importance': 'low'}  # No NPC
             ],
             'biomes': ['MOUNTAIN', 'HILLS'],
-            'spawn_chance': 0.30,
-            'min_distance': 4
+            'spawn_chance': 0.06,  # Reduced from 0.30 - 6% chance
+            'min_distance': 7  # Increased from 4
         },
         'FISHING_VILLAGE': {
             'size': (18, 18),  # New settlement type
@@ -139,8 +139,8 @@ class ChunkSettlementManager:
                 {'name': 'Sailor Lodge', 'size': (4, 4), 'npc': 'Sailor', 'has_shop': False, 'importance': 'low'}
             ],
             'biomes': ['COAST', 'PLAINS'],  # Near water
-            'spawn_chance': 0.25,
-            'min_distance': 4
+            'spawn_chance': 0.05,  # Reduced from 0.25 - 5% chance
+            'min_distance': 7  # Increased from 4
         }
     }
     

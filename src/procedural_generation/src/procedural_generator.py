@@ -81,7 +81,7 @@ class ProceduralGenerator:
                 {'name': 'Guard House', 'size': (8, 6), 'npc': 'Guard Captain', 'has_shop': False}
             ],
             'biomes': ['PLAINS', 'FOREST'],
-            'safe_radius': 20
+            'safe_radius': 40  # Increased from 20 for better protection
         },
         'DESERT_OUTPOST': {
             'size': (20, 20),
@@ -91,7 +91,7 @@ class ProceduralGenerator:
                 {'name': 'Caravan Rest', 'size': (10, 6)}
             ],
             'biomes': ['DESERT'],
-            'safe_radius': 15
+            'safe_radius': 30  # Increased from 15 for better protection
         },
         'SNOW_SETTLEMENT': {
             'size': (18, 18),
@@ -101,7 +101,7 @@ class ProceduralGenerator:
                 {'name': 'Warm Lodge', 'size': (10, 8)}
             ],
             'biomes': ['SNOW'],
-            'safe_radius': 15
+            'safe_radius': 30  # Increased from 15 for better protection
         }
     }
     
@@ -281,7 +281,7 @@ class ProceduralGenerator:
         self.occupied_areas.append((x, y, settlement_width, settlement_height))
         
         # Add safe zone
-        safe_radius = template_config.get('safe_radius', 15)
+        safe_radius = template_config.get('safe_radius', 30)  # Increased default from 15
         center_x = x + settlement_width // 2
         center_y = y + settlement_height // 2
         self.settlement_safe_zones.append((center_x, center_y, safe_radius))
@@ -513,7 +513,7 @@ class ProceduralGenerator:
         
         # Calculate enemy density (fewer enemies than current system)
         total_area = self.width * self.height
-        target_enemies = int(total_area * 0.001)  # 0.1% of tiles have enemies
+        target_enemies = int(total_area * 0.0008)  # Reduced from 0.001 to 0.0008 - 0.08% of tiles have enemies
         
         attempts = 0
         max_attempts = target_enemies * 10
@@ -567,8 +567,8 @@ class ProceduralGenerator:
                 if self.biome_map[y][x] != boss_biome:
                     continue
                 
-                # Check if far from settlements
-                if self.is_in_safe_zone(x, y) or self.distance_to_nearest_settlement(x, y) < 40:
+                # Check if far from settlements (increased distance requirement)
+                if self.is_in_safe_zone(x, y) or self.distance_to_nearest_settlement(x, y) < 80:  # Increased from 40
                     continue
                 
                 # Check terrain

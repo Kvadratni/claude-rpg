@@ -14,15 +14,15 @@ class EnhancedEntitySpawner:
     """
     
     # Rebalanced enemies with tier-based spawning and biome difficulty scaling
-    # Tier 1: Near settlements (0-30 tiles) - Beginner enemies
-    # Tier 2: Medium distance (30-60 tiles) - Intermediate enemies  
-    # Tier 3: Far from settlements (60+ tiles) - Advanced enemies
+    # Tier 1: Near settlements (0-60 tiles) - Beginner enemies (weaker stats)
+    # Tier 2: Medium distance (60-120 tiles) - Intermediate enemies  
+    # Tier 3: Far from settlements (120+ tiles) - Advanced enemies
     BIOME_ENEMIES = {
         'FOREST': {
             'difficulty_modifier': 1.0,  # Easy biome - baseline difficulty
             'tier_1': [
-                {'name': 'Forest Goblin', 'health': 50, 'damage': 12, 'experience': 35, 'type': 'melee'},
-                {'name': 'Forest Sprite', 'health': 45, 'damage': 10, 'experience': 30, 'type': 'melee'},
+                {'name': 'Forest Goblin', 'health': 25, 'damage': 6, 'experience': 15, 'type': 'melee'},  # Further reduced
+                {'name': 'Forest Sprite', 'health': 20, 'damage': 4, 'experience': 12, 'type': 'melee'},  # Further reduced
             ],
             'tier_2': [
                 {'name': 'Goblin Archer', 'health': 55, 'damage': 15, 'experience': 45, 'type': 'ranged', 'weapon': 'bow'},
@@ -36,10 +36,10 @@ class EnhancedEntitySpawner:
             ]
         },
         'PLAINS': {
-            'difficulty_modifier': 1.2,  # Medium biome - 20% harder
+            'difficulty_modifier': 1.1,  # Reduced from 1.2 - Medium biome - 10% harder
             'tier_1': [
-                {'name': 'Bandit Scout', 'health': 50, 'damage': 14, 'experience': 35, 'type': 'melee'},
-                {'name': 'Wild Boar', 'health': 55, 'damage': 12, 'experience': 30, 'type': 'melee'},
+                {'name': 'Bandit Scout', 'health': 25, 'damage': 7, 'experience': 15, 'type': 'melee'},  # Further reduced
+                {'name': 'Wild Boar', 'health': 30, 'damage': 6, 'experience': 12, 'type': 'melee'},  # Further reduced
             ],
             'tier_2': [
                 {'name': 'Bandit Raider', 'health': 70, 'damage': 18, 'experience': 55, 'type': 'melee'},
@@ -53,10 +53,10 @@ class EnhancedEntitySpawner:
             ]
         },
         'DESERT': {
-            'difficulty_modifier': 1.4,  # Hard biome - 40% harder
+            'difficulty_modifier': 1.1,  # Further reduced from 1.2 - Hard biome - 10% harder
             'tier_1': [
-                {'name': 'Desert Scorpion', 'health': 60, 'damage': 16, 'experience': 40, 'type': 'melee'},
-                {'name': 'Sand Viper', 'health': 45, 'damage': 18, 'experience': 45, 'type': 'melee'},
+                {'name': 'Desert Scorpion', 'health': 30, 'damage': 8, 'experience': 18, 'type': 'melee'},  # Further reduced
+                {'name': 'Sand Viper', 'health': 25, 'damage': 9, 'experience': 20, 'type': 'melee'},  # Further reduced
             ],
             'tier_2': [
                 {'name': 'Giant Scorpion', 'health': 85, 'damage': 24, 'experience': 70, 'type': 'melee'},
@@ -70,10 +70,10 @@ class EnhancedEntitySpawner:
             ]
         },
         'SNOW': {
-            'difficulty_modifier': 1.5,  # Very hard biome - 50% harder
+            'difficulty_modifier': 1.2,  # Further reduced from 1.3 - Very hard biome - 20% harder
             'tier_1': [
-                {'name': 'Ice Wolf', 'health': 55, 'damage': 18, 'experience': 45, 'type': 'melee'},
-                {'name': 'Frost Sprite', 'health': 50, 'damage': 16, 'experience': 40, 'type': 'melee'},
+                {'name': 'Ice Wolf', 'health': 30, 'damage': 9, 'experience': 20, 'type': 'melee'},  # Further reduced
+                {'name': 'Frost Sprite', 'health': 25, 'damage': 8, 'experience': 18, 'type': 'melee'},  # Further reduced
             ],
             'tier_2': [
                 {'name': 'Ice Troll', 'health': 95, 'damage': 26, 'experience': 80, 'type': 'melee'},
@@ -87,10 +87,10 @@ class EnhancedEntitySpawner:
             ]
         },
         'SWAMP': {
-            'difficulty_modifier': 1.6,  # Extremely hard biome - 60% harder
+            'difficulty_modifier': 1.3,  # Further reduced from 1.4 - Extremely hard biome - 30% harder
             'tier_1': [
-                {'name': 'Swamp Rat', 'health': 50, 'damage': 14, 'experience': 35, 'type': 'melee'},
-                {'name': 'Bog Sprite', 'health': 55, 'damage': 16, 'experience': 40, 'type': 'melee'},
+                {'name': 'Swamp Rat', 'health': 25, 'damage': 6, 'experience': 15, 'type': 'melee'},  # Further reduced
+                {'name': 'Bog Sprite', 'health': 30, 'damage': 8, 'experience': 18, 'type': 'melee'},  # Further reduced
             ],
             'tier_2': [
                 {'name': 'Swamp Troll', 'health': 100, 'damage': 30, 'experience': 95, 'type': 'melee'},
@@ -283,12 +283,12 @@ class EnhancedEntitySpawner:
         
         # Calculate enemy density with improved scaling
         total_area = self.width * self.height
-        target_enemies = int(total_area * 0.0015)  # Reduced from 0.003 to 0.0015 - 0.15% of tiles have enemies
+        target_enemies = int(total_area * 0.0008)  # Reduced from 0.0015 to 0.0008 - 0.08% of tiles have enemies
         
         attempts = 0
         max_attempts = target_enemies * 25  # More attempts for better tier-based placement
         
-        print(f"🎯 Target enemies: {target_enemies} (0.15% of {total_area} tiles)")
+        print(f"🎯 Target enemies: {target_enemies} (0.08% of {total_area} tiles)")
         
         while len(enemies) < target_enemies and attempts < max_attempts:
             attempts += 1
@@ -315,10 +315,10 @@ class EnhancedEntitySpawner:
             # Determine enemy tier based on distance from settlements
             distance_to_settlement = self._distance_to_nearest_settlement(x, y, settlement_safe_zones)
             
-            if distance_to_settlement < 30:
+            if distance_to_settlement < 60:  # Increased from 30
                 tier = 'tier_1'  # Near settlements - beginner enemies
                 tier_name = "Beginner"
-            elif distance_to_settlement < 60:
+            elif distance_to_settlement < 120:  # Increased from 60
                 tier = 'tier_2'  # Medium distance - intermediate enemies
                 tier_name = "Intermediate"
             else:
@@ -391,20 +391,21 @@ class EnhancedEntitySpawner:
             self.mark_position_occupied(x, y)
             
             # Debug info for first few enemies
-            if len(enemies) <= 5:
+            if len(enemies) <= 8:  # Increased from 5 to see more examples
                 print(f"  🗡️  {enemy_config['name']} ({tier_name}) in {biome}: "
                       f"HP={enemy_config['health']}, DMG={enemy_config['damage']}, "
-                      f"XP={enemy_config['experience']}, Distance={distance_to_settlement:.1f}")
+                      f"XP={enemy_config['experience']}, Distance={distance_to_settlement:.1f} tiles"
+                      f" (Base: HP={base_enemy_config['health']}, DMG={base_enemy_config['damage']}, Mod={difficulty_modifier:.1f})")
         
         # Count enemies by tier and biome for debugging
         tier_counts = {'Beginner': 0, 'Intermediate': 0, 'Advanced': 0}
         biome_counts = {}
         
         for enemy in enemies:
-            # Estimate tier based on stats (rough approximation for debug)
-            if enemy.health < 70:
+            # Estimate tier based on stats (updated thresholds for new balance)
+            if enemy.health < 40:  # Reduced from 50 to match new tier 1 stats (25-35 base * modifiers)
                 tier_counts['Beginner'] += 1
-            elif enemy.health < 120:
+            elif enemy.health < 90:  # Reduced from 100 to match new tier 2 stats
                 tier_counts['Intermediate'] += 1
             else:
                 tier_counts['Advanced'] += 1
@@ -782,9 +783,9 @@ class EnhancedEntitySpawner:
                 if biome_map[y][x] != boss_biome:
                     continue
                 
-                # Check if far from settlements
+                # Check if far from settlements (increased distance requirement)
                 if (self._is_in_safe_zone(x, y, settlement_safe_zones) or 
-                    self._distance_to_nearest_settlement(x, y, settlement_safe_zones) < 40):
+                    self._distance_to_nearest_settlement(x, y, settlement_safe_zones) < 80):  # Increased from 40
                     continue
                 
                 # Enhanced position validation for bosses

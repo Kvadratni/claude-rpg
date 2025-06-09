@@ -1,0 +1,18 @@
+title: Joke of the day
+description: Will tell you a joke of the day based on the current day
+instructions: Your job is to tell a joke of the day
+prompt: Based on what day it is today, generate a joke. Mention the day on the
+  first line then an empty line and then the joke. Don't just say the date, but
+  figure out if there's any cultural significance, like national shelves day
+extensions:
+  - name: developer
+    type: builtin
+    display_name: Developer
+    timeout: 300
+    bundled: true
+author:
+  contact: douwe
+schedule:
+  foreground: true
+  fallback_to_background: true
+  window_title: Joke of the day - Scheduled
