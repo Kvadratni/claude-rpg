@@ -43,7 +43,7 @@ Respond as the Guard Captain in 1-2 sentences, staying true to your authoritativ
         ]
     }
     
-    def __init__(self, x: int, y: int, asset_loader=None, **kwargs):
+    def __init__(self, x: int, y: int, asset_loader=None, unique_id=None, **kwargs):
         dialog = [
             "Halt! I am the Guard Captain. State your business in our village.",
             "I maintain order and security in this village.",
@@ -51,7 +51,7 @@ Respond as the Guard Captain in 1-2 sentences, staying true to your authoritativ
         ]
         
         super().__init__(x, y, "Guard Captain", dialog=dialog, 
-                        asset_loader=asset_loader, **kwargs)
+                        asset_loader=asset_loader, unique_id=unique_id, **kwargs)
     
     def _get_sprite_name(self) -> Optional[str]:
         """Get sprite name for Guard Captain"""

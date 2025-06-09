@@ -13,7 +13,7 @@ class InnkeeperNPC(BaseAINPC):
         "description": "Friendly innkeeper providing rest and local information"
     }
     
-    def __init__(self, x: int, y: int, asset_loader=None, **kwargs):
+    def __init__(self, x: int, y: int, asset_loader=None, unique_id=None, **kwargs):
         dialog = [
             "Welcome to the Sleeping Dragon Inn!",
             "We have the finest rooms and meals in the village.",
@@ -31,7 +31,7 @@ class InnkeeperNPC(BaseAINPC):
         
         super().__init__(x, y, "Innkeeper", dialog=dialog, 
                         asset_loader=asset_loader, has_shop=True,
-                        shop_items=shop_items, **kwargs)
+                        shop_items=shop_items, unique_id=unique_id, **kwargs)
     
     def _get_sprite_name(self):
         """Get sprite name for Innkeeper"""
