@@ -289,6 +289,10 @@ class EnhancedEntitySpawner:
         max_attempts = target_enemies * 25  # More attempts for better tier-based placement
         
         print(f"🎯 Target enemies: {target_enemies} (0.08% of {total_area} tiles)")
+        print(f"🏘️  Settlement safe zones: {len(settlement_safe_zones)} zones")
+        if settlement_safe_zones:
+            for i, (cx, cy, radius) in enumerate(settlement_safe_zones[:3]):  # Show first 3
+                print(f"   Zone {i+1}: center=({cx}, {cy}), radius={radius}")
         
         while len(enemies) < target_enemies and attempts < max_attempts:
             attempts += 1
@@ -315,6 +319,10 @@ class EnhancedEntitySpawner:
             # Determine enemy tier based on distance from settlements
             distance_to_settlement = self._distance_to_nearest_settlement(x, y, settlement_safe_zones)
             
+            # DEBUG: Add more detailed tier selection logging
+            if len(enemies) <= 3:
+                print(f"  🎯 Enemy spawn attempt at ({x}, {y}): distance={distance_to_settlement:.1f} tiles")
+            
             if distance_to_settlement < 60:  # Increased from 30
                 tier = 'tier_1'  # Near settlements - beginner enemies
                 tier_name = "Beginner"
@@ -324,6 +332,10 @@ class EnhancedEntitySpawner:
             else:
                 tier = 'tier_3'  # Far from settlements - advanced enemies
                 tier_name = "Advanced"
+            
+            # DEBUG: Log tier selection for first few enemies
+            if len(enemies) <= 3:
+                print(f"  📊 Selected tier: {tier} ({tier_name}) for distance {distance_to_settlement:.1f}")
             
             # Get appropriate enemy types for this tier
             enemy_types = biome_config.get(tier, [])
@@ -703,7 +715,9 @@ class EnhancedEntitySpawner:
                                       settlement_safe_zones: List[Tuple[int, int, int]]) -> float:
         """Calculate distance to nearest settlement"""
         if not settlement_safe_zones:
-            return float('inf')
+            # If no settlements, assume we're in a "beginner area" - return small distance
+            # This ensures tier 1 enemies spawn when no settlements are provided
+            return 30.0  # Within tier 1 range (< 60)
         
         min_distance = float('inf')
         for center_x, center_y, _ in settlement_safe_zones:
