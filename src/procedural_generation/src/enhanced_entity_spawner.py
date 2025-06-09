@@ -13,40 +13,105 @@ class EnhancedEntitySpawner:
     Enhanced entity spawner with logical rules and collision detection
     """
     
-    # Existing enemies mapped to biomes - now includes ranged enemies
+    # Rebalanced enemies with tier-based spawning and biome difficulty scaling
+    # Tier 1: Near settlements (0-30 tiles) - Beginner enemies
+    # Tier 2: Medium distance (30-60 tiles) - Intermediate enemies  
+    # Tier 3: Far from settlements (60+ tiles) - Advanced enemies
     BIOME_ENEMIES = {
-        'FOREST': [
-            {'name': 'Forest Goblin', 'health': 45, 'damage': 9, 'experience': 30, 'type': 'melee'},
-            {'name': 'Goblin Archer', 'health': 40, 'damage': 12, 'experience': 35, 'type': 'ranged', 'weapon': 'bow'},
-            {'name': 'Forest Sprite', 'health': 35, 'damage': 12, 'experience': 40, 'type': 'melee'},
-            {'name': 'Ancient Guardian', 'health': 60, 'damage': 15, 'experience': 50, 'type': 'melee'},
-            {'name': 'Skeleton Archer', 'health': 50, 'damage': 14, 'experience': 45, 'type': 'ranged', 'weapon': 'bow'}
-        ],
-        'DESERT': [
-            {'name': 'Giant Scorpion', 'health': 55, 'damage': 16, 'experience': 45, 'type': 'melee'},
-            {'name': 'Bandit Scout', 'health': 35, 'damage': 8, 'experience': 20, 'type': 'melee'},
-            {'name': 'Dark Mage', 'health': 60, 'damage': 18, 'experience': 70, 'type': 'ranged', 'weapon': 'dark_magic'}
-        ],
-        'PLAINS': [
-            {'name': 'Bandit Scout', 'health': 35, 'damage': 8, 'experience': 20, 'type': 'melee'},
-            {'name': 'Orc Warrior', 'health': 80, 'damage': 18, 'experience': 60, 'type': 'melee'},
-            {'name': 'Orc Crossbow', 'health': 70, 'damage': 20, 'experience': 65, 'type': 'ranged', 'weapon': 'crossbow'}
-        ],
-        'SNOW': [
-            {'name': 'Crystal Elemental', 'health': 70, 'damage': 20, 'experience': 65, 'type': 'melee'},
-            {'name': 'Ancient Guardian', 'health': 60, 'damage': 15, 'experience': 50, 'type': 'melee'},
-            {'name': 'Dark Mage', 'health': 60, 'damage': 18, 'experience': 70, 'type': 'ranged', 'weapon': 'dark_magic'}
-        ],
-        'SWAMP': [
-            {'name': 'Swamp Troll', 'health': 90, 'damage': 22, 'experience': 70, 'type': 'melee'},
-            {'name': 'Skeleton Archer', 'health': 50, 'damage': 14, 'experience': 45, 'type': 'ranged', 'weapon': 'bow'}
-        ]
+        'FOREST': {
+            'difficulty_modifier': 1.0,  # Easy biome - baseline difficulty
+            'tier_1': [
+                {'name': 'Forest Goblin', 'health': 50, 'damage': 12, 'experience': 35, 'type': 'melee'},
+                {'name': 'Forest Sprite', 'health': 45, 'damage': 10, 'experience': 30, 'type': 'melee'},
+            ],
+            'tier_2': [
+                {'name': 'Goblin Archer', 'health': 55, 'damage': 15, 'experience': 45, 'type': 'ranged', 'weapon': 'bow'},
+                {'name': 'Forest Goblin', 'health': 65, 'damage': 16, 'experience': 50, 'type': 'melee'},
+                {'name': 'Skeleton Archer', 'health': 60, 'damage': 18, 'experience': 55, 'type': 'ranged', 'weapon': 'bow'}
+            ],
+            'tier_3': [
+                {'name': 'Ancient Guardian', 'health': 85, 'damage': 22, 'experience': 75, 'type': 'melee'},
+                {'name': 'Elder Forest Sprite', 'health': 70, 'damage': 20, 'experience': 65, 'type': 'melee'},
+                {'name': 'Goblin Chieftain', 'health': 95, 'damage': 24, 'experience': 85, 'type': 'melee'}
+            ]
+        },
+        'PLAINS': {
+            'difficulty_modifier': 1.2,  # Medium biome - 20% harder
+            'tier_1': [
+                {'name': 'Bandit Scout', 'health': 50, 'damage': 14, 'experience': 35, 'type': 'melee'},
+                {'name': 'Wild Boar', 'health': 55, 'damage': 12, 'experience': 30, 'type': 'melee'},
+            ],
+            'tier_2': [
+                {'name': 'Bandit Raider', 'health': 70, 'damage': 18, 'experience': 55, 'type': 'melee'},
+                {'name': 'Orc Scout', 'health': 75, 'damage': 20, 'experience': 60, 'type': 'melee'},
+                {'name': 'Orc Crossbow', 'health': 80, 'damage': 22, 'experience': 70, 'type': 'ranged', 'weapon': 'crossbow'}
+            ],
+            'tier_3': [
+                {'name': 'Orc Warrior', 'health': 110, 'damage': 28, 'experience': 90, 'type': 'melee'},
+                {'name': 'Bandit Captain', 'health': 100, 'damage': 26, 'experience': 85, 'type': 'melee'},
+                {'name': 'Orc Berserker', 'health': 120, 'damage': 32, 'experience': 100, 'type': 'melee'}
+            ]
+        },
+        'DESERT': {
+            'difficulty_modifier': 1.4,  # Hard biome - 40% harder
+            'tier_1': [
+                {'name': 'Desert Scorpion', 'health': 60, 'damage': 16, 'experience': 40, 'type': 'melee'},
+                {'name': 'Sand Viper', 'health': 45, 'damage': 18, 'experience': 45, 'type': 'melee'},
+            ],
+            'tier_2': [
+                {'name': 'Giant Scorpion', 'health': 85, 'damage': 24, 'experience': 70, 'type': 'melee'},
+                {'name': 'Desert Nomad', 'health': 75, 'damage': 22, 'experience': 65, 'type': 'ranged', 'weapon': 'bow'},
+                {'name': 'Sand Elemental', 'health': 90, 'damage': 20, 'experience': 75, 'type': 'melee'}
+            ],
+            'tier_3': [
+                {'name': 'Dark Mage', 'health': 100, 'damage': 30, 'experience': 110, 'type': 'ranged', 'weapon': 'dark_magic'},
+                {'name': 'Desert Warlord', 'health': 130, 'damage': 35, 'experience': 120, 'type': 'melee'},
+                {'name': 'Ancient Scorpion King', 'health': 140, 'damage': 32, 'experience': 125, 'type': 'melee'}
+            ]
+        },
+        'SNOW': {
+            'difficulty_modifier': 1.5,  # Very hard biome - 50% harder
+            'tier_1': [
+                {'name': 'Ice Wolf', 'health': 55, 'damage': 18, 'experience': 45, 'type': 'melee'},
+                {'name': 'Frost Sprite', 'health': 50, 'damage': 16, 'experience': 40, 'type': 'melee'},
+            ],
+            'tier_2': [
+                {'name': 'Ice Troll', 'health': 95, 'damage': 26, 'experience': 80, 'type': 'melee'},
+                {'name': 'Crystal Elemental', 'health': 85, 'damage': 28, 'experience': 85, 'type': 'melee'},
+                {'name': 'Frost Mage', 'health': 80, 'damage': 30, 'experience': 90, 'type': 'ranged', 'weapon': 'ice_magic'}
+            ],
+            'tier_3': [
+                {'name': 'Ancient Guardian', 'health': 120, 'damage': 35, 'experience': 130, 'type': 'melee'},
+                {'name': 'Frost Giant', 'health': 160, 'damage': 40, 'experience': 150, 'type': 'melee'},
+                {'name': 'Ice Dragon Wyrmling', 'health': 140, 'damage': 38, 'experience': 140, 'type': 'melee'}
+            ]
+        },
+        'SWAMP': {
+            'difficulty_modifier': 1.6,  # Extremely hard biome - 60% harder
+            'tier_1': [
+                {'name': 'Swamp Rat', 'health': 50, 'damage': 14, 'experience': 35, 'type': 'melee'},
+                {'name': 'Bog Sprite', 'health': 55, 'damage': 16, 'experience': 40, 'type': 'melee'},
+            ],
+            'tier_2': [
+                {'name': 'Swamp Troll', 'health': 100, 'damage': 30, 'experience': 95, 'type': 'melee'},
+                {'name': 'Poison Archer', 'health': 75, 'damage': 25, 'experience': 80, 'type': 'ranged', 'weapon': 'poison_bow'},
+                {'name': 'Bog Witch', 'health': 85, 'damage': 32, 'experience': 100, 'type': 'ranged', 'weapon': 'dark_magic'}
+            ],
+            'tier_3': [
+                {'name': 'Ancient Swamp Lord', 'health': 150, 'damage': 42, 'experience': 160, 'type': 'melee'},
+                {'name': 'Plague Bearer', 'health': 130, 'damage': 38, 'experience': 145, 'type': 'melee'},
+                {'name': 'Swamp Dragon', 'health': 170, 'damage': 45, 'experience': 180, 'type': 'melee'}
+            ]
+        }
     }
     
-    # Boss locations for each biome
+    # Enhanced boss locations with biome-specific scaling
     BOSS_LOCATIONS = [
-        {'name': 'Orc Warlord', 'health': 400, 'damage': 30, 'experience': 300, 'biome': 'PLAINS'},
-        {'name': 'Ancient Dragon', 'health': 800, 'damage': 50, 'experience': 500, 'biome': 'SNOW'}
+        {'name': 'Forest Dragon', 'health': 600, 'damage': 45, 'experience': 400, 'biome': 'FOREST'},
+        {'name': 'Orc Warlord', 'health': 800, 'damage': 55, 'experience': 500, 'biome': 'PLAINS'},
+        {'name': 'Desert Lich', 'health': 900, 'damage': 65, 'experience': 600, 'biome': 'DESERT'},
+        {'name': 'Ancient Dragon', 'health': 1200, 'damage': 75, 'experience': 750, 'biome': 'SNOW'},
+        {'name': 'Swamp Hydra', 'health': 1000, 'damage': 70, 'experience': 650, 'biome': 'SWAMP'}
     ]
     
     # Tile type constants
@@ -212,16 +277,18 @@ class EnhancedEntitySpawner:
                      settlement_safe_zones: List[Tuple[int, int, int]], 
                      asset_loader: Any) -> List[Any]:
         """
-        Spawn enemies with enhanced collision detection and terrain validation
+        Spawn enemies with tier-based difficulty scaling and biome modifiers
         """
         enemies = []
         
-        # Calculate enemy density
+        # Calculate enemy density with improved scaling
         total_area = self.width * self.height
-        target_enemies = int(total_area * 0.003)  # Increased from 0.001 to 0.003 - 0.3% of tiles have enemies
+        target_enemies = int(total_area * 0.0015)  # Reduced from 0.003 to 0.0015 - 0.15% of tiles have enemies
         
         attempts = 0
-        max_attempts = target_enemies * 20  # Increased attempts for better placement
+        max_attempts = target_enemies * 25  # More attempts for better tier-based placement
+        
+        print(f"🎯 Target enemies: {target_enemies} (0.15% of {total_area} tiles)")
         
         while len(enemies) < target_enemies and attempts < max_attempts:
             attempts += 1
@@ -238,14 +305,49 @@ class EnhancedEntitySpawner:
             if not self.is_position_valid_for_entity(x, y, tiles, biome_map, "enemy"):
                 continue
             
-            # Get biome and spawn appropriate enemy
+            # Get biome and calculate distance to nearest settlement for tier determination
             biome = biome_map[y][x]
-            enemy_types = self.BIOME_ENEMIES.get(biome, [])
+            biome_config = self.BIOME_ENEMIES.get(biome)
             
+            if not biome_config:
+                continue
+            
+            # Determine enemy tier based on distance from settlements
+            distance_to_settlement = self._distance_to_nearest_settlement(x, y, settlement_safe_zones)
+            
+            if distance_to_settlement < 30:
+                tier = 'tier_1'  # Near settlements - beginner enemies
+                tier_name = "Beginner"
+            elif distance_to_settlement < 60:
+                tier = 'tier_2'  # Medium distance - intermediate enemies
+                tier_name = "Intermediate"
+            else:
+                tier = 'tier_3'  # Far from settlements - advanced enemies
+                tier_name = "Advanced"
+            
+            # Get appropriate enemy types for this tier
+            enemy_types = biome_config.get(tier, [])
             if not enemy_types:
                 continue
             
-            enemy_config = random.choice(enemy_types)
+            # Choose random enemy from tier
+            base_enemy_config = random.choice(enemy_types)
+            
+            # Apply biome difficulty modifier
+            difficulty_modifier = biome_config.get('difficulty_modifier', 1.0)
+            
+            # Scale enemy stats based on biome difficulty
+            enemy_config = {
+                'name': base_enemy_config['name'],
+                'health': int(base_enemy_config['health'] * difficulty_modifier),
+                'damage': int(base_enemy_config['damage'] * difficulty_modifier),
+                'experience': int(base_enemy_config['experience'] * difficulty_modifier),
+                'type': base_enemy_config['type']
+            }
+            
+            # Add weapon if ranged enemy
+            if base_enemy_config.get('weapon'):
+                enemy_config['weapon'] = base_enemy_config['weapon']
             
             # Import Enemy and RangedEnemy classes
             try:
@@ -282,12 +384,40 @@ class EnhancedEntitySpawner:
                              damage=enemy_config['damage'],
                              experience=enemy_config['experience'],
                              asset_loader=asset_loader)
+            
             enemies.append(enemy)
             
             # Mark position as occupied
             self.mark_position_occupied(x, y)
+            
+            # Debug info for first few enemies
+            if len(enemies) <= 5:
+                print(f"  🗡️  {enemy_config['name']} ({tier_name}) in {biome}: "
+                      f"HP={enemy_config['health']}, DMG={enemy_config['damage']}, "
+                      f"XP={enemy_config['experience']}, Distance={distance_to_settlement:.1f}")
         
-        print(f"Spawned {len(enemies)} enemies with enhanced placement")
+        # Count enemies by tier and biome for debugging
+        tier_counts = {'Beginner': 0, 'Intermediate': 0, 'Advanced': 0}
+        biome_counts = {}
+        
+        for enemy in enemies:
+            # Estimate tier based on stats (rough approximation for debug)
+            if enemy.health < 70:
+                tier_counts['Beginner'] += 1
+            elif enemy.health < 120:
+                tier_counts['Intermediate'] += 1
+            else:
+                tier_counts['Advanced'] += 1
+            
+            # Count by biome (approximate based on position)
+            enemy_biome = biome_map[int(enemy.y)][int(enemy.x)]
+            biome_counts[enemy_biome] = biome_counts.get(enemy_biome, 0) + 1
+        
+        print(f"✅ Spawned {len(enemies)} enemies with tier-based scaling:")
+        print(f"   📊 Tiers: Beginner={tier_counts['Beginner']}, "
+              f"Intermediate={tier_counts['Intermediate']}, Advanced={tier_counts['Advanced']}")
+        print(f"   🌍 Biomes: {biome_counts}")
+        
         return enemies
     
     def spawn_objects(self, tiles: List[List[int]], biome_map: List[List[str]], 

@@ -45,25 +45,60 @@ class Enemy(Entity):
         # Very Slow: 0.008-0.012 (bosses/massive creatures)
         
         speed_table = {
-            # Fast, agile enemies
+            # Fast, agile enemies (Tier 1-2)
             "Forest Sprite": 0.095,      # Very fast magical creature
+            "Elder Forest Sprite": 0.085, # Slightly slower but still fast
             "Bandit Scout": 0.080,       # Quick and nimble
-            "Goblin": 0.070,             # Fast and aggressive
+            "Wild Boar": 0.075,          # Fast charging animal
+            "Sand Viper": 0.090,         # Very fast snake
+            "Ice Wolf": 0.085,           # Fast predator
+            "Frost Sprite": 0.080,       # Magical speed
+            "Swamp Rat": 0.070,          # Quick scavenger
+            "Bog Sprite": 0.075,         # Magical swamp creature
+            
+            # Normal speed enemies (Tier 1-2)
             "Forest Goblin": 0.065,      # Slightly slower in forest
+            "Goblin Archer": 0.060,      # Ranged, more cautious
+            "Bandit Raider": 0.055,      # Heavier armor than scout
+            "Desert Scorpion": 0.050,    # Decent speed with claws
+            "Desert Nomad": 0.055,       # Desert dweller
+            "Skeleton Archer": 0.045,    # Undead, deliberate
             
-            # Normal speed enemies
-            "Giant Scorpion": 0.055,     # Decent speed with claws
+            # Medium speed enemies (Tier 2-3)
+            "Orc Scout": 0.050,          # Lighter orc
+            "Giant Scorpion": 0.045,     # Larger, slower than desert version
             "Crystal Elemental": 0.050,  # Magical floating movement
-            "Orc Warrior": 0.048,        # Armored but mobile
-            "Fire Drake": 0.045,         # Flying but cautious
+            "Sand Elemental": 0.045,     # Heavy sand form
+            "Ice Troll": 0.040,          # Large but not massive
+            "Poison Archer": 0.050,      # Ranged swamp dweller
             
-            # Slow, heavy enemies
+            # Slow, heavy enemies (Tier 3)
             "Ancient Guardian": 0.040,   # Skeletal, deliberate movement
+            "Goblin Chieftain": 0.045,  # Armored leader
+            "Orc Warrior": 0.042,       # Heavy armor
+            "Orc Crossbow": 0.038,      # Heavy crossbow equipment
+            "Bandit Captain": 0.040,    # Experienced fighter
+            "Orc Berserker": 0.048,     # Rage-fueled speed
             "Swamp Troll": 0.035,       # Large and lumbering
+            "Bog Witch": 0.038,         # Magical but slow
+            "Dark Mage": 0.035,         # Focuses on magic over movement
+            "Frost Mage": 0.040,        # Ice magic user
             
-            # Boss enemies (slow but powerful)
-            "Orc Warlord": 0.030,       # Heavy armor, commanding presence
-            "Ancient Dragon": 0.025,     # Massive, deliberate movements
+            # Very slow, massive enemies (Tier 3 Elite)
+            "Desert Warlord": 0.032,     # Heavily armored leader
+            "Ancient Scorpion King": 0.030, # Massive arthropod
+            "Frost Giant": 0.028,       # Enormous humanoid
+            "Ice Dragon Wyrmling": 0.035, # Young dragon, still large
+            "Ancient Swamp Lord": 0.025, # Ancient and massive
+            "Plague Bearer": 0.030,     # Disease-ridden, slow
+            "Swamp Dragon": 0.032,      # Full-grown swamp dragon
+            
+            # Boss enemies (very slow but powerful)
+            "Forest Dragon": 0.030,      # Massive forest boss
+            "Orc Warlord": 0.025,       # Heavy armor, commanding presence
+            "Desert Lich": 0.020,       # Undead magic user
+            "Ancient Dragon": 0.022,    # Massive, deliberate movements
+            "Swamp Hydra": 0.028,       # Multi-headed beast
         }
         
         # Get speed for this enemy type, with fallback for unknown types
@@ -163,21 +198,52 @@ class Enemy(Entity):
         if self.asset_loader:
             # Map enemy names to sprite assets
             sprite_mappings = {
-                # Existing enemies
-                "Orc Warlord": "orc_boss_sprite",
-                "Orc Boss": "orc_boss_sprite",
-                "Goblin": "goblin_sprite",
+                # Forest enemies
                 "Forest Goblin": "goblin_sprite",
-                "Bandit Scout": "bandit_scout",
-                # New enemies
                 "Forest Sprite": "forest_sprite",
+                "Elder Forest Sprite": "elder_forest_sprite",
                 "Ancient Guardian": "ancient_guardian",
-                "Orc Warrior": "orc_warrior", 
-                "Ancient Dragon": "ancient_dragon",
-                "Fire Drake": "fire_drake",
-                "Crystal Elemental": "crystal_elemental",
+                "Goblin Chieftain": "goblin_chieftain",  # Fixed: now uses correct sprite
+                
+                # Plains enemies
+                "Bandit Scout": "bandit_scout",
+                "Wild Boar": "wild_boar",
+                "Bandit Raider": "bandit_raider",
+                "Orc Scout": "orc_scout",
+                "Orc Warrior": "orc_warrior",
+                "Bandit Captain": "bandit_captain",
+                "Orc Berserker": "orc_berserker",
+                
+                # Desert enemies
+                "Desert Scorpion": "desert_scorpion",
+                "Sand Viper": "sand_viper",
                 "Giant Scorpion": "giant_scorpion",
-                "Swamp Troll": "swamp_troll"
+                "Sand Elemental": "sand_elemental",
+                "Desert Warlord": "desert_warlord",
+                "Ancient Scorpion King": "ancient_scorpion_king",
+                
+                # Snow enemies
+                "Ice Wolf": "ice_wolf",
+                "Frost Sprite": "frost_sprite",
+                "Ice Troll": "ice_troll",
+                "Crystal Elemental": "crystal_elemental",
+                "Frost Giant": "frost_giant",
+                "Ice Dragon Wyrmling": "ice_dragon",
+                
+                # Swamp enemies
+                "Swamp Rat": "swamp_rat",
+                "Bog Sprite": "bog_sprite",
+                "Swamp Troll": "swamp_troll",
+                "Ancient Swamp Lord": "swamp_lord",
+                "Plague Bearer": "plague_bearer",
+                "Swamp Dragon": "swamp_dragon",
+                
+                # Boss enemies
+                "Forest Dragon": "forest_dragon",
+                "Orc Warlord": "orc_boss_sprite",
+                "Desert Lich": "desert_lich",
+                "Ancient Dragon": "ancient_dragon",
+                "Swamp Hydra": "swamp_hydra"
             }
             
             sprite_name = sprite_mappings.get(self.name)
@@ -200,21 +266,62 @@ class Enemy(Entity):
         
         # Different colors and features for different enemies
         enemy_styles = {
-            # Existing enemies
-            "Orc Warlord": {"color": (139, 0, 0), "eye_color": (255, 0, 0), "feature": "crown"},  # Dark red with crown
-            "Orc Boss": {"color": (139, 0, 0), "eye_color": (255, 0, 0), "feature": "crown"},
-            "Goblin": {"color": (0, 100, 0), "eye_color": (255, 255, 0), "feature": "ears"},  # Dark green with yellow eyes
-            "Forest Goblin": {"color": (34, 139, 34), "eye_color": (255, 255, 0), "feature": "ears"},  # Forest green
-            "Bandit Scout": {"color": (101, 67, 33), "eye_color": (255, 0, 0), "feature": "mask"},  # Brown with mask
-            # New enemies
-            "Forest Sprite": {"color": (50, 205, 50), "eye_color": (255, 255, 255), "feature": "glow"},  # Lime green with glow
-            "Ancient Guardian": {"color": (245, 245, 220), "eye_color": (255, 0, 0), "feature": "bones"},  # Beige skeleton with red eyes
-            "Orc Warrior": {"color": (139, 69, 19), "eye_color": (255, 165, 0), "feature": "tusks"},  # Brown with orange eyes
-            "Ancient Dragon": {"color": (128, 0, 128), "eye_color": (255, 215, 0), "feature": "scales"},  # Purple with gold eyes
-            "Fire Drake": {"color": (255, 69, 0), "eye_color": (255, 255, 0), "feature": "flames"},  # Red-orange with yellow eyes
-            "Crystal Elemental": {"color": (173, 216, 230), "eye_color": (0, 191, 255), "feature": "crystals"},  # Light blue with blue eyes
-            "Giant Scorpion": {"color": (160, 82, 45), "eye_color": (255, 0, 0), "feature": "claws"},  # Saddle brown with red eyes
-            "Swamp Troll": {"color": (85, 107, 47), "eye_color": (255, 255, 0), "feature": "moss"}  # Dark olive green with yellow eyes
+            # Forest enemies
+            "Forest Goblin": {"color": (34, 139, 34), "eye_color": (255, 255, 0), "feature": "ears"},
+            "Forest Sprite": {"color": (50, 205, 50), "eye_color": (255, 255, 255), "feature": "glow"},
+            "Elder Forest Sprite": {"color": (0, 255, 127), "eye_color": (255, 215, 0), "feature": "glow"},
+            "Ancient Guardian": {"color": (245, 245, 220), "eye_color": (255, 0, 0), "feature": "bones"},
+            "Goblin Chieftain": {"color": (0, 100, 0), "eye_color": (255, 215, 0), "feature": "crown"},
+            
+            # Plains enemies
+            "Bandit Scout": {"color": (101, 67, 33), "eye_color": (255, 0, 0), "feature": "mask"},
+            "Wild Boar": {"color": (139, 69, 19), "eye_color": (255, 165, 0), "feature": "tusks"},
+            "Bandit Raider": {"color": (160, 82, 45), "eye_color": (255, 0, 0), "feature": "mask"},
+            "Orc Scout": {"color": (105, 105, 105), "eye_color": (255, 165, 0), "feature": "tusks"},
+            "Orc Warrior": {"color": (139, 69, 19), "eye_color": (255, 165, 0), "feature": "tusks"},
+            "Bandit Captain": {"color": (139, 0, 0), "eye_color": (255, 215, 0), "feature": "crown"},
+            "Orc Berserker": {"color": (178, 34, 34), "eye_color": (255, 0, 0), "feature": "tusks"},
+            
+            # Desert enemies
+            "Desert Scorpion": {"color": (210, 180, 140), "eye_color": (255, 0, 0), "feature": "claws"},
+            "Sand Viper": {"color": (238, 203, 173), "eye_color": (255, 255, 0), "feature": "scales"},
+            "Giant Scorpion": {"color": (160, 82, 45), "eye_color": (255, 0, 0), "feature": "claws"},
+            "Sand Elemental": {"color": (244, 164, 96), "eye_color": (255, 215, 0), "feature": "crystals"},
+            "Desert Warlord": {"color": (139, 0, 0), "eye_color": (255, 215, 0), "feature": "crown"},
+            "Ancient Scorpion King": {"color": (128, 0, 0), "eye_color": (255, 215, 0), "feature": "crown"},
+            
+            # Snow enemies
+            "Ice Wolf": {"color": (176, 196, 222), "eye_color": (173, 216, 230), "feature": "none"},
+            "Frost Sprite": {"color": (230, 230, 250), "eye_color": (0, 191, 255), "feature": "glow"},
+            "Ice Troll": {"color": (119, 136, 153), "eye_color": (173, 216, 230), "feature": "none"},
+            "Crystal Elemental": {"color": (173, 216, 230), "eye_color": (0, 191, 255), "feature": "crystals"},
+            "Frost Giant": {"color": (105, 105, 105), "eye_color": (173, 216, 230), "feature": "none"},
+            "Ice Dragon Wyrmling": {"color": (70, 130, 180), "eye_color": (255, 215, 0), "feature": "scales"},
+            
+            # Swamp enemies
+            "Swamp Rat": {"color": (107, 142, 35), "eye_color": (255, 255, 0), "feature": "none"},
+            "Bog Sprite": {"color": (85, 107, 47), "eye_color": (124, 252, 0), "feature": "glow"},
+            "Swamp Troll": {"color": (85, 107, 47), "eye_color": (255, 255, 0), "feature": "moss"},
+            "Ancient Swamp Lord": {"color": (47, 79, 79), "eye_color": (255, 215, 0), "feature": "crown"},
+            "Plague Bearer": {"color": (128, 128, 0), "eye_color": (255, 0, 0), "feature": "none"},
+            "Swamp Dragon": {"color": (107, 142, 35), "eye_color": (255, 215, 0), "feature": "scales"},
+            
+            # Ranged enemies
+            "Goblin Archer": {"color": (0, 120, 0), "eye_color": (255, 255, 0), "feature": "ears"},
+            "Skeleton Archer": {"color": (245, 245, 220), "eye_color": (255, 0, 0), "feature": "bones"},
+            "Desert Nomad": {"color": (210, 180, 140), "eye_color": (139, 69, 19), "feature": "mask"},
+            "Orc Crossbow": {"color": (139, 69, 19), "eye_color": (255, 0, 0), "feature": "tusks"},
+            "Frost Mage": {"color": (75, 0, 130), "eye_color": (173, 216, 230), "feature": "crystals"},
+            "Poison Archer": {"color": (107, 142, 35), "eye_color": (255, 0, 0), "feature": "none"},
+            "Bog Witch": {"color": (75, 0, 130), "eye_color": (124, 252, 0), "feature": "crystals"},
+            "Dark Mage": {"color": (75, 0, 130), "eye_color": (138, 43, 226), "feature": "crystals"},
+            
+            # Boss enemies
+            "Forest Dragon": {"color": (34, 139, 34), "eye_color": (255, 215, 0), "feature": "crown"},
+            "Orc Warlord": {"color": (139, 0, 0), "eye_color": (255, 0, 0), "feature": "crown"},
+            "Desert Lich": {"color": (25, 25, 112), "eye_color": (0, 255, 255), "feature": "crown"},
+            "Ancient Dragon": {"color": (128, 0, 128), "eye_color": (255, 215, 0), "feature": "crown"},
+            "Swamp Hydra": {"color": (85, 107, 47), "eye_color": (255, 0, 0), "feature": "crown"}
         }
         
         # Get style for this enemy, default to generic style
@@ -529,7 +636,9 @@ class RangedEnemy(Enemy):
             "crossbow": 9.0,
             "magic_staff": 7.0,
             "throwing_knife": 5.0,
-            "dark_magic": 6.0
+            "dark_magic": 6.0,
+            "ice_magic": 7.5,
+            "poison_bow": 8.5
         }
         return weapon_ranges.get(self.weapon_type, 7.0)
     
@@ -540,7 +649,9 @@ class RangedEnemy(Enemy):
             "crossbow": 120,    # 2 seconds (slower but more damage)
             "magic_staff": 100, # 1.67 seconds
             "throwing_knife": 60, # 1 second (fast)
-            "dark_magic": 110   # 1.83 seconds
+            "dark_magic": 110,   # 1.83 seconds
+            "ice_magic": 105,    # 1.75 seconds
+            "poison_bow": 95     # 1.58 seconds
         }
         return weapon_cooldowns.get(self.weapon_type, 90)
     
@@ -555,6 +666,10 @@ class RangedEnemy(Enemy):
                 "Orc Crossbow": "orc_crossbow", 
                 "Skeleton Archer": "skeleton_archer",
                 "Dark Mage": "dark_mage",
+                "Desert Nomad": "desert_nomad",
+                "Frost Mage": "frost_mage",
+                "Poison Archer": "poison_archer",
+                "Bog Witch": "bog_witch",
                 # Boss variants
                 "Goblin Archer Chief": "goblin_archer",
                 "Orc Crossbow Captain": "orc_crossbow",

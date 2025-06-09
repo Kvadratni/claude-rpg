@@ -96,17 +96,56 @@ class AssetLoader:
             "water_keeper": "water_keeper.png",
             "mushroom_farmer": "mushroom_farmer.png",
             "assayer": "assayer.png",
-            # New Enemies
-            "bandit_scout": "bandit_scout.png",
+            # Forest Enemies
             "forest_sprite": "forest_sprite.png",
+            "elder_forest_sprite": "elder_forest_sprite.png",
             "ancient_guardian": "ancient_guardian.png",
+            "goblin_chieftain": "goblin_chieftain.png",
+            
+            # Plains Enemies
+            "bandit_scout": "bandit_scout.png",
+            "wild_boar": "wild_boar.png",
+            "bandit_raider": "bandit_raider.png",
+            "orc_scout": "orc_scout.png",
             "orc_warrior": "orc_warrior.png",
-            "ancient_dragon": "ancient_dragon.png",
-            "fire_drake": "fire_drake.png",
-            "crystal_elemental": "crystal_elemental.png",
+            "bandit_captain": "bandit_captain.png",
+            "orc_berserker": "orc_berserker.png",
+            
+            # Desert Enemies
+            "desert_scorpion": "desert_scorpion.png",
+            "sand_viper": "sand_viper.png",
             "giant_scorpion": "giant_scorpion.png",
+            "desert_nomad": "desert_nomad.png",
+            "sand_elemental": "sand_elemental.png",
+            "desert_warlord": "desert_warlord.png",
+            "ancient_scorpion_king": "ancient_scorpion_king.png",
+            
+            # Snow Enemies
+            "ice_wolf": "ice_wolf.png",
+            "frost_sprite": "frost_sprite.png",
+            "ice_troll": "ice_troll.png",
+            "crystal_elemental": "crystal_elemental.png",
+            "frost_mage": "frost_mage.png",
+            "frost_giant": "frost_giant.png",
+            "ice_dragon": "ice_dragon.png",
+            
+            # Swamp Enemies
+            "swamp_rat": "swamp_rat.png",
+            "bog_sprite": "bog_sprite.png",
             "swamp_troll": "swamp_troll.png",
-            # Ranged Enemies
+            "poison_archer": "poison_archer.png",
+            "bog_witch": "bog_witch.png",
+            "swamp_lord": "swamp_lord.png",
+            "plague_bearer": "plague_bearer.png",
+            "swamp_dragon": "swamp_dragon.png",
+            
+            # Boss Enemies
+            "forest_dragon": "forest_dragon.png",
+            "desert_lich": "desert_lich.png",
+            "swamp_hydra": "swamp_hydra.png",
+            "ancient_dragon": "ancient_dragon.png",
+            
+            # Ranged Enemies (existing and new)
             "goblin_archer": "goblin_archer.png",
             "orc_crossbow": "orc_crossbow.png",
             "skeleton_archer": "skeleton_archer.png",
@@ -276,16 +315,54 @@ class AssetLoader:
             "water_keeper": (30, 144, 255),  # Dodger blue
             "mushroom_farmer": (160, 82, 45),  # Saddle brown
             "assayer": (105, 105, 105),  # Gray for minerals
-            # New Enemies
-            "bandit_scout": (101, 67, 33),  # Brown
+            # Forest Enemies
             "forest_sprite": (50, 205, 50),  # Lime green
+            "elder_forest_sprite": (0, 255, 127),  # Spring green
             "ancient_guardian": (245, 245, 220),  # Beige
+            "goblin_chieftain": (0, 100, 0),  # Dark green
+            
+            # Plains Enemies  
+            "bandit_scout": (101, 67, 33),  # Brown
+            "wild_boar": (139, 69, 19),  # Saddle brown
+            "bandit_raider": (160, 82, 45),  # Saddle brown
+            "orc_scout": (105, 105, 105),  # Dim gray
             "orc_warrior": (139, 69, 19),  # Brown
-            "ancient_dragon": (128, 0, 128),  # Purple
-            "fire_drake": (255, 69, 0),  # Red-orange
-            "crystal_elemental": (173, 216, 230),  # Light blue
+            "bandit_captain": (139, 0, 0),  # Dark red
+            "orc_berserker": (178, 34, 34),  # Firebrick
+            
+            # Desert Enemies
+            "desert_scorpion": (210, 180, 140),  # Tan
+            "sand_viper": (238, 203, 173),  # Peach puff
             "giant_scorpion": (160, 82, 45),  # Saddle brown
+            "desert_nomad": (210, 180, 140),  # Tan
+            "sand_elemental": (244, 164, 96),  # Sandy brown
+            "desert_warlord": (139, 0, 0),  # Dark red
+            "ancient_scorpion_king": (128, 0, 0),  # Maroon
+            
+            # Snow Enemies
+            "ice_wolf": (176, 196, 222),  # Light steel blue
+            "frost_sprite": (230, 230, 250),  # Lavender
+            "ice_troll": (119, 136, 153),  # Light slate gray
+            "crystal_elemental": (173, 216, 230),  # Light blue
+            "frost_mage": (75, 0, 130),  # Indigo
+            "frost_giant": (105, 105, 105),  # Dim gray
+            "ice_dragon": (70, 130, 180),  # Steel blue
+            
+            # Swamp Enemies
+            "swamp_rat": (107, 142, 35),  # Olive drab
+            "bog_sprite": (85, 107, 47),  # Dark olive green
             "swamp_troll": (85, 107, 47),  # Dark olive green
+            "poison_archer": (107, 142, 35),  # Olive drab
+            "bog_witch": (75, 0, 130),  # Indigo
+            "swamp_lord": (47, 79, 79),  # Dark slate gray
+            "plague_bearer": (128, 128, 0),  # Olive
+            "swamp_dragon": (107, 142, 35),  # Olive drab
+            
+            # Boss Enemies
+            "forest_dragon": (34, 139, 34),  # Forest green
+            "desert_lich": (25, 25, 112),  # Midnight blue
+            "swamp_hydra": (85, 107, 47),  # Dark olive green
+            "ancient_dragon": (128, 0, 128),  # Purple
             # Ranged Enemies
             "goblin_archer": (0, 120, 0),  # Dark green
             "orc_crossbow": (139, 69, 19),  # Brown

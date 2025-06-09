@@ -212,6 +212,169 @@ python main.py
 - **Watch your stamina** - ranged weapons consume stamina per shot ⭐
 - **Save frequently** using the ESC menu
 
+## 🗡️ **Complete Enemy System** ⭐ **REBALANCED!**
+
+### **🎯 Power Scaling System**
+Our revolutionary enemy system features **tier-based spawning** and **biome difficulty scaling** for the perfect challenge progression:
+
+- **📍 Tier-Based Spawning**: Enemy difficulty scales with distance from settlements
+  - **Tier 1** (0-30 tiles): Beginner enemies near towns
+  - **Tier 2** (30-60 tiles): Intermediate enemies in wilderness  
+  - **Tier 3** (60+ tiles): Advanced enemies in remote areas
+
+- **🌍 Biome Difficulty Modifiers**: Each biome has unique challenge levels
+  - **🌲 Forest**: 1.0x (Easy/Beginner-friendly)
+  - **🌾 Plains**: 1.2x (Medium challenge)
+  - **🏜️ Desert**: 1.4x (Hard encounters)
+  - **❄️ Snow**: 1.5x (Very hard enemies)
+  - **🐸 Swamp**: 1.6x (Extreme difficulty)
+
+- **⚖️ Balanced Spawn Density**: 0.15% of tiles (60 enemies in 200x200 world)
+
+---
+
+### **🌲 Forest Enemies** (Easy Biome - 1.0x Modifier)
+*Perfect for new players and early game exploration*
+
+| Sprite | Enemy | Tier | HP | DMG | XP | Type | Notes |
+|:------:|-------|:----:|:--:|:---:|:--:|:----:|-------|
+| ![Forest Goblin](assets/images/goblin_sprite.png) | **Forest Goblin** | 1-2 | 50-65 | 12-16 | 35-50 | Melee | Forest-dwelling goblin with tribal weapons |
+| ![Forest Sprite](assets/images/forest_sprite.png) | **Forest Sprite** | 1 | 45 | 10 | 30 | Melee | Fast magical forest creature |
+| ![Elder Forest Sprite](assets/images/elder_forest_sprite.png) | **Elder Forest Sprite** | 3 | 70 | 20 | 65 | Melee | Powerful magical forest guardian |
+| ![Goblin Archer](assets/images/goblin_archer.png) | **Goblin Archer** | 2 | 55 | 15 | 45 | Ranged | Bow-wielding forest goblin |
+| ![Skeleton Archer](assets/images/skeleton_archer.png) | **Skeleton Archer** | 2 | 60 | 18 | 55 | Ranged | Undead archer with bone arrows |
+| ![Ancient Guardian](assets/images/ancient_guardian.png) | **Ancient Guardian** | 3 | 85 | 22 | 75 | Melee | Skeletal forest protector |
+| ![Goblin Chieftain](assets/images/goblin_chieftain.png) | **Goblin Chieftain** | 3 | 95 | 24 | 85 | Melee | Goblin leader with golden crown |
+
+---
+
+### **🌾 Plains Enemies** (Medium Biome - 1.2x Modifier)
+*Balanced challenge with orc encounters and bandit raids*
+
+| Sprite | Enemy | Tier | Base HP | Final HP | Base DMG | Final DMG | XP | Type | Notes |
+|:------:|-------|:----:|:-------:|:--------:|:--------:|:---------:|:--:|:----:|-------|
+| ![Bandit Scout](assets/images/bandit_scout.png) | **Bandit Scout** | 1 | 50 | 60 | 14 | 17 | 42 | Melee | Quick human outlaw |
+| ![Wild Boar](assets/images/wild_boar.png) | **Wild Boar** | 1 | 55 | 66 | 12 | 14 | 36 | Melee | Aggressive plains animal |
+| ![Bandit Raider](assets/images/bandit_raider.png) | **Bandit Raider** | 2 | 70 | 84 | 18 | 22 | 66 | Melee | Armored bandit warrior |
+| ![Orc Scout](assets/images/orc_scout.png) | **Orc Scout** | 2 | 75 | 90 | 20 | 24 | 72 | Melee | Light orc reconnaissance |
+| ![Orc Crossbow](assets/images/orc_crossbow.png) | **Orc Crossbow** | 2 | 80 | 96 | 22 | 26 | 84 | Ranged | Heavy crossbow specialist |
+| ![Orc Warrior](assets/images/orc_warrior.png) | **Orc Warrior** | 3 | 110 | 132 | 28 | 34 | 108 | Melee | Heavily armored orc |
+| ![Bandit Captain](assets/images/bandit_captain.png) | **Bandit Captain** | 3 | 100 | 120 | 26 | 31 | 102 | Melee | Experienced outlaw leader |
+| ![Orc Berserker](assets/images/orc_berserker.png) | **Orc Berserker** | 3 | 120 | 144 | 32 | 38 | 120 | Melee | Rage-fueled orc warrior |
+
+---
+
+### **🏜️ Desert Enemies** (Hard Biome - 1.4x Modifier)
+*Dangerous encounters with scorpions, vipers, and dark magic*
+
+| Sprite | Enemy | Tier | Base HP | Final HP | Base DMG | Final DMG | XP | Type | Weapon | Notes |
+|:------:|-------|:----:|:-------:|:--------:|:--------:|:---------:|:--:|:----:|:------:|-------|
+| ![Desert Scorpion](assets/images/desert_scorpion.png) | **Desert Scorpion** | 1 | 60 | 84 | 16 | 22 | 56 | Melee | Stinger | Small but venomous |
+| ![Sand Viper](assets/images/sand_viper.png) | **Sand Viper** | 1 | 45 | 63 | 18 | 25 | 63 | Melee | Fangs | Lightning-fast serpent |
+| ![Giant Scorpion](assets/images/giant_scorpion.png) | **Giant Scorpion** | 2 | 85 | 119 | 24 | 34 | 98 | Melee | Claws | Massive arthropod |
+| ![Desert Nomad](assets/images/desert_nomad.png) | **Desert Nomad** | 2 | 75 | 105 | 22 | 31 | 91 | Ranged | Bow | Robed desert archer |
+| ![Sand Elemental](assets/images/sand_elemental.png) | **Sand Elemental** | 2 | 90 | 126 | 20 | 28 | 105 | Melee | Magic | Swirling sand creature |
+| ![Dark Mage](assets/images/dark_mage.png) | **Dark Mage** | 3 | 100 | 140 | 30 | 42 | 154 | Ranged | Dark Magic | Powerful spellcaster |
+| ![Desert Warlord](assets/images/desert_warlord.png) | **Desert Warlord** | 3 | 130 | 182 | 35 | 49 | 168 | Melee | Scimitar | Desert military leader |
+| ![Ancient Scorpion King](assets/images/ancient_scorpion_king.png) | **Ancient Scorpion King** | 3 | 140 | 196 | 32 | 45 | 175 | Melee | Crown | Massive scorpion ruler |
+
+---
+
+### **❄️ Snow Enemies** (Very Hard Biome - 1.5x Modifier)
+*Extremely challenging with elemental threats and frost magic*
+
+| Sprite | Enemy | Tier | Base HP | Final HP | Base DMG | Final DMG | XP | Type | Weapon | Notes |
+|:------:|-------|:----:|:-------:|:--------:|:--------:|:---------:|:--:|:----:|:------:|-------|
+| ![Ice Wolf](assets/images/ice_wolf.png) | **Ice Wolf** | 1 | 55 | 83 | 18 | 27 | 68 | Melee | Fangs | Frost-covered predator |
+| ![Frost Sprite](assets/images/frost_sprite.png) | **Frost Sprite** | 1 | 50 | 75 | 16 | 24 | 60 | Melee | Ice Magic | Hostile ice fairy |
+| ![Ice Troll](assets/images/ice_troll.png) | **Ice Troll** | 2 | 95 | 143 | 26 | 39 | 120 | Melee | Ice Club | Large frozen humanoid |
+| ![Crystal Elemental](assets/images/crystal_elemental.png) | **Crystal Elemental** | 2 | 85 | 128 | 28 | 42 | 128 | Melee | Crystals | Living ice formation |
+| ![Frost Mage](assets/images/frost_mage.png) | **Frost Mage** | 2 | 80 | 120 | 30 | 45 | 135 | Ranged | Ice Magic | Ice spellcaster |
+| ![Ancient Guardian](assets/images/ancient_guardian.png) | **Ancient Guardian** | 3 | 120 | 180 | 35 | 53 | 195 | Melee | Bone Weapons | Powerful undead |
+| ![Frost Giant](assets/images/frost_giant.png) | **Frost Giant** | 3 | 160 | 240 | 40 | 60 | 225 | Melee | Ice Hammer | Enormous ice titan |
+| ![Ice Dragon Wyrmling](assets/images/ice_dragon.png) | **Ice Dragon Wyrmling** | 3 | 140 | 210 | 38 | 57 | 210 | Melee | Frost Breath | Young ice dragon |
+
+---
+
+### **🐸 Swamp Enemies** (Extreme Biome - 1.6x Modifier)
+*The ultimate challenge with poison, disease, and ancient horrors*
+
+| Sprite | Enemy | Tier | Base HP | Final HP | Base DMG | Final DMG | XP | Type | Weapon | Notes |
+|:------:|-------|:----:|:-------:|:--------:|:--------:|:---------:|:--:|:----:|:------:|-------|
+| ![Swamp Rat](assets/images/swamp_rat.png) | **Swamp Rat** | 1 | 50 | 80 | 14 | 22 | 56 | Melee | Disease | Plague-carrying rodent |
+| ![Bog Sprite](assets/images/bog_sprite.png) | **Bog Sprite** | 1 | 55 | 88 | 16 | 26 | 64 | Melee | Swamp Magic | Dark swamp fairy |
+| ![Swamp Troll](assets/images/swamp_troll.png) | **Swamp Troll** | 2 | 100 | 160 | 30 | 48 | 152 | Melee | Club | Moss-covered giant |
+| ![Poison Archer](assets/images/poison_archer.png) | **Poison Archer** | 2 | 75 | 120 | 25 | 40 | 128 | Ranged | Poison Bow | Toxic arrow specialist |
+| ![Bog Witch](assets/images/bog_witch.png) | **Bog Witch** | 2 | 85 | 136 | 32 | 51 | 160 | Ranged | Dark Magic | Swamp spellcaster |
+| ![Ancient Swamp Lord](assets/images/swamp_lord.png) | **Ancient Swamp Lord** | 3 | 150 | 240 | 42 | 67 | 256 | Melee | Vine Crown | Massive swamp ruler |
+| ![Plague Bearer](assets/images/plague_bearer.png) | **Plague Bearer** | 3 | 130 | 208 | 38 | 61 | 232 | Melee | Disease | Rotting plague zombie |
+| ![Swamp Dragon](assets/images/swamp_dragon.png) | **Swamp Dragon** | 3 | 170 | 272 | 45 | 72 | 288 | Melee | Poison Breath | Moss-covered dragon |
+
+---
+
+### **👑 Boss Enemies** (Ultimate Challenges)
+*Biome-specific bosses with massive health pools and devastating attacks*
+
+| Sprite | Boss | Biome | HP | DMG | XP | Special Abilities | Notes |
+|:------:|------|:-----:|:--:|:---:|:--:|:---------------:|-------|
+| ![Forest Dragon](assets/images/forest_dragon.png) | **Forest Dragon** | Forest | 600 | 45 | 400 | Nature Magic, Healing | Entry-level boss, forest guardian |
+| ![Orc Warlord](assets/images/orc_boss_sprite.png) | **Orc Warlord** | Plains | 800 | 55 | 500 | Command Aura, Charge | Mid-tier boss, orc commander |
+| ![Desert Lich](assets/images/desert_lich.png) | **Desert Lich** | Desert | 900 | 65 | 600 | Dark Magic, Teleport | High-tier undead sorcerer |
+| ![Ancient Dragon](assets/images/ancient_dragon.png) | **Ancient Dragon** | Snow | 1200 | 75 | 750 | Frost Breath, Ice Storm | Ultimate boss challenge |
+| ![Swamp Hydra](assets/images/swamp_hydra.png) | **Swamp Hydra** | Swamp | 1000 | 70 | 650 | Multi-Head Attack, Regeneration | Elite multi-headed serpent |
+
+---
+
+### **⚔️ Combat System Features**
+
+#### **🏹 Ranged Combat**
+- **Weapon Variety**: 7 different ranged weapon types with unique characteristics
+- **Realistic Physics**: Projectiles travel with proper trajectories and speeds
+- **Visual Effects**: Each weapon fires distinct projectiles (arrows, bolts, magic)
+- **Range Optimization**: Different weapons excel at different combat distances
+
+#### **🤖 Enemy AI**
+- **Tier-Based Behavior**: Higher tier enemies have more sophisticated AI
+- **Movement Patterns**: Each enemy type has unique movement and attack patterns
+- **Ranged Enemy Tactics**: Ranged enemies maintain optimal distance and use cover
+- **Boss Mechanics**: Bosses have special abilities and complex attack patterns
+
+#### **📊 Progression System**
+- **Smooth Difficulty Curve**: Natural progression from beginner to expert challenges
+- **Risk vs Reward**: Venturing into dangerous areas yields better experience and loot
+- **Biome Mastery**: Players can choose their preferred challenge level
+- **Strategic Depth**: 35+ unique enemy types require different combat approaches
+
+---
+
+### **🎯 Strategy Guide**
+
+#### **For New Players (Forest Biome)**
+- Start with **Forest Goblins** and **Forest Sprites** to learn combat basics
+- Practice ranged combat with **Goblin Archers**
+- Avoid **Tier 3** enemies until you're well-equipped
+
+#### **Intermediate Players (Plains/Desert)**
+- **Plains**: Face balanced challenges with **Orc Warriors** and **Bandit Raiders**
+- **Desert**: Test your skills against **Giant Scorpions** and **Dark Mages**
+- Master both melee and ranged combat for optimal success
+
+#### **Expert Players (Snow/Swamp)**
+- **Snow Biome**: Extreme challenges with **Frost Giants** and **Ice Dragons**
+- **Swamp Biome**: Ultimate test with **Ancient Swamp Lords** and **Plague Bearers**
+- Requires top-tier equipment and advanced combat strategies
+
+#### **Boss Hunting**
+- **Forest Dragon**: Perfect first boss for learning boss mechanics
+- **Orc Warlord**: Balanced challenge requiring good equipment
+- **Desert Lich**: High-tier boss with dangerous magic attacks
+- **Ancient Dragon**: Ultimate endgame challenge
+- **Swamp Hydra**: Elite boss with unique multi-head mechanics
+
+---
+
+*The enemy system provides infinite replayability with procedural spawning, ensuring every adventure offers fresh challenges and discoveries!*
+
 ## 🔧 Development Status
 
 ### Current State: **Advanced Beta with Procedural Generation & AI NPCs** ⭐
