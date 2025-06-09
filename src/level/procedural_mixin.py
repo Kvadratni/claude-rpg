@@ -510,6 +510,19 @@ class ProceduralGenerationMixin:
             # Check if this is a background NPC (non-interactive)
             is_background = entity_data.get('is_background', False)
             
+            # Also check by NPC name - these are background NPCs that should use generic sprite
+            background_npc_names = [
+                'Resident', 'House Servant', 'Worker', 'Villager', 'Peasant', 
+                'Farmer', 'Laborer', 'Citizen', 'Townsperson', 'Commoner',
+                'House Owner', 'Tenant', 'Occupant', 'Dweller', 'Elder',
+                'Old Man', 'Old Woman', 'Child', 'Young One', 'Helper',
+                'Assistant', 'Apprentice', 'Servant'
+            ]
+            
+            if npc_name in background_npc_names:
+                is_background = True
+                print(f"        🎭 Identified '{npc_name}' as background NPC by name")
+            
             # Create NPC with data from chunk (don't auto-create sprite yet)
             npc = NPC(
                 x=world_x,
@@ -526,9 +539,11 @@ class ProceduralGenerationMixin:
             if is_background:
                 npc.is_background = True
                 npc.dialog = ["..."]  # Minimal dialog to avoid errors
+                print(f"        🎭 Set is_background=True for '{npc_name}'")
             else:
                 # Mark as AI-ready so it will be enabled on first interaction
                 npc.ai_ready = True
+                print(f"        🤖 Set ai_ready=True for '{npc_name}'")
             
             # Now create the sprite with the correct flag set
             npc.create_npc_sprite()

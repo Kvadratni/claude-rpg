@@ -132,13 +132,41 @@ class NPC(Entity):
             print(f"   - is_background value: {self.is_background}")
         print(f"   - Has asset_loader: {self.asset_loader is not None}")
         
-        # Check if this is a background NPC - use generic sprite
+        # Check if this is a background NPC - use appropriate generic sprite
         if hasattr(self, 'is_background') and self.is_background:
             print(f"   🎭 Background NPC detected: '{self.name}'")
             if self.asset_loader:
-                print(f"   🔍 Looking for 'generic_npc' asset...")
-                generic_npc_image = self.asset_loader.get_image('generic_npc')
-                print(f"   📦 generic_npc asset found: {generic_npc_image is not None}")
+                # Map background NPC names to specific generic sprites
+                background_sprite_mappings = {
+                    'Resident': 'generic_villager_1',
+                    'House Owner': 'generic_villager_1', 
+                    'Villager': 'generic_villager_2',
+                    'Worker': 'generic_worker',
+                    'Laborer': 'generic_worker',
+                    'House Servant': 'generic_servant',
+                    'Servant': 'generic_servant',
+                    'Farmer': 'generic_farmer',
+                    'Peasant': 'generic_farmer',
+                    'Citizen': 'generic_citizen',
+                    'Townsperson': 'generic_citizen',
+                    'Commoner': 'generic_citizen',
+                    'Elder': 'generic_elder',
+                    'Old Man': 'generic_elder',
+                    'Old Woman': 'generic_elder',
+                    'Child': 'generic_child',
+                    'Young One': 'generic_child',
+                    'Helper': 'generic_merchant_helper',
+                    'Assistant': 'generic_merchant_helper',
+                    'Apprentice': 'generic_merchant_helper'
+                }
+                
+                # Get appropriate sprite for this background NPC type
+                sprite_name = background_sprite_mappings.get(self.name, 'generic_npc')  # Fallback to original
+                print(f"   🔍 Looking for '{sprite_name}' asset for '{self.name}'...")
+                
+                generic_npc_image = self.asset_loader.get_image(sprite_name)
+                print(f"   📦 {sprite_name} asset found: {generic_npc_image is not None}")
+                
                 if generic_npc_image:
                     print(f"   📏 Original asset size: {generic_npc_image.get_size()}")
                     # Create base sprite
@@ -151,10 +179,10 @@ class NPC(Entity):
                         self.sprite,  # Up (2)
                         self.sprite   # Right (3) - original (facing right)
                     ]
-                    print(f"   🎉 Successfully loaded generic sprite for background NPC '{self.name}'")
+                    print(f"   🎉 Successfully loaded {sprite_name} sprite for background NPC '{self.name}'")
                     return
                 else:
-                    print(f"   ❌ Failed to load generic_npc sprite for background NPC '{self.name}', falling back to generated sprite")
+                    print(f"   ❌ Failed to load {sprite_name} sprite for background NPC '{self.name}', falling back to generated sprite")
             else:
                 print(f"   ❌ No asset_loader available for background NPC '{self.name}'")
         else:

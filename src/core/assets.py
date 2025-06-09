@@ -61,6 +61,15 @@ class AssetLoader:
             "orc_boss_sprite": "orc_boss_sprite.png",
             "npc_shopkeeper": "npc_shopkeeper.png",
             "generic_npc": "generic_npc.png",  # Added generic NPC for background NPCs
+            "generic_villager_1": "generic_villager_1.png",  # New background NPCs
+            "generic_villager_2": "generic_villager_2.png",
+            "generic_worker": "generic_worker.png",
+            "generic_servant": "generic_servant.png",
+            "generic_farmer": "generic_farmer.png",
+            "generic_citizen": "generic_citizen.png",
+            "generic_elder": "generic_elder.png",
+            "generic_child": "generic_child.png",
+            "generic_merchant_helper": "generic_merchant_helper.png",
             "trader": "trader.png",
             "elder_npc": "elder_npc.png",  # Added elder NPC
             "village_guard_sprite": "village_guard_sprite.png",  # Added village guard
@@ -280,6 +289,15 @@ class AssetLoader:
             "orc_boss_sprite": (139, 0, 0),
             "npc_shopkeeper": (255, 215, 0),
             "generic_npc": (180, 180, 180),  # Light gray for generic NPCs
+            "generic_villager_1": (139, 69, 19),  # Brown tunic
+            "generic_villager_2": (34, 139, 34),  # Green dress
+            "generic_worker": (101, 67, 33),  # Brown leather
+            "generic_servant": (128, 128, 128),  # Gray uniform
+            "generic_farmer": (210, 180, 140),  # Tan with straw hat
+            "generic_citizen": (70, 130, 180),  # Blue tunic
+            "generic_elder": (160, 160, 160),  # Gray with walking stick
+            "generic_child": (255, 192, 203),  # Pink for child
+            "generic_merchant_helper": (160, 82, 45),  # Brown leather vest
             "trader": (210, 180, 140),  # Tan for simple trader
             "elder_npc": (128, 0, 128),  # Purple for elder
             "village_guard_sprite": (70, 130, 180),  # Steel blue for guard
